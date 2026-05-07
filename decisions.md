@@ -276,3 +276,29 @@ The dashboard remains the canonical state of the system. All approval workflows 
 - If multi-user access ever becomes a requirement — revisit the whole "Python + Task Scheduler" stack, since it's single-machine by design.
 - If Anthropic ships a Claude-native scheduling/notification primitive that subsumes parts of this layer — revisit whether to migrate.
 - Annual review: re-evaluate whether the Gmail account is still the right sender. If the account changes or 2SV gets disabled, alerting silently breaks.
+
+## 2026-05-08 — Doc-revision pass complete: design docs aligned with Python logistics architecture
+
+**Decision:** All eight design documents affected by the 2026-05-07 "Power Automate dropped from architecture" decision have been updated and re-uploaded to the project knowledge base. The design docs are now in alignment with the architectural state captured in decisions.md — decisions.md no longer supersedes the design docs on PA, Python logistics, Gmail SMTP, or the Orchestrator heartbeat.
+
+**Docs updated this session:**
+- `00_PROJECT_OVERVIEW.docx` — Guiding Principle #6 renamed and rewritten ("Python Handles Logistics, Claude Handles Intelligence"). Glossary unchanged (no PA entry existed).
+- `01_ARCHITECTURE.docx` — Layer Summary "Logistics" row rewritten. Data Flow paragraph updated to reference Python `watchdog` script. Key Architectural Constraints list extended with the Orchestrator heartbeat interface commitment. The full "POWER AUTOMATE RESPONSIBILITIES" section replaced with "PYTHON LOGISTICS LAYER" — three-pillar table covering file watching, scheduled jobs, and structured alerting, plus an APPROVAL SURFACE callout.
+- `02_AGENT_DESCRIPTIONS.docx` — Agent 01 Orchestrator: heartbeat bullet added to Key Behaviour, "Power Automate" replaced with "filings watcher" in Inputs. Agent 06 News Agent: RSS aggregation reattributed from PA to the News Agent itself. Agent 19 Chief Security Agent: Warning-level delivery channel updated from "Teams + email + dashboard" to "Gmail SMTP + dashboard banner."
+- `03_TECH_STACK.docx` — Stack Overview table: removed PA + Teams rows, added watchdog, Task Scheduler, smtplib/email, python-dotenv. Python Environment Setup section: rewritten to assume activated venv, removed the irrelevant `--break-system-packages` flag, added `pip install watchdog python-dotenv`. Power Automate Connectors section deleted entirely. New Tool Selection Rationale subsection "Why Python Logistics over Power Automate?" added.
+- `04_BUILD_SEQUENCE.docx` — Phase 0 status callout updated to reflect closeout (all four items checked, PA item recorded as removed). Phase 0 checklist: PA item deleted entirely, commit references added to closeout items. Phase 2 absorbs the new alert-delivery design (`mfip_alerts.py` build step + nightly Task Scheduler log export). Phase 3 Bloomberg Ingestion: PA Desktop replaced with Python `watchdog` script. Phase 5 Intelligence Layer: PA RSS aggregation replaced with feedparser-based News Agent aggregation. Phase 7: PA approval workflow replaced with in-dashboard Zone 4C banner. Phase 8: warning card formatter scope clarified to produce both dashboard banner content and the structured `Alert` payload for `mfip_alerts.py`.
+- `05_DASHBOARD_SPEC.docx` — Zone 1 Command Centre: new "Unsent Alerts indicator" element added between Alert Badges and Company Selector. Zone 4C Rebalancing Alert Banner: framed as primary approval surface in v1, with persistence-until-actioned semantics. Real-Time Update Schedule table: News feed source updated from PA push to News Agent poll.
+- `06_SECURITY_COUNCIL.docx` — Warning level delivery channel updated to Gmail SMTP + dashboard banner with sender/recipient addresses. Audit trail backup mechanism rewritten from SharePoint to nightly local export + commit to logs-archive Git branch.
+- `07_BLOOMBERG_EXPORT_TEMPLATE.docx` — confirmed no-op. The template was originally written at an implementation-agnostic abstraction level and required no changes.
+
+**Reasoning:** Without this alignment, the design docs and decisions.md would have continued to disagree on PA/Python/Gmail SMTP, with decisions.md as the canonical reference and the design docs out of date. Phase 1 build (dashboard shell) needs to start from a clean, internally consistent document set.
+
+**Implication:**
+- decisions.md no longer supersedes the design docs on PA-related guidance — they are now in alignment.
+- Phase 0 status reflected in `04_BUILD_SEQUENCE.docx`: "Phase 0 complete; ready for Phase 1."
+- One follow-up identified during the session, not closed: `feedparser` was added to `04_BUILD_SEQUENCE.docx` Phase 5 as the RSS library but has not been added to `03_TECH_STACK.docx`. Trivial library; can be added the next time the tech stack doc is touched, or picked up at Phase 5 build start.
+- The known design-doc/Git gap remains unsolved (design docs live only in the project KB, not in Git). Out of scope for this session per the session brief.
+
+**Affected docs:** `00_PROJECT_OVERVIEW.docx`, `01_ARCHITECTURE.docx`, `02_AGENT_DESCRIPTIONS.docx`, `03_TECH_STACK.docx`, `04_BUILD_SEQUENCE.docx`, `05_DASHBOARD_SPEC.docx`, `06_SECURITY_COUNCIL.docx`, `07_BLOOMBERG_EXPORT_TEMPLATE.docx`. All updated 2026-05-08 (or confirmed no-op).
+
+**Revisit trigger:** None for this entry — it's a closeout. The architectural decisions that drove it (Power Automate dropped, Python logistics adopted) carry their own revisit triggers in their respective decisions.md entries.
