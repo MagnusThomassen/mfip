@@ -1,0 +1,32 @@
+﻿# MFIP v1 Python dependencies
+# Stage 0.2 - pinned with version ranges; exact versions captured in requirements.lock.txt
+
+# === Core numerical / data ===
+pandas>=2.2,<3.0
+numpy>=1.26,<3.0
+scipy>=1.13,<2.0
+pydantic>=2.7,<3.0
+
+# === Market & macro data ===
+yfinance>=0.2.40
+pandas-datareader>=0.10.0
+
+# === Analytical database ===
+duckdb>=1.0.0
+
+# === Dashboard ===
+dash>=2.17,<4.0
+plotly>=5.22
+dash-ag-grid>=31.0.0
+
+# === Document & spreadsheet generation ===
+python-docx>=1.1.0
+openpyxl>=3.1.2
+
+# === PDF extraction (Phase 4) ===
+camelot-py[cv]>=0.11.0
+pymupdf>=1.24.0
+
+# === FinBERT (Phase 5) - DEFERRED, install with Stage 5.0 ===
+# transformers>=4.40
+# torch>=2.3
