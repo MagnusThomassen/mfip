@@ -192,3 +192,87 @@ Critically, Bloomberg's role is restricted to **market data only**. Bloomberg ex
 - Environment note for future threads: Claude Code CLI on Windows is the install surface. The Claude.ai project chat (where most architecture work happens) does not expose `/plugin` or `/setup-cowork` slash commands, so plugin install cannot happen from inside a project chat session.
 
 **Revisit trigger:** If `claude plugin update` or `claude plugin marketplace refresh` re-pulls the cache from upstream, the `[]` `hooks.json` will return and both plugins will fail to load again — re-apply the `{"hooks": {}}` patch. Periodically (monthly) check `github.com/anthropics/financial-services-plugins` for an upstream fix; once the published `hooks.json` is valid, this entry can be marked resolved.
+
+---
+
+## 2026-05-07 — Power Automate dropped from architecture; replaced with Python + Task Scheduler + Gmail SMTP + structured alerting
+
+**Decision:** Power Automate (Cloud and Desktop) is removed from MFIP's architecture entirely. The "Logistics Layer" specified in `01_ARCHITECTURE.docx` is replaced by three native components:
+
+1. **File watching and folder monitoring** → Python `watchdog` library, run as Windows scheduled tasks. Replaces PA Desktop flows for `bloomberg_inbox\` and `filings\` monitoring.
+2. **Scheduled jobs** (nightly log archive, weekly digest, Git commits of log exports) → Windows Task Scheduler invoking Python scripts. Replaces all PA Cloud time-triggered flows.
+3. **Notifications** → Gmail SMTP from `magnus.thomass1@gmail.com` (sender) to `magnus.t@live.no` (recipient), with structured alert payloads, local disk fallback for delivery failures, and a dashboard surface for unsent items. Replaces PA Cloud Teams cards and Outlook digest emails.
+
+The dashboard remains the canonical state of the system. All approval workflows (portfolio rebalancing, Critical security remediation) happen inside the dashboard — there is no external approval surface in v1.
+
+**Reasoning:** The original Power Automate architecture was aspirational rather than well-suited. Several factors converged:
+
+- **No viable Microsoft account.** Personal M365 was already rejected (`2026-05-07 — Storage layer` decision: ~£60/year deemed unnecessary). University and work accounts both have policy restrictions and lifecycle dependencies (Kingston account dies at graduation; running personal projects on an employer tenant is a policy issue). Free personal Microsoft accounts have heavily restricted PA Cloud connectors. There is no good account answer.
+- **PA was being asked to do too much.** Of the eight PA tasks specified in `01_ARCHITECTURE.docx`, only two (Teams notifications, approval workflows) genuinely benefited from PA-shaped capabilities, and both depended on Teams access that the account situation above precludes anyway. The other six (file watching, log archiving, model archival, news aggregation, weekly digest, scheduled jobs) are simpler in Python.
+- **Architectural inconsistency.** MFIP's whole identity is "every decision traceable, version-controlled, reproducible." PA flows live in a Microsoft cloud account, GUI-edited, not Git-diffable. Half the system in Python and half in PA flows would have meant half the system was outside the version-control envelope. That's a bad split for a project with this design philosophy.
+- **GUI dependency.** PA Desktop has to be running on the Windows machine for local file watching to work. A Python `watchdog` script can run as a background service or scheduled task without a GUI, with no "did I remember to launch PA Desktop today" failure mode.
+- **The notification trade-off was theoretical.** The one capability PA-via-Teams might have offered — push-notification approval cards — was never actually accessible given the account situation. Dropping PA loses no real capability.
+
+**Implication:**
+
+***Architecture changes (require doc updates in next session):***
+
+- `00_PROJECT_OVERVIEW.docx` Guiding Principle #6 ("Power Automate Handles Logistics, Claude Handles Intelligence") becomes **"Python Handles Logistics, Claude Handles Intelligence."**
+- `01_ARCHITECTURE.docx` "Logistics" row in the layer summary table is rewritten. The full "POWER AUTOMATE RESPONSIBILITIES" table is replaced with a "PYTHON LOGISTICS LAYER" table covering the three pillars below.
+- `03_TECH_STACK.docx` removes "Logistics automation" (PA), "Notifications" (Teams connector). Adds: `watchdog` for file events, `python-dotenv` for secret management, standard library `smtplib` and `email` for SMTP. Notes Windows Task Scheduler as the native scheduling layer.
+- `04_BUILD_SEQUENCE.docx` Phase 0 item 3 ("Configure Power Automate connectors") is removed entirely. Phase 2 (Logging Infrastructure) absorbs the new alert-delivery design as part of the same logging layer. References to PA in Phases 3, 7, and 8 are rewritten.
+- `05_DASHBOARD_SPEC.docx` rebalancing approval banner becomes the *primary* approval surface (it was previously framed as a mirror of a Teams card). New element: "unsent alerts" indicator in Zone 1 (Command Centre) showing count of alerts that failed to deliver and are queued in `unsent_alerts/`.
+- `06_SECURITY_COUNCIL.docx` references to "Teams + email" notification channels become "Gmail SMTP + dashboard banner."
+- `07_BLOOMBERG_EXPORT_TEMPLATE.docx` references to PA Desktop watching the inbox stay conceptually correct (something watches the folder), implementation note updated to `watchdog` script.
+
+***Implementation: pillar 1 — file watching (`watchdog`):***
+
+- One Python script per watched folder. Initial set: `bloomberg_inbox\`, `filings\`. Each script registers a `watchdog` Observer on its folder, fires a handler when a new `.xlsx` (Bloomberg) or `.pdf` (filings) lands, validates the file against its template, and queues it for the appropriate downstream agent.
+- Scripts run as scheduled tasks via Windows Task Scheduler with trigger "At log on" + restart-on-failure. They are NOT user-launched processes — they survive reboots and run silently.
+- Scripts log every file event to `decision_log` (Phase 2 logging infrastructure) so the file ingestion pipeline is fully auditable.
+
+***Implementation: pillar 2 — scheduled tasks (Task Scheduler):***
+
+- Nightly log export: scheduled task at 02:00 invokes a Python script that exports new `decision_log` and `security_log` entries since the last export to `C:\MFIP\logs\exports\<date>.json`, then commits the new file to the `logs-archive` branch on Git.
+- Weekly digest: scheduled task at 07:00 every Monday invokes a Python script that summarises the past week's pipeline activity (companies analysed, alerts raised, recommendations issued) and sends it as a single email via the alerting pillar.
+- All scheduled tasks are defined in PowerShell scripts committed to `scripts/scheduled_tasks/` so they can be re-applied to a new machine via `./register_tasks.ps1`.
+
+***Implementation: pillar 3 — structured alerting (Gmail SMTP):***
+
+- Single Python module `mfip_alerts.py` (target ~150 lines) implementing three concerns:
+  1. **`Alert` Pydantic model** — schema for any alert. Fields: `correlation_id` (UUID, ties alert to pipeline run, matches `decision_log`/`security_log`), `timestamp` (ISO 8601 UTC), `severity` (Advisory/Warning/Critical), `issuing_agent`, `title`, `summary`, `error_class` (optional), `error_message` (optional), `stack_trace` (optional, truncated to ~30 lines), `context_fields` (dict — company, fiscal year, document path, etc.), `recommended_action` (optional), `dashboard_link` (deep-link to Zone 2 with company pre-selected).
+  2. **`render_alert(alert: Alert)`** — produces a multipart MIME email (HTML primary, plain-text fallback). HTML is severity-color-coded (red Critical, amber Warning, yellow Advisory). Plain-text is a clean structured fallback for clients that don't render HTML.
+  3. **`send_alert(alert: Alert)`** — attempts SMTP send; on any failure, writes the alert payload to `C:\MFIP\runtime\unsent_alerts\<timestamp>_<correlation_id>.json`. Either way, also writes an entry to `security_log` recording the alert and its delivery status.
+- **Self-contained alerts principle:** every alert email is debuggable from its body alone. Magnus should not need to grep logs or remember context to understand what an alert is telling him. The Pydantic model is designed with this in mind — context, error details, and remediation are all first-class fields, not afterthoughts.
+- **Local fallback:** when SMTP fails (network, Gmail throttling, app-password revoked), the alert is never lost. It goes to disk in `unsent_alerts/`. Next successful run of any send-alert path also drains the queue: scans the folder oldest-first, retries each, moves successful sends to `unsent_alerts/sent/<date>/` and leaves persistent failures in place.
+- **Dashboard surface:** Zone 1 (Command Centre) shows a small "X unsent alerts" indicator when `unsent_alerts/` is non-empty. Clicking opens a queue view. This means an alert can never be silently lost — it's either in `magnus.t@live.no`, on disk, or visible in the dashboard.
+
+***Heartbeat — interface in v1, watchdog process in v1.5:***
+
+- The orchestrator (Agent 01) touches `C:\MFIP\runtime\orchestrator.heartbeat` every 60 seconds while running. This is a v1 requirement — approximately 5 lines in the orchestrator's main loop.
+- The watchdog **process** that monitors the heartbeat file and emails an alert when its mtime exceeds 5 minutes is **deferred to v1.5**. v1 is hands-on use where Magnus is at the dashboard daily and a missed crash is a "lost morning of progress" inconvenience, not a "lost data" failure mode. The watchdog becomes meaningful when MFIP is run unattended.
+- By committing to the heartbeat *interface* now, the watchdog process can be added in v1.5 without touching v1 code. The integration point is locked in; the consumer is scheduled.
+
+***Credentials and secrets:***
+
+- Gmail App Password generated for `magnus.thomass1@gmail.com` (requires 2-Step Verification on that account first).
+- Stored at `C:\MFIP\repo\.env` as `MFIP_GMAIL_APP_PASSWORD=...`, `MFIP_GMAIL_SENDER=magnus.thomass1@gmail.com`, `MFIP_GMAIL_RECIPIENT=magnus.t@live.no`.
+- `.env` added to `.gitignore` (verify before first commit of the alerting module).
+- Loaded via `python-dotenv` (added to `requirements.txt` next time it's edited).
+- Future secrets (NewsAPI key, etc.) follow the same pattern — `.env` is the canonical secret store.
+
+***What is NOT being built in v1:***
+
+- No external notification surface other than email. No Discord, no Telegram, no SMS. If email proves insufficient in practice, revisit then.
+- No mobile-friendly approval webpage. Approvals require opening the dashboard.
+- Heartbeat watchdog process is v1.5 (the heartbeat file itself is v1; see above).
+
+**Affected docs:** `00_PROJECT_OVERVIEW.docx`, `01_ARCHITECTURE.docx`, `03_TECH_STACK.docx`, `04_BUILD_SEQUENCE.docx`, `05_DASHBOARD_SPEC.docx`, `06_SECURITY_COUNCIL.docx`, `07_BLOOMBERG_EXPORT_TEMPLATE.docx` — all require updating in a dedicated doc-revision session before Phase 1 build begins. Until those updates land, this decisions.md entry is the canonical reference and supersedes any PA-related guidance in those documents.
+
+**Revisit trigger:**
+
+- If after 4+ weeks of v1 use, email proves insufficient (alerts missed, latency too high, inbox noise unmanageable) — revisit notification surface, with Discord webhook or ntfy.sh as next-best options.
+- If MFIP transitions from hands-on use to unattended/daemon-like operation — promote the heartbeat watchdog from v1.5 to immediate priority.
+- If multi-user access ever becomes a requirement — revisit the whole "Python + Task Scheduler" stack, since it's single-machine by design.
+- If Anthropic ships a Claude-native scheduling/notification primitive that subsumes parts of this layer — revisit whether to migrate.
+- Annual review: re-evaluate whether the Gmail account is still the right sender. If the account changes or 2SV gets disabled, alerting silently breaks.
