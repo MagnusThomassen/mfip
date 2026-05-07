@@ -132,22 +132,30 @@ Critically, Bloomberg's role is restricted to **market data only**. Bloomberg ex
 
 **Revisit trigger:** After v1 has produced 30+ recommendations and Learning Agent activates in v2, evaluate whether the default weighting needs calibration. The current weighting reflects Magnus's Penman-heavy methodology preference; data may suggest different weights.
 
-## 2026-05-07 - Stage 0.2 complete: Python dependencies pinned and smoke-tested
+---
+
+## 2026-05-07 — Stage 0.2 complete: Python dependencies pinned and smoke-tested
+
 **Decision:** Phase 0 Stage 0.2 complete. Python environment fully provisioned per `03_TECH_STACK.docx`, with pinned manifests and an automated environment smoke test.
+
 - `requirements.txt` created at repo root with range-pinned dependencies (e.g. `pandas>=2.2,<3.0`). 14 direct dependencies covering all v1 needs: numerical stack, market/macro data, DuckDB, Dash + AG Grid, document/spreadsheet generation, and PDF extraction.
 - `requirements.lock.txt` generated via `pip freeze` capturing 68 exact pins (direct + transitive) for reproducibility.
 - `scripts/smoke_test_env.py` created. Imports all 14 v1 packages, runs a DuckDB in-memory query, and instantiates a Pydantic BaseModel. Exits 0 on full pass, 1 on any failure.
 - All 16 smoke-test checks passing on Python 3.12.10. Notable resolved versions: pandas 2.3.3, numpy 2.4.4, scipy 1.17.1, pydantic 2.13.4, duckdb 1.5.2, dash 3.4.0, camelot-py 1.0.9, pymupdf 1.27.2.3.
 - Committed as `a258675` on `main`.
+
 **Reasoning:** Pinning via `requirements.txt` (curated ranges) plus `requirements.lock.txt` (exact freeze) gives both readability and reproducibility. Any future machine can reproduce the exact stack via `pip install -r requirements.lock.txt`. The smoke test is the acceptance criterion for environment health -- it runs in under 3 seconds and catches any silent install corruption before it bites a downstream phase.
+
 **Implication:**
 - `transformers` and `torch` (FinBERT for News Agent) deferred to Stage 5.0. Adds ~2.5 GB and a CUDA/CPU decision unnecessary for Phases 0-4. Commented in `requirements.txt` for visibility.
 - Ghostscript binary (Camelot's PDF backend) deferred to Phase 4 start. The Python `camelot-py` package installed cleanly; the system-level Ghostscript only matters when we actually run PDF extraction.
 - `--break-system-packages` flag in `03_TECH_STACK.docx` is irrelevant inside an activated venv on Windows. Worth correcting in that doc next time it is edited so a future re-provisioning does not get confused.
 - `opencv-python-headless` was pulled in instead of full `opencv-python` (Camelot's `[cv]` extra). Preferable for a non-GUI use case -- smaller install, no display dependencies.
 - numpy 2.4.x resolved cleanly across the stack. Worth re-running the smoke test if any package is upgraded later, since NumPy 2.x compatibility issues do still surface in some scientific-Python edges.
+
 **Revisit trigger:** Re-run `scripts/smoke_test_env.py` after every dependency upgrade, before the corresponding phase begins, and whenever the venv is rebuilt on a new machine. If any check fails, do not proceed with the affected phase until resolved.
 
+---
 
 ## 2026-05-07 — Phase 0 closeout (item 1): GitHub remote configured
 
@@ -166,3 +174,21 @@ Critically, Bloomberg's role is restricted to **market data only**. Bloomberg ex
 - `gh` CLI install added GitHub.cli to system PATH. Future PowerShell sessions will see `gh` natively without the manual `$env:Path` refresh used in this session.
 
 **Revisit trigger:** If Magnus moves to a second development machine, repeat `gh auth login` on that machine to register credentials. If repo ever needs to be made public (e.g. for a portfolio piece in a job application), re-evaluate whether the decisions log and methodology should be sanitised first.
+
+---
+
+## 2026-05-07 — Phase 0 item 2: Finance plugins installed via Claude Code CLI 2.1.132
+
+**Decision:** Installed `financial-analysis` (core) and `equity-research` plugins from the `claude-for-financial-services` marketplace (source repo: `anthropics/financial-services-plugins` on GitHub). Skipped `investment-banking`, `private-equity`, and `wealth-management` as out of scope for MFIP. The earlier-doc plugin names `model-builder` and `valuation-reviewer` do not exist in the current marketplace — their capabilities (DCF, comps, 3-statement models) are bundled inside the `financial-analysis` core plugin.
+
+**Reasoning:** The finance plugins are skill scaffolding for Claude Code itself — slash commands like `/dcf`, `/comps`, `/ic-memo` and bundled skill files. They are not runtime dependencies of MFIP and nothing in the agent pipeline imports them. Two plugins covers MFIP's actual scope (equity research and FSA-style modelling) without dragging in IB, PE, or wealth-management verticals that have no place in this project. The marketplace's declared name (`claude-for-financial-services`) differs from the GitHub repo name (`financial-services-plugins`); install commands must use the declared name.
+
+**Implication:**
+- Both plugins shipped with a `hooks.json` containing `[]`, which fails the CLI's schema validator on Claude Code 2.1.132 (the schema expects an object with a required `hooks` record). Patched both files locally to `{"hooks": {}}` to unblock loading:
+  - `C:\Users\MagnusThomassen\.claude\plugins\cache\claude-for-financial-services\financial-analysis\0.1.0\hooks\hooks.json`
+  - `C:\Users\MagnusThomassen\.claude\plugins\cache\claude-for-financial-services\equity-research\0.1.0\hooks\hooks.json`
+- `03_TECH_STACK.docx` plugin install commands corrected: marketplace suffix is `@claude-for-financial-services`, not `@financial-services-plugins`; only the two relevant plugins are listed.
+- `04_BUILD_SEQUENCE.docx` Phase 0 item 2 ticked off.
+- Environment note for future threads: Claude Code CLI on Windows is the install surface. The Claude.ai project chat (where most architecture work happens) does not expose `/plugin` or `/setup-cowork` slash commands, so plugin install cannot happen from inside a project chat session.
+
+**Revisit trigger:** If `claude plugin update` or `claude plugin marketplace refresh` re-pulls the cache from upstream, the `[]` `hooks.json` will return and both plugins will fail to load again — re-apply the `{"hooks": {}}` patch. Periodically (monthly) check `github.com/anthropics/financial-services-plugins` for an upstream fix; once the published `hooks.json` is valid, this entry can be marked resolved.
