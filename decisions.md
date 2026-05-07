@@ -302,3 +302,214 @@ The dashboard remains the canonical state of the system. All approval workflows 
 **Affected docs:** `00_PROJECT_OVERVIEW.docx`, `01_ARCHITECTURE.docx`, `02_AGENT_DESCRIPTIONS.docx`, `03_TECH_STACK.docx`, `04_BUILD_SEQUENCE.docx`, `05_DASHBOARD_SPEC.docx`, `06_SECURITY_COUNCIL.docx`, `07_BLOOMBERG_EXPORT_TEMPLATE.docx`. All updated 2026-05-08 (or confirmed no-op).
 
 **Revisit trigger:** None for this entry — it's a closeout. The architectural decisions that drove it (Power Automate dropped, Python logistics adopted) carry their own revisit triggers in their respective decisions.md entries.
+
+## 2026-05-08 — Bloomberg export: USD standardisation and FX source
+
+**Decision part 1 — Display currency:**
+All Bloomberg exports run with Excel display currency set to USD,
+with one exception: the BETA function, which retains its default
+behaviour (regression in local currency against local index).
+
+**Affected sheets:** HP_Monthly, HP_Daily, Index_HP_Monthly, DVD, EE, RV_Comps
+**Not affected:** BETA (local currency preserved for correct regression)
+
+**Reasoning:**
+1. Reduces manual configuration per session from 6 settings (one per
+   company) to 1 — fewer error sources, faster export.
+2. USD is Bloomberg's default — least friction with Terminal behaviour.
+3. Cross-border comps and portfolio aggregation require a common
+   currency for reconciliation regardless. Standardisation at the
+   source is cleaner than conversion at use.
+4. MSFT — the only USD-listed company in the universe — requires
+   no conversion at all.
+
+**Decision part 2 — FX source:**
+Historical FX rates are pulled from Bloomberg (HP on FX crosses) as
+part of the same export session as company and index data.
+`pandas-datareader` remains in the stack for live FX in the dashboard
+(intraday display only) but is NOT the source of historical rates
+used by the modelling layer.
+
+**FX crosses exported (v1 universe):**
+- `NOKUSD Curncy` — for EQNR, DNB, TEL
+- `DKKUSD Curncy` — for NOVO B
+- `GBPUSD Curncy` — for CKN
+- USD/USD not required (MSFT is native USD)
+
+All FX exports: HP, monthly periodicity, 10-year range — same
+resolution as Index_HP_Monthly.
+
+**Reasoning for BBG as FX source (not pandas-datareader):**
+1. Temporal consistency — FX rates carry the same export timestamp
+   as company and index data. No drift between data sources.
+2. One data source, one failure mode. If a BBG export is missing,
+   the ingestion layer knows immediately that the package is incomplete.
+3. Parser symmetry — FX sheets follow the same HP format as the
+   other price-history sheets. No new parser path required.
+4. pandas-datareader rates can diverge from BBG rates (different
+   underlying sources, different times of day). Mixing them creates
+   subtle reconciliation problems that are difficult to detect.
+
+**FX handling in the ingestion layer remains necessary:**
+- Annual report PDF data arrives in the company's reporting currency
+  (NOK/DKK/GBP/USD) and cannot be changed at the source.
+- The ingestion layer tags BBG data as USD, tags PDF data with native
+  currency derived from the ticker exchange suffix, and maintains an
+  FX table from the three FX exports for conversion at reconciliation
+  time.
+- Conversion happens at use, not at storage — the Verified Dataset
+  retains native values for full audit trail.
+
+**BETA exception:**
+Beta regression must be performed in local currency against the local
+benchmark index to remain methodologically correct (EQNR vs OBX in
+NOK, not both converted to USD). BBG's BETA function handles this
+internally provided display currency is not manipulated before export.
+Documented explicitly in `07_BLOOMBERG_EXPORT_TEMPLATE.docx` checklist.
+
+**Open question — FX snapshot selection at use time:**
+This decision establishes that FX rates are stored as a series of
+point-in-time exports. It does NOT yet specify which snapshot the
+modelling layer uses when reconciling a specific PDF figure with
+a specific BBG figure. Three viable rules:
+
+1. **Most recent snapshot at analysis time** — simplest rule. Risk:
+   when reconciling a 2024 annual report against current BBG data,
+   uses today's FX rate, not the FX rate that was relevant when the
+   PDF was published. Acceptable for live analysis, problematic for
+   any historical comparison.
+
+2. **Snapshot matching PDF publication date** — most temporally
+   correct for reconciling against filed financial statements. Each
+   PDF figure is converted at the FX rate that prevailed when that
+   PDF was published. Adds a lookup step but produces the cleanest
+   reconciliation.
+
+3. **Daily time-series interpolated per analysis date** — most flexible
+   for arbitrary historical analysis. Required for v2 backtesting.
+   Overkill for v1 use cases.
+
+**Provisional default for v1:** Rule 2 (snapshot matching PDF publication
+date) for reconciling PDF-sourced figures with BBG market data, falling
+back to Rule 1 (most recent) when PDF publication date is unavailable
+or when the figure is BBG-native (peer multiples, prices). This balances
+correctness with simplicity. The decision is not final until Phase 4
+(FSA Agent build) — it will be confirmed or revised when the first
+real reconciliation is implemented against EQNR's 2024 annual report.
+
+This open question is flagged as a TODO in `04_BUILD_SEQUENCE.docx`
+Phase 4 so it is not silently absorbed during implementation.
+
+**Affected docs:**
+- `07_BLOOMBERG_EXPORT_TEMPLATE.docx` — Currency handling section,
+  pre-export checklist, BETA function checklist line, quarantine
+  conditions table, and a new FX EXPORTS section with filename
+  convention.
+- `04_BUILD_SEQUENCE.docx` — Phase 3 ingestion layer must validate
+  presence of FX exports against the company universe (e.g., if any
+  Norwegian ticker is in the package, NOKUSD must also be present).
+  Phase 4 must include a TODO referencing the FX snapshot selection
+  rule above. Phase time estimates unchanged — FX parsing reuses the
+  HP parser path.
+
+**Revisit triggers:**
+- If MFIP expands the universe with companies in additional currencies
+  (JPY, CHF, CAD, SEK), add new FX crosses to the export package and
+  update the ingestion validator's required-FX list.
+- If Magnus introduces a base-currency selector in the dashboard in v2,
+  reconsider whether standardisation should move from the export layer
+  to the ingestion layer.
+- If pandas-datareader proves to have better historical coverage than
+  BBG for specific dates, source prioritisation may be revised.
+- **Phase 4 build trigger:** confirm or revise the FX snapshot selection
+  rule against the first real PDF-vs-BBG reconciliation (EQNR 2024).
+  Update this entry with the final decision.## 2026-05-08 — Logistics-layer dependencies pinned and smoke-tested
+
+**Decision:** The three logistics-layer Python packages flagged across
+multiple earlier decisions but never formally pinned (`feedparser`,
+`watchdog`, `python-dotenv`) have been installed, pinned in
+`requirements.txt` under a new "Logistics layer" group, captured in
+`requirements.lock.txt`, and added to the Stage 0.2 smoke test.
+
+**Versions installed:**
+- `feedparser==6.0.12` (with transitive `sgmllib3k==1.0.0`)
+- `watchdog==6.0.0`
+- `python-dotenv==1.2.2`
+
+**Pinning ranges in requirements.txt:**
+- `feedparser>=6.0,<7.0`
+- `watchdog>=6.0,<7.0`
+- `python-dotenv>=1.2,<2.0`
+
+**Commits:**
+- `7474a3f` — deps: add logistics-layer packages (watchdog, dotenv, feedparser)
+- `d9a5ef2` — test: extend smoke test with logistics-layer packages
+
+**Smoke test changes:**
+- Total checks: 16 → 19.
+- `importlib.metadata.version()` introduced as the version-lookup
+  mechanism for `watchdog` and `python-dotenv`, since neither exposes a
+  module-level `__version__` attribute. Pattern available for future
+  packages with the same quirk.
+
+**Reasoning:** These packages were referenced across `01_ARCHITECTURE.docx`,
+`03_TECH_STACK.docx`, `04_BUILD_SEQUENCE.docx`, and the 2026-05-07
+"Power Automate dropped" entry, but the formal pinning kept getting
+deferred. Closing this thread now means a fresh clone of the repo
+followed by `pip install -r requirements.lock.txt` will reproduce the
+exact environment the smoke test validates — the property required
+before Phase 1 build begins.
+
+**Resolves:**
+- 2026-05-07 "Power Automate dropped" entry (line 261): "python-dotenv
+  added to `requirements.txt` next time it's edited" — done.
+- 2026-05-08 doc-revision pass entry (line 299): "feedparser ... has
+  not been added to `03_TECH_STACK.docx`" — partially done. Requirements
+  side resolved here. Doc update to `03_TECH_STACK.docx` carried into
+  the 2026-05-09 morning doc-revision session.
+
+**Affected docs:**
+- `requirements.txt` — new "Logistics layer" group added.
+- `requirements.lock.txt` — regenerated, 68 → 72 pins.
+- `scripts/smoke_test_env.py` — three new import checks, new
+  `importlib.metadata` import.
+- `03_TECH_STACK.docx` — pending update in 2026-05-09 morning session
+  (Stack Overview table needs `feedparser` row; pip install line needs
+  `feedparser` appended to existing `watchdog python-dotenv`).
+
+**Revisit trigger:** When upgrading any of these three packages, re-run
+the smoke test. If watchdog moves to 7.x or python-dotenv to 2.x, the
+pinning ranges need a deliberate decision rather than an automatic bump.
+
+---
+
+## Carried into 2026-05-09 morning doc-revision session
+
+Three documentation threads remain open from 2026-05-08 evening's
+work. They are batched for a single focused session before the
+Bloomberg lab visit:
+
+1. **`03_TECH_STACK.docx`** — add `feedparser` to Stack Overview table
+   and Python Environment Setup pip install line. Verify `watchdog`
+   and `python-dotenv` rows from 2026-05-08 PA-removal pass are
+   present.
+
+2. **`07_BLOOMBERG_EXPORT_TEMPLATE.docx`** — five edits implementing
+   the USD standardisation and FX-source decision (see 2026-05-08
+   "Bloomberg export: USD standardisation and FX source" entry):
+   - Pre-export checklist: USD-at-session-start
+   - Per BBG function: BETA exception note + checklist line update
+   - Currency handling section: full rewrite
+   - Quarantine conditions table: new BETA-currency row
+   - New FX RATE EXPORTS section between Required Sheets and Export
+     Session Checklist
+
+3. **`04_BUILD_SEQUENCE.docx`** — three additions:
+   - Phase 3: FX-presence validator checklist item
+   - Phase 4: `pdf_publication_date` field in ExtractionOutput schema
+   - Phase 6: split FSA Agent step into reformulation + FX-snapshot-rule
+     checkboxes
+
+After the doc-revision pass, README.md "Last sync" date moves to
+2026-05-09 and local working copies are refreshed from the project
+knowledge base.
