@@ -148,3 +148,21 @@ Critically, Bloomberg's role is restricted to **market data only**. Bloomberg ex
 - numpy 2.4.x resolved cleanly across the stack. Worth re-running the smoke test if any package is upgraded later, since NumPy 2.x compatibility issues do still surface in some scientific-Python edges.
 **Revisit trigger:** Re-run `scripts/smoke_test_env.py` after every dependency upgrade, before the corresponding phase begins, and whenever the venv is rebuilt on a new machine. If any check fails, do not proceed with the affected phase until resolved.
 
+
+## 2026-05-07 — Phase 0 closeout (item 1): GitHub remote configured
+
+**Decision:** Local repo at `C:\MFIP\repo` pushed to a new private GitHub remote at `https://github.com/MagnusThomassen/mfip`. All 7 commits and 25 objects on `main` now mirrored to GitHub. `origin/main` set as upstream for local `main`.
+
+- Auth method: GitHub CLI (`gh` 2.92.0) via HTTPS + browser device flow. Credentials persisted in Windows Credential Manager — no token to manage manually, no SSH key generated.
+- Repo created with `gh repo create mfip --private --source=. --remote=origin`. Visibility verified Private in browser. Description set to "Magnus Financial Intelligence Platform - personal equity analysis system (private)".
+- `.venv/` correctly excluded from push (verified via GitHub file listing) — `.gitignore` from Stage 0.1 is working as intended.
+
+**Reasoning:** Private repo is mandatory because the methodology, agent prompt seeds, and decisions log together represent the analytical IP of the project. GitHub CLI was chosen over SSH keys or PAT because (a) browser auth is the lowest-friction setup on a fresh Windows machine, (b) credentials are managed by Windows itself rather than a file Magnus has to protect, and (c) `gh` becomes available for future operations like creating issues, PRs, or a `logs-archive` branch from the terminal without context switching. The trade-off is one extra tool installed; the benefit is that future GitHub-side operations are scriptable from PowerShell.
+
+**Implication:**
+- All future commits should be pushed regularly. Phase 0 work to date had no off-machine backup — that gap is now closed.
+- The `logs-archive` branch referenced in Phase 2 (nightly JSON log export, `04_BUILD_SEQUENCE.docx`) can be created and pushed as a separate branch when Phase 2 begins. No action required in Phase 0.
+- Repo description currently says "personal equity analysis system" — sufficient for now. A proper `README.md` is deferred until there is something user-facing to describe (likely after Phase 1 dashboard shell is buildable).
+- `gh` CLI install added GitHub.cli to system PATH. Future PowerShell sessions will see `gh` natively without the manual `$env:Path` refresh used in this session.
+
+**Revisit trigger:** If Magnus moves to a second development machine, repeat `gh auth login` on that machine to register credentials. If repo ever needs to be made public (e.g. for a portfolio piece in a job application), re-evaluate whether the decisions log and methodology should be sanitised first.
