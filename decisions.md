@@ -109,3 +109,25 @@ Critically, Bloomberg's role is restricted to **market data only**. Bloomberg ex
 - Future companies added to coverage universe automatically inherit the template — no per-company customization needed.
 
 **Revisit trigger:** First lab session (to confirm sheet naming convention against BBG defaults). Subsequently, when BBG meaningfully changes its export format (rare), or when a new BBG function is needed.
+
+---
+
+## 2026-05-07 — Session B complete: design docs aligned to DCF + RE + DDM methodology
+
+**Decision:** Three design documents have been regenerated and uploaded to the project knowledge base, replacing the previous versions:
+
+- `02_AGENT_DESCRIPTIONS.docx` — fully expanded to all 19 agents with Role, Inputs, Outputs, Key Behaviour, Failure Mode, and Prompt Guidance Seed for each. The single DCF Agent has been split into three sibling intrinsic-value agents (DCF Agent #10, RE Valuation Agent #11, DDM Agent #12). Chief Analyst (#15) rewritten with full triangulation logic: method-applicability filter, convergence-based confidence (±15% HIGH, ±25% MEDIUM, wider LOW), default weighting (35% DCF, 35% RE, 20% DDM, 10% Comps, Shock as downside floor), and explicit divergence-diagnostic patterns. New methodology appendix included.
+
+- `01_ARCHITECTURE.docx` — Layer 4 updated to list six modelling agents (FSA, DCF, RE Valuation, DDM, Comps, Shock). Data Flow paragraph rewritten to reflect FSA-first ordering (because RE depends on reformulated statements), then three intrinsic-value agents in parallel with Comps, then Shock. Bloomberg-scope callout added. Key constraints list expanded.
+
+- `04_BUILD_SEQUENCE.docx` — Phase 0 status reflects what's complete (Stage 0.1 done). Phase 3 rewritten as Bloomberg Ingestion Layer referencing the export template. Phase 6 expanded to ~10-14 hours with six explicit build steps in correct order. Phase 7 Chief Analyst expanded with triangulation, applicability filter, and confidence calibration steps. V2 phases section added.
+
+**Reasoning:** These docs needed to align with the methodology decision logged earlier today. Without alignment, the agent descriptions doc (which is the spec the modelling code will be written against) would not match the architectural intent, leading to drift during Phase 6 build.
+
+**Implication:**
+- Phase 6 estimate increased from ~6-8 hours (single DCF) to 10-14 hours (three valuation agents + FSA + Comps + Shock).
+- FSA Agent's reformulated statements (Reformulated_IS, Reformulated_BS) are now an explicit hard prerequisite for RE Valuation Agent — captured in agent descriptions and architecture constraints.
+- Agent prompt seeds in `02_AGENT_DESCRIPTIONS.docx` are the starting points for system prompts when each agent is built. Expand at build time, do not improvise from scratch.
+- Chief Analyst's default weighting (35/35/20/10) should be revisited after first 30 recommendations, when Learning Agent data accumulates in v2.
+
+**Revisit trigger:** After v1 has produced 30+ recommendations and Learning Agent activates in v2, evaluate whether the default weighting needs calibration. The current weighting reflects Magnus's Penman-heavy methodology preference; data may suggest different weights.
