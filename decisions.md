@@ -942,3 +942,128 @@ The applied edits reflect this final state, not the original brief's draft.
 **Affected docs:** `01_ARCHITECTURE.docx`, `04_BUILD_SEQUENCE.docx`, `07_BLOOMBERG_EXPORT_TEMPLATE.docx` — all updated 2026-05-09.
 
 **Revisit trigger:** None — this is a closeout entry. The architectural decisions that drove the storage layout carry their own revisit triggers in the 2026-05-09 "Bloomberg storage architecture" entry.
+
+## 2026-05-09 — Pre-Phase-1 cleanup and doc-alignment pass: state validated, repo cleaned, CLAUDE.md and SYSTEM_PROMPT.docx aligned, .env created
+
+**Decision:** Before starting Phase 1 (dashboard shell), the local MFIP state was validated against the design docs and seven gaps were closed in a single coherent pass spanning repo hygiene, doc alignment, and infrastructure. This entry records what was found, what was fixed, the resulting commits, and the off-repo changes (`.env` and the project's Custom Instructions). The pass establishes a fully validated working tree and an internally consistent doc set as the starting point for Phase 1.
+
+**State validation outcome:**
+
+A read-only PowerShell sweep (folder structure, Git state, venv, `.gitignore`, key files) confirmed Phase 0 deliverables intact: all eight top-level `C:\MFIP\` directories present; `bloomberg_archive\` per-company date-stamped layout matches the storage architecture (six ticker folders plus `FX\` and `INDICES\`, each with a `2026-05-08\` date subfolder); five ticker folders under `filings\` with no date subfolders (durable-artefact pattern); all 11 design docs present at `C:\MFIP\docs\`; venv healthy at `C:\MFIP\repo\.venv\`; repo on `main` synced with `origin/main` before the cleanup commits. Seven gaps surfaced; all closed in this pass.
+
+**Gap 1 — `templates\` was untracked in Git (closed; commit `5c9db87`):**
+
+The 2026-05-09 "Bloomberg storage architecture" entry stated that master templates are Git-versioned in `repo\templates\bloomberg\` with every change carrying a commit hash referenceable from `decisions.md`. The templates were physically present on disk but had never been `git add`ed — the canonical-source-of-truth claim was structurally true but not actually true at the commit level. Seven files added in one commit: three `.xlsx` masters (FX, Indices, Ticker) and four supporting `.py` files. Total 643 lines across the seven files.
+
+**Gap 2 — `decisions.md` had 431 unstaged lines (closed; commit `af3f02d`):**
+
+Two architectural entries logged earlier on 2026-05-09 were sitting in the working tree uncommitted: the ANR Consensus addition to the Bloomberg export template, and the doc-revision-pass closeout (template restructured, ANR added, Session Execution Matrix added, Build Sequence Phase 3 FX validator updated, Tech Stack feedparser row added). Both committed as a single decisions.md commit so the architectural record matched what was on the GitHub remote.
+
+**Gap 3 — `CLAUDE.md` was stale (closed; commit `dac7e3b`):**
+
+The Claude Code session-bootstrap file `C:\MFIP\repo\CLAUDE.md` contradicted current architecture in four places: (1) named Power Automate as the logistics layer (dropped on 2026-05-07 in favour of Python `watchdog` + Task Scheduler + `mfip_alerts.py`); (2) status block read "Pre-build... Next phase: Phase 0" when Phase 0 was complete and Phase 1 was next; (3) claimed the repo did not contain design docs (local copies exist at `C:\MFIP\docs\` per `docs\README.md`); (4) storage-layout diagram showed flat `bloomberg_archive\` with no per-company date-stamped subfolders, no shared `_INDICES\`/`_FX\`, no `repo\templates\bloomberg\`, and no `docs\` directory. File rewritten end-to-end. Substantive changes:
+
+- **"How to start each session"** section restructured. New rule for design-doc reads: routine lookups (colour values, sheet names, zone dimensions) read local without confirmation; architectural reads (constraints, agent contracts, decisions to be encoded in code) read local then ask the user "`docs\README.md` last sync is `<date>`. Is the chat project library newer?" before proceeding. Codifies the local-as-working-copy / chat-project-as-canonical relationship from `docs\README.md`.
+- **Architectural rules** expanded from 7 to 9. Rule 6 rewritten from Power Automate to "Python handles logistics, Claude agents handle intelligence" with the three-pillar specifics. New rules 8 (Bloomberg = market data only) and 9 (FSA before RE) made explicit.
+- **Storage layout diagram** rewritten to match current architecture. Shows `bloomberg_inbox\` as dormant-in-v1, per-company date-stamped subfolders under `bloomberg_archive\`, underscore-prefixed `_INDICES\` and `_FX\` for shared workbooks, flat `filings\<TICKER>\` for PDFs, `models\<TICKER>\<DATE>\` for agent-generated Excel, `docs\` as local design-doc copies, `repo\templates\bloomberg\` with the three subfolders, and `.env` shown as gitignored with `python-dotenv` annotation.
+- **Current status** updated from "Pre-build" to "Phase 0 complete; Phase 1 next: dashboard shell".
+- **New "Ending a session" section** added at the end of the file. Sessions end only when Magnus explicitly says so. The final reply must be a handoff prompt for the next session containing: where we left off (with last commit hash if relevant); current state (clean working tree, uncommitted work, running tools); next action (single concrete step); open questions or blockers; files touched this session. Format is a single Markdown block Magnus can paste into the next session's first message. End-of-session is not inferred from the conversation tailing off.
+
+**Gap 4 — `.env` did not exist (closed; not committed — file is gitignored by design):**
+
+Per the 2026-05-07 logistics-layer decision, `C:\MFIP\repo\.env` should hold three values for `mfip_alerts.py` (Phase 2): `MFIP_GMAIL_APP_PASSWORD`, `MFIP_GMAIL_SENDER` (`magnus.thomass1@gmail.com`), `MFIP_GMAIL_RECIPIENT` (`magnus.t@live.no`). The file did not exist at validation time. Originally proposed to defer to Phase 2 start; Magnus elected to close it now while in scope. 2-Step Verification was already enabled; one App Password generated under the name "MFIP" via `myaccount.google.com/apppasswords`; `.env` written via PowerShell using a `Read-Host -AsSecureString` flow that prevented the password from entering shell history or appearing on screen, with the SecureString-to-plaintext conversion zeroed out of memory immediately after the file write. Verification confirmed: file exists, three lines, password length 16 characters, all three keys present, `git status --short .env` returns silence (file is ignored), `.env` appears as line 29 of `.gitignore`. Credentials remain unvalidated end-to-end until Phase 2 — `mfip_alerts.py` doesn't exist yet — but the file is in place with the right shape for `python-dotenv` to load when needed.
+
+**Gap 5 — `SYSTEM_PROMPT.docx` was stale and in Norwegian (closed; updated in `C:\MFIP\docs\` and project library, project Custom Instructions synced):**
+
+Three issues: (1) status block read "Pre-build" when Phase 0 was complete; (2) document list omitted `07_BLOOMBERG_EXPORT_TEMPLATE.docx` and `decisions.md` despite both being referenced throughout the project; (3) bio sentence still listed Power Automate as part of Magnus's background, which has become misleading since PA was dropped from the architecture. Magnus elected to also translate the entire document from Norwegian to English to make English the primary working language for the project (chat-side Claude continues in English; Magnus may reply in Norwegian when convenient). The full document was rewritten via the `docx` skill (unpack → edit XML → repack) to preserve all original Word styling — Arial fonts, dark blue heading colour `#1A4A7A`, table borders `#B0C8E8`, alternating cell shading `#FFFFFF` / `#F4F8FD`, blue header rule `#2E75B6`, sizes, spacing. Substantive content changes:
+
+- **Bio sentence** trimmed: removed econometrics (irrelevant to MFIP, relevant to dissertation which is a separate project), Power Automate (dropped from architecture), Max subscription (doesn't change response shape). Kept Kingston (relevant — Bloomberg lab is part of architecture), MSc Finance (relevant — informs depth of finance discussion), Python, Bloomberg, Windows desktop.
+- **Status block** updated to "Phase 0 complete. Repo, venv, GitHub remote, finance plugins, Bloomberg templates Git-versioned, .env created. Next action: Phase 1 — dashboard shell (Plotly Dash + AG Grid, four zones, placeholder data throughout). Blockers: None. Working tree clean as of the 2026-05-09 cleanup pass."
+- **Document list** extended with `07_BLOOMBERG_EXPORT_TEMPLATE.docx` (Bloomberg export contract) and `decisions.md` (architectural decisions log; lives in repo, not in project library), placed in correct positions with correct alternating-shading pattern.
+- **New "ENDING A SESSION" section** added at end of document, mirroring the rule added to `CLAUDE.md`. Both Claudes (chat-side architect and Claude Code builder) now share the same end-of-session protocol.
+
+The project's Custom Instructions (the active prompt pasted into the project settings UI, distinct from the `.docx` documentation of it) was updated in parallel by Magnus to keep the active prompt aligned with the documented version. Both surfaces — the documented `.docx` and the active project instructions — are now in sync.
+
+**Gap 6 — Superseded `.py` generator scripts under `templates\bloomberg\` (closed; commit `7b9d33c`):**
+
+The Gap 1 commit added four `.py` files alongside the three `.xlsx` masters: `build_bbg_fx.py`, `build_bbg_indices.py`, `build_bbg_template.py`, `verify_bbg_template.py`. These were the original template-generator scripts from Claude Code's first build, written before the BDP/BDH workflow was adopted. The `.xlsx` templates have since diverged on every dimension that matters: 7-sheet master with RV_Comps added per-company at the lab, ANR added as 7th sheet on 2026-05-09, BDP/BDH formula structure, USD display-currency standardisation, FX-source decision, and the Session Execution Matrix. Running the generator scripts today would produce `.xlsx` files that do not match the canonical templates actually in use. The scripts were not Phase 3 ingestion code (Phase 3 is parsers, written in `scripts/`, written from the design-doc spec, not derived from these). Backup analysis confirmed the scripts are recoverable from Git history (`git checkout 5c9db87 -- templates/bloomberg/Template_*/`) — University OneDrive carries only `.xlsx` files lab↔home, the project library has only the `.xlsx` files, and `C:\BACKUP - MFIP\` depends on refresh timing. With Git as the canonical immutable record, deletion was the right cleanup. Four files removed in one commit (643 lines deleted); the deletion commit message itself documents the reason and recovery path so no separate `decisions.md` entry was needed at the cleanup level.
+
+**Gap 7 — End-of-session protocol gap between Claude Code and chat-side Claude (closed alongside Gaps 3 and 5):**
+
+The originally drafted closeout for this pass flagged the end-of-session rule as added only to `CLAUDE.md`, with the `SYSTEM_PROMPT.docx` mirror as a "possible future doc-revision item." Magnus elected to close that gap immediately rather than defer. Both surfaces now carry the same rule: a session ends only when Magnus explicitly signals it, and the final reply must be a structured handoff prompt covering where we left off, current state, next action, open questions, and files touched. End-of-session is not inferred from conversation tailing off, going quiet, or work appearing complete. Format: single Markdown block paste-ready for the next session.
+
+**Reasoning:**
+
+- The seven gaps shared a common root cause: each was either (a) work decided in chat but never landed in the repo, (b) doc-state lagging architectural-state, or (c) infrastructure prerequisite that would have blocked a downstream phase. Without this pass, Phase 1 would have started from a working tree where the canonical-source-of-truth claims in `decisions.md` did not match Git history, where Claude Code's session bootstrap would have misled any new session it loaded, where the chat-side Custom Instructions would have continued to mention dropped tools, and where the Phase 2 logistics layer would have hit a missing-credential blocker. Closing all seven together preserves the audit trail (one entry, one date) rather than scattering closeouts across multiple entries.
+- Doing this validation pass before Phase 1 — rather than during — protects the build flow. Phase 1 is dashboard-shell work, design-and-iteration heavy, and benefits from not being interrupted by infrastructure questions about whether templates are committed, whether `.env` exists, or whether the system prompt still mentions Power Automate.
+- The `.docx` editing approach (unpack → edit XML → repack, per the `docx` skill) was used after the lesson recorded earlier in 2026-05-09 — that the project library exposes `.docx` files as Markdown text extracts, and editing those extracts produces files that lose Word styling on reimport. The unpack-edit-repack approach preserved every styling element (fonts, colours, table shading, spacing). 83 text runs replaced in a single pass for the Norwegian → English translation, all matched cleanly with no fallthrough cases.
+- The decision to delete the superseded `.py` generator scripts rather than mark them stale was driven by the GitHub backup story: Git history is a stronger backup than any of the four other backup mechanisms (University OneDrive, project library, `C:\BACKUP - MFIP\`, none of which actually carry the `.py` files anyway). With deletion fully reversible from `5c9db87`, the cost of "delete now and want them back later" is one Git command, while the cost of "leave clutter and step around it for months" is real friction every time the templates folder is opened.
+
+**Implication:**
+
+- Working tree clean as of commit `7b9d33c` plus the (gitignored) `.env` file. Phase 1 can begin from a fully validated state.
+- The architectural record matches the repo state on every concern checked: storage layout, templates Git-versioning, design-doc local copies, logistics layer, session bootstrap, alerting credentials, end-of-session protocol, and template-folder hygiene.
+- Both Claude surfaces (chat-side architect, Claude Code builder) share the same end-of-session rule. Handoffs between sessions — and between the two Claudes — should now produce consistently structured output.
+- Project's primary working language is now English. Chat-side Claude responds in English; Magnus may reply in Norwegian when convenient. `SYSTEM_PROMPT.docx` and the active Custom Instructions are both in English.
+- Gmail App Password is unvalidated until Phase 2 builds `mfip_alerts.py` and runs the first test send. If the credential proves invalid at that point — typo on paste, App Password revoked, 2SV setting changed — the recovery path is delete the entry from `myaccount.google.com/apppasswords`, generate a new one, rewrite `.env` via the same PowerShell flow.
+- Storage-architecture entry's mention of "the .xlsx template plus the initial Python parser file from Claude Code's earlier build" is technically inaccurate after the Gap 6 deletion. Historical entries describe what was true at the time, not what is true now, and the deletion commit explains the change, so the historical entry was not amended.
+
+**Affected docs (in this pass):**
+- `CLAUDE.md` (in repo) — rewritten end-to-end.
+- `SYSTEM_PROMPT.docx` (in `C:\MFIP\docs\` and the project library) — translated to English, structural updates, new ENDING A SESSION section.
+- Project Custom Instructions (in the Claude project settings UI) — synced with the updated `SYSTEM_PROMPT.docx`.
+- No design docs (the architectural design-doc set 00–07 + V2_BACKLOG) were edited; all already in alignment.
+
+**Revisit trigger:**
+
+- Phase 2 first SMTP test: confirm Gmail App Password works end-to-end. If it fails, follow the recovery path above and update this entry with the failure mode and resolution.
+- Future Claude Code sessions: the new `CLAUDE.md` design-docs rule (read local + freshness check on architectural reads) should be confirmed working in practice. If sessions either skip the freshness check too aggressively or ask for confirmation on every routine lookup, the rule needs calibration.
+- Future chat sessions: the new ENDING A SESSION rule on the chat side should be confirmed producing useful handoff prompts. If the required-fields list misses key context in practice, refine in `SYSTEM_PROMPT.docx` and `CLAUDE.md` together (both must stay in sync).
+- If the project library and `C:\MFIP\docs\` drift again — i.e. one is updated and the other is not — surface it as an Advisory at the next doc-revision pass. The freshness check rule in `CLAUDE.md` is the early-warning mechanism, but is not foolproof.
+
+## 2026-05-09 — Correction: superseded `.py` generator scripts were less divergent than the deletion entry implied
+
+**Decision:** This entry corrects the previous "Pre-Phase-1 cleanup" entry (this same date), specifically the Gap 6 description of the four deleted `.py` template-generator scripts. On reading the actual file contents post-deletion, the divergence-from-canonical claim was overstated. The deletion is not reversed — the files remain absent from the working tree at HEAD and recoverable from Git history at `5c9db87`. This entry adjusts the record so future sessions reading `decisions.md` understand what was actually deleted.
+
+**What the previous entry said (overstated):**
+
+The Gap 6 description characterised the four scripts as having diverged from the canonical templates on "every dimension that matters: 7-sheet master with RV_Comps added per-company at the lab, ANR added as 7th sheet on 2026-05-09, BDP/BDH formula structure, USD display-currency standardisation, FX-source decision, and the Session Execution Matrix." It stated that "running the generator scripts today would produce `.xlsx` files that do not match the canonical templates actually in use."
+
+**What the file contents actually showed (when read post-deletion):**
+
+`build_bbg_template.py` (446 lines) builds a 7-sheet master workbook using the BDP/BDH formula approach. Specifically:
+
+- **Sheet structure:** CONFIG, BETA, DVD, EE, RV_Comps, ANR, HP_Monthly, HP_Daily — matches the current canonical 7-sheet master exactly.
+- **ANR sheet:** present with the correct fields — `BEST_ANALYST_RATING`, `TOT_BUY_REC`, `TOT_HOLD_REC`, `TOT_SELL_REC`, `BEST_TARGET_PRICE`, `TOT_ANALYST_REC`. The previous entry's claim that the scripts predated ANR was wrong.
+- **BDP/BDH formulas:** the script uses BDP and BDH throughout (not legacy paste-from-screen). The previous entry's implication that the scripts predated the BDP/BDH workflow was wrong.
+- **CONFIG-driven references:** every formula references `CONFIG!$B$3` (ticker) and `CONFIG!$B$4` (currency), matching the contract the Phase 3 parser will read against.
+- **Number formats, currency overrides:** `EQY_FUND_CRNCY` parameter on currency-sensitive fields, percentage formatting on LTG, multiplier formatting on RV_Comps.
+
+`build_bbg_fx.py` and `build_bbg_indices.py` (85 lines each) build the corresponding FX and indices workbooks with BDH formulas, instructions, and the date-stamped filename convention from the storage architecture.
+
+`verify_bbg_template.py` (27 lines) loads the saved master and prints the BDP/BDH formulas per sheet — a sanity check, not business logic.
+
+**Where the scripts actually diverge from the current canonical state:**
+
+The divergence is narrow, not broad:
+
+- **RV_Comps column set:** the script encodes 4 multiples (EV/EBITDA, P/E, EV/Sales, P/Book). The actual lab workflow uses a Bloomberg-Terminal-side named layout with additional metrics (ROE, growth metrics) and renames the sheet from `RV` to `RV_Comps`. This was always a deliberate omission — the RV column set is a *terminal-side* contract, not a template-side contract, per the 2026-05-09 storage-architecture closeout. The script's RV_Comps is a placeholder that the lab workflow overrides at the terminal.
+- **Hardcoded export-end date in BDH ranges:** `build_bbg_fx.py` and `build_bbg_indices.py` hardcode `"20260508"` as the export-end date in their BDH calls. These would need to be parameterised before re-use, but that is a 2-line edit, not an architectural rebuild.
+
+Everything else — USD display-currency standardisation, CKN GBp double-conversion handling, FX snapshot selection rule — is correctly *not* in the templates because those are runtime-side concerns (the lab checklist enforces the first; the Phase 3 parser will handle the others). The previous entry conflated "not in the template script" with "out of date in the template script." It is the former.
+
+**Reasoning:**
+
+- The original deletion was driven by the assumption that the scripts were architecturally stale and would produce non-current `.xlsx` files. That assumption was wrong: run today, `build_bbg_template.py` would produce a master that matches the canonical 7-sheet structure on every dimension except the deliberate RV_Comps placeholder. The scripts have genuine archival value as executable documentation of what the current `.xlsx` files contain — readable in a way that openpyxl post-hoc inspection isn't, and useful as a reference when writing the inverse Phase 3 parser.
+- The deletion is nonetheless not reversed. Three reasons: (1) the files are durably recoverable from Git history at commit `5c9db87` via `git checkout 5c9db87 -- templates/bloomberg/Template_*/`, so their absence from HEAD is not data loss; (2) the canonical `.xlsx` masters themselves remain Git-versioned and serve as the authoritative artefact, so the `.py` files are reference material rather than source-of-truth; (3) flipping the deletion in a separate restore commit would clutter the history without changing the underlying availability. The cost of "leave them in history, document accurately" is lower than the cost of "restore and re-explain why they're back."
+- The mistake worth flagging for future sessions: the original assessment characterised file content from filename and decisions.md context alone, without reading the actual code. When evaluating whether something is stale, read the thing. Magnus's local copies surfaced the actual content and made the correction possible.
+
+**Implication:**
+
+- Future sessions reading the cleanup-pass entry should also read this correction. The deletion stands; the rationale shifts from "broadly superseded" to "narrow placeholder divergence + archival reference replaced by Git history."
+- If a Phase 3 parser-build session ever wants to consult the original BDP/BDH formula set as a reference for parsing, the recovery path is `git checkout 5c9db87 -- templates/bloomberg/Template_*/` into a temp location, read, then revert. The scripts are reference material, not active code.
+- The same pattern of "evaluate from filename and context, then realise the content is different" should be guarded against in future doc-revision passes. When the cost of reading the file is small (it always is, for a few-hundred-line script), reading first is the right default.
+
+**Affected docs:** None — this is a correction to the same-date cleanup-pass entry above, not a design-doc change.
+
+**Revisit trigger:** None — this is a closeout correction. If the four `.py` files are ever restored to the working tree, log a new entry recording the restoration and its motivation.
