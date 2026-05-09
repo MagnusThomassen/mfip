@@ -423,7 +423,9 @@ Phase 4 so it is not silently absorbed during implementation.
   BBG for specific dates, source prioritisation may be revised.
 - **Phase 4 build trigger:** confirm or revise the FX snapshot selection
   rule against the first real PDF-vs-BBG reconciliation (EQNR 2024).
-  Update this entry with the final decision.## 2026-05-08 — Logistics-layer dependencies pinned and smoke-tested
+  Update this entry with the final decision.
+
+## 2026-05-08 — Logistics-layer dependencies pinned and smoke-tested
 
 **Decision:** The three logistics-layer Python packages flagged across
 multiple earlier decisions but never formally pinned (`feedparser`,
@@ -513,3 +515,430 @@ Bloomberg lab visit:
 After the doc-revision pass, README.md "Last sync" date moves to
 2026-05-09 and local working copies are refreshed from the project
 knowledge base.
+
+## 2026-05-09 — ANR Consensus added to Bloomberg export template
+
+**Decision:** ANR (Analyst Recommendations) is added as a seventh required
+sheet in each company workbook. Sheet name: ANR. BBG function: ANR on ticker.
+
+**Reasoning:** The Dashboard Spec (05_DASHBOARD_SPEC.docx Zone 3D — Analyst
+Consensus Tracker) specifies display of current consensus rating, buy/hold/sell
+breakdown, and MFIP-vs-Street comparison. The existing EE sheet covers forward
+EPS/revenue/EBITDA estimates but does not provide the rating distribution — that
+gap was unresourced. ANR closes it. The Agent 06 (News Agent) description in
+02_AGENT_DESCRIPTIONS.docx listed "analyst rating changes from Bloomberg EE
+sheet" as an input, which was a misconception (EE is estimates, ANR is
+recommendations) — this decision corrects the source. Marginal export cost at
+the lab is ~30 seconds per company.
+
+**Implication:**
+- 07_BLOOMBERG_EXPORT_TEMPLATE.docx: ANR row added to Required Sheets table;
+  ANR step added to Per BBG function checklist; count updated from six to seven
+  sheets; Relationship to Modelling Agents table updated (News Agent + Chief
+  Analyst consume ANR).
+- 02_AGENT_DESCRIPTIONS.docx: Agent 06 News Agent inputs — "analyst rating
+  changes from Bloomberg EE sheet" corrected to "Bloomberg ANR sheet". Deferred
+  to next doc-revision session.
+- 04_BUILD_SEQUENCE.docx: Phase 3 ingestion layer validates ANR sheet presence
+  alongside the other six required sheets. Covered by Edit 3 this session.
+- Session Execution Matrix: ANR column added as the 7th function per company row.
+
+**Revisit trigger:** If ANR proves to have sparse coverage for any company in
+the universe (some smaller tickers have few or no analyst ratings), flag as
+Advisory in the ingestion layer rather than quarantining — missing ANR is
+degraded functionality, not a data-integrity failure.
+
+## 2026-05-09 — Doc-revision pass complete: Bloomberg template restructured, ANR added, Session Execution Matrix added, Build Sequence Phase 3 FX validator updated, Tech Stack feedparser row added
+
+**Decision:** Three design documents updated in a focused pre-lab session.
+All changes reflect decisions already logged in decisions.md — this entry
+records the doc-revision pass itself.
+
+**Docs updated this session:**
+- `03_TECH_STACK.docx` — feedparser row added to Stack Overview table
+  (pip install line already had it; table was missing the entry).
+- `07_BLOOMBERG_EXPORT_TEMPLATE.docx` — major revision implementing the
+  2026-05-08 USD standardisation and FX source decision: pre-export checklist
+  updated (USD-once-per-session), BETA exception documented, Currency handling
+  section rewritten, BETA-in-USD quarantine row added, Index_HP_Monthly removed
+  from company sheets, new INDICES WORKBOOK and FX WORKBOOK sections added,
+  FILE NAMING CONVENTION updated for three file families, ANR added as seventh
+  required sheet, SESSION EXECUTION MATRIX added (8 files × 7 functions).
+- `04_BUILD_SEQUENCE.docx` — Phase 3: stale single-sheet validation step
+  replaced with three items covering company workbooks, INDICES workbook,
+  and FX workbook validation including pandas-datareader fallback check and
+  BETA currency detection.
+
+**Deferred to next doc-revision session:**
+- `02_AGENT_DESCRIPTIONS.docx` — News Agent input: "analyst rating changes
+  from Bloomberg EE sheet" should be corrected to "Bloomberg ANR sheet".
+
+**Affected docs:** `03_TECH_STACK.docx`, `07_BLOOMBERG_EXPORT_TEMPLATE.docx`,
+`04_BUILD_SEQUENCE.docx` — all updated 2026-05-09.
+
+**Revisit trigger:** None — this is a closeout entry.2026-05-08 — Automated filings acquisition flagged as v2 (Playwright held in reserve)
+Decision: Automated annual-report PDF acquisition is added to V2_BACKLOG.docx as deferred component #5. V1 continues to use manual PDF drops to C:\MFIP\filings\<TICKER>\. When v2 work begins, the fetcher follows a cheap-to-expensive hierarchy: regulator APIs first (SEC EDGAR, Oslo Børs announcements, Companies House, Nasdaq Copenhagen), then RSS/Atom feeds, then direct HTTP GET on known IR URLs, with headless browser automation (Playwright) held in reserve only for JS-rendered or anti-bot-protected sites that defeat the first three.
+The fetcher is implemented as a scheduled Python script in scripts/fetchers/, not as an agent. Filings acquisition is logistics, not intelligence, and falls under the v1 principle "Python handles logistics, Claude handles intelligence" (see 2026-05-07 "Power Automate dropped" entry). The downstream pipeline does not change — the fetcher drops PDFs into the existing filings inbox and the existing watchdog picks them up.
+Reasoning: Three reasons to flag now rather than wait. (1) The architectural intent — logistics-not-agent, cheap-to-expensive hierarchy, no downstream pipeline changes — is easier to record while the reasoning is fresh than to reconstruct in v2. (2) Playwright was raised as a candidate plugin during the v1 build, and it earns no place in v1; recording where it might earn a place in v2 prevents future re-litigation of the same question. (3) Automation has real but bounded value at 6 companies — the cost-benefit shifts decisively in favour of automation when the universe expands or when MFIP transitions to unattended operation, and naming those triggers explicitly makes the v2 activation decision crisp rather than vibe-based.
+Implication:
+
+V2_BACKLOG.docx gains a fifth deferred component with the four-tier acquisition hierarchy and explicit oppstartskriterier.
+No change to v1 architecture, build sequence, or tech stack.
+When v2 begins: the fetcher targets the regulator-level sources first because they're the most stable, the most likely to provide structured metadata (filing type, date, fiscal year), and the least likely to break on cosmetic site redesigns.
+Playwright, if eventually added, lives behind the fetcher's escalation logic. It is not a top-level dependency. requirements.txt does not pre-install it in v1.
+The fetcher must populate the pdf_publication_date field that ExtractionOutput already requires (per 04_BUILD_SEQUENCE.docx Phase 4) — that field's value should come from the regulator filing metadata where available, falling back to the PDF's own front-matter date.
+
+Affected docs: V2_BACKLOG.docx only. No changes to v1 design docs.
+Revisit trigger: Three independent triggers, any of which activates v2 work on this component:
+
+V1 stable on 6 companies for 30+ days and Magnus has bandwidth for v2.
+Coverage universe expansion to 10+ companies — manual PDF acquisition becomes the bottleneck.
+MFIP transitions to unattended operation (related to the v1.5 heartbeat-watchdog promotion trigger).
+
+When activated: start with SEC EDGAR (MSFT, fully documented JSON API, lowest implementation risk) as the proof-of-concept before expanding to the European regulators.
+
+## 2026-05-08 — Bloomberg export workflow confirmed: BDP/BDH template approach adopted
+
+**Decision:** Bloomberg data export workflow has been redesigned from manual terminal copy-paste to a structured Excel template approach using Bloomberg's Excel Add-in (BDP/BDH formulas). Three master templates have been created and validated against live Bloomberg data at Kingston University's trading lab.
+
+**Templates created:**
+- `MFIP_Bloomberg_Export_Template_Master.xlsx` — company-specific data (8 sheets)
+- `MFIP_Bloomberg_Export_Template_Indices.xlsx` — index price history (4 sheets)
+- `MFIP_Bloomberg_Export_Template_FX.xlsx` — FX rate history (3 sheets)
+
+**Workflow at lab:**
+1. Open Master template, change ticker in CONFIG!B3 (one change auto-populates all BDP/BDH sheets)
+2. Wait ~30 seconds for all formulas to populate
+3. Paste RV_Comps manually from Bloomberg RV terminal screen (peer set is company-specific, cannot be standardised with BDP)
+4. Ctrl+A → Paste Special → Values on each sheet
+5. Save as `<TICKER>_<YYYY-MM-DD>.xlsx`
+6. Run Indices template once per session → save as `INDICES_<YYYY-MM-DD>.xlsx`
+7. Run FX template once per session → save as `FX_<YYYY-MM-DD>.xlsx`
+8. All files moved to `C:\MFIP\bloomberg_inbox\`
+
+**Confirmed working field mnemonics (tested on Kingston Bloomberg terminal):**
+
+| Sheet | Field | Mnemonic |
+|-------|-------|----------|
+| BETA | Raw Beta | `BETA_RAW_OVERRIDABLE` |
+| BETA | Adjusted Beta | `BETA_ADJ_OVERRIDABLE` |
+| BETA | R-squared | `COEF_DETER_R_SQUARED` |
+| EE | Forward EPS | `BEST_EPS` |
+| EE | Long-Term Growth | `BEST_LTG_EEPS` |
+| EE | Revenue Estimate | `BEST_SALES` |
+| EE | EBITDA Estimate | `BEST_EBITDA` |
+| EE | Consensus Rating | `BEST_ANALYST_RATING` |
+| RV_Comps | EV/EBITDA | `BEST_CUR_EV_TO_EBITDA` |
+| RV_Comps | P/E | `BEST_PE_RATIO` |
+| RV_Comps | EV/Sales | `EV_TO_T12M_SALES` |
+| RV_Comps | Price/Book | `PX_TO_BOOK_RATIO` |
+| ANR | Consensus Rating | `BEST_ANALYST_RATING` |
+| ANR | Buy count | `TOT_BUY_REC` |
+| ANR | Hold count | `TOT_HOLD_REC` |
+| ANR | Sell count | `TOT_SELL_REC` |
+| ANR | Target Price | `BEST_TARGET_PRICE` |
+| ANR | Coverage count | `TOT_ANALYST_REC` |
+| DVD | Full history | `DVD_HIST_ALL` (BDS) |
+| HP_Monthly | Monthly close | `PX_LAST` (BDH, monthly, 10Y) |
+| HP_Daily | Daily close | `PX_LAST` (BDH, daily, 5Y) |
+
+**Known data gaps — expected behaviour, not bugs:**
+
+- `BEST_LTG_EEPS` returns `#VALUE!` for DNB and CKN — no consensus LTG available for banks and small-cap shipbrokers. DDM Agent falls back to historical DPS CAGR and sustainable growth rate from FSA Agent.
+- `BEST_CUR_EV_TO_EBITDA` and `EV_TO_T12M_SALES` return `#N/A` for DNB — EV-based multiples are not meaningful for financial sector companies. P/E and P/Book are the correct multiples for banks. Comps Agent must apply sector-appropriate multiple selection.
+- `BEST_CUR_EV_TO_EBITDA` and `BEST_PE_RATIO` return `#N/A` for CKN — thin analyst coverage (6 analysts). EV/Sales and P/Book populated correctly.
+
+**BEST_ANALYST_RATING scale inversion warning:**
+`BEST_ANALYST_RATING` is documented as 1=Buy, 5=Sell but returns anomalous values for some tickers (MSFT showing 4.84 despite 66 Buy / 3 Hold / 1 Sell in ANR). The raw Buy/Hold/Sell counts (`TOT_BUY_REC`, `TOT_HOLD_REC`, `TOT_SELL_REC`) are the reliable signal. `BEST_ANALYST_RATING` should be treated as indicative only — the Chief Analyst and News Agent must use raw counts as primary input.
+
+**CKN currency note:**
+CKN is UK-listed and trades in GBp (pence). Bloomberg target price (`BEST_TARGET_PRICE`) returns ~5101 USD, which reconciles correctly to ~3835 GBp at prevailing GBPUSD. The ingestion layer must be aware that CKN price fields involve a GBp → GBP → USD double conversion. Flag for Phase 3 ingestion layer build.
+
+**RV_Comps manual paste decision:**
+Peer sets are company-specific and cannot be standardised with BDP formulas (EQNR's peers are European oil majors; DNB's peers are Nordic banks; CKN's peers are shipbrokers). RV_Comps is the one sheet in the Master template that requires manual copy-paste from the Bloomberg RV terminal screen each session. All other sheets are fully automated via BDP/BDH. RV sheet should be exported in USD display currency for cross-company comparability.
+
+**Master template fixes outstanding (to complete at home):**
+- Delete duplicate `RV_Comps` BDP sheet — keep manual paste placeholder only
+- Delete old `ANR` BDP sheet — rename `ANR (2)` to `ANR`
+
+**First full export session completed 2026-05-08:**
+All 8 files exported and validated:
+- `EQNR_NO_2026-05-08.xlsx` ✓
+- `DNB_NO_2026-05-08.xlsx` ✓
+- `TEL_NO_2026-05-08.xlsx` ✓
+- `NOVOB_DC_2026-05-08.xlsx` ✓
+- `CKN_LN_2026-05-08.xlsx` ✓
+- `MSFT_US_2026-05-08.xlsx` ✓
+- `INDICES_2026-05-08.xlsx` ✓
+- `FX_2026-05-08.xlsx` ✓
+
+**Affected docs:**
+- `07_BLOOMBERG_EXPORT_TEMPLATE.docx` — requires update to reflect BDP/BDH template approach, confirmed field mnemonics, RV manual paste decision, and known data gaps. Update in next doc-revision session.
+- `03_TECH_STACK.docx` — no changes required (openpyxl already in stack for ingestion parsing).
+
+**Revisit triggers:**
+- If Bloomberg changes field mnemonics — re-test affected fields and update this entry.
+- If CKN is replaced by a USD or EUR-listed company — CKN GBp conversion note becomes irrelevant.
+- If consensus LTG becomes available for DNB or CKN — remove from known gaps list.
+- Phase 3 build: implement CKN GBp double-conversion handling in ingestion layer before parsing CKN files.
+
+## 2026-05-09 — Bloomberg storage architecture: per-company date-stamped archive, templates Git-versioned, OneDrive as lab↔home courier
+
+**Decision:** The storage layout for Bloomberg-related files is finalised across three distinct concerns: master templates, post-export data files, and annual report PDFs. The design encodes a deliberate asymmetry between Bloomberg data (point-in-time snapshots, date-versioned) and annual report PDFs (durable artefacts, fiscal-year-versioned).
+
+**1. Master templates — Git-versioned in the MFIP repo**
+
+Location: `C:\MFIP\repo\templates\bloomberg\`
+
+Three subfolders, one per template family, each containing the .xlsx template plus the initial Python parser file from Claude Code's earlier build:
+
+- `Template_FX\` — `MFIP_Bloomberg_Export_Template_FX.xlsx`
+- `Template_Index\` — `MFIP_Bloomberg_Export_Template_Indices.xlsx`
+- `Template_Ticker\` — `MFIP_Bloomberg_Export_Template_Master.xlsx`
+
+Templates are committed to Git as part of MFIP's source-of-truth alongside `decisions.md`, `requirements.txt`, agent prompt seeds, and `scripts/`. Every template change has a commit hash referenceable from `decisions.md`. Underscore-only folder names are script-safe across Python, PowerShell, and shell glob patterns.
+
+**2. Post-export Bloomberg data — `bloomberg_archive\` with per-company date-stamped subfolders**
+
+Location: `C:\MFIP\bloomberg_archive\`
+
+Restructured from the original flat archive (per the 2026-05-07 "Bloomberg integration" entries) to a per-company tree with date-stamped subfolders:
+
+```
+C:\MFIP\bloomberg_archive\
+├── EQNR_NO\
+│   └── 2026-05-08\
+│       └── EQNR_NO_2026-05-08.xlsx
+├── DNB_NO\
+│   └── ...
+├── _INDICES\
+│   └── 2026-05-08\
+│       └── INDICES_2026-05-08.xlsx
+└── _FX\
+    └── 2026-05-08\
+        └── FX_2026-05-08.xlsx
+```
+
+Underscore-prefix on `_INDICES` and `_FX` keeps shared-resource workbooks separated from the company list and sorts them to the top of the directory listing. Ticker folder names use underscores (`EQNR_NO`) matching the filename convention in `07_BLOOMBERG_EXPORT_TEMPLATE.docx` — never spaces.
+
+The date-stamped subfolders reflect that Bloomberg exports are point-in-time snapshots: every export of EQNR captures a different state (new prices, possibly new estimates, new dividends), and all snapshots are retained for full audit trail.
+
+**3. Annual report PDFs — `filings\` with flat per-ticker structure (no date subfolders)**
+
+Location: `C:\MFIP\filings\<TICKER>\`
+
+Annual reports are durable artefacts identified by fiscal year, not snapshots. Date subfolders would be noise. Once a 2024 annual report lands in `EQNR_NO\`, it's there permanently; the 2025 report joins it next year, never replaces it. PDF filename convention deferred to Phase 4 (Extractor A build) when the parser will define how it extracts fiscal year from the filename or PDF metadata.
+
+**4. Lab↔home file transport — University OneDrive**
+
+OneDrive (Magnus's University tenant) is the courier between the locked-down Kingston Bloomberg lab machines and the personal MFIP machine. Replaces the USB-stick option from earlier discussion. Workflow:
+
+- Templates: edit at home → `git commit && git push` → copy to OneDrive when a lab session is approaching → open from OneDrive at the lab. Templates flow home → lab.
+- Exports: lab session saves `<TICKER>_<DATE>.xlsx` files to OneDrive → home machine copies them into `bloomberg_archive\<TICKER>\<DATE>\`. Exports flow lab → home.
+
+Templates are *not* Git-versioned at the OneDrive copy — Git remains the source of truth and OneDrive is a one-way mirror updated when templates change. If a template is ever edited at the lab in an emergency, the change must be brought back into the repo manually.
+
+**5. `bloomberg_inbox\` reclassified as dormant in v1**
+
+Per `04_BUILD_SEQUENCE.docx` Phase 3 and `01_ARCHITECTURE.docx`, `bloomberg_inbox\` was specified as the watchdog drop zone for ingestion-side format validation. In practice, exports flow directly from OneDrive to `bloomberg_archive\<TICKER>\<DATE>\` because Magnus is the sole file source and the export discipline enforced at the lab obviates the need for runtime format quarantine. The Phase 3 watchdog (when built) will need its scope re-evaluated — its primary use case (catching malformed automated drops) doesn't apply when a disciplined human is the only source. Decision deferred until Phase 3 starts. The inbox folder remains in place as future infrastructure.
+
+**Reasoning:**
+
+- Per-company date-stamped archive gives a coherent "everything for EQNR" view (`bloomberg_archive\EQNR_NO\`) without breaking the watchdog/inbox/archive separation that the Phase 3 architecture is designed around.
+- Asymmetric date-handling (date subfolders for Bloomberg, no date subfolders for filings) reflects the actual temporal model of each data type — encoding "snapshot vs durable artefact" structurally rather than relying on convention.
+- Templates inside `repo\` keeps everything that *defines* MFIP under a single source-of-truth. The .py files alongside each template would be orphaned from version control if templates lived outside the repo.
+- OneDrive eliminates the USB-stick failure mode (forgotten stick, lost stick, stale copy) without introducing cloud dependencies into the runtime architecture — it's a courier, not a runtime component.
+
+**Implication:**
+
+- `01_ARCHITECTURE.docx` (Phase 3 description), `04_BUILD_SEQUENCE.docx` (Phase 3 build steps), and `07_BLOOMBERG_EXPORT_TEMPLATE.docx` (Quarantine Conditions section) all need updating in a future doc-revision session to reflect: (a) the per-company date-stamped archive structure, (b) the dormant inbox, (c) the OneDrive transport flow. Until those updates land, this entry is canonical.
+- Phase 3 ingestion-layer build needs to know: skip CONFIG sheet, match RV_Comps columns by header name not position, handle CKN GBp double conversion, accept exports landing directly in `bloomberg_archive\` rather than requiring an inbox detour.
+- Templates in Git means template changes get commit messages and `git diff` (binary diff is uninformative for .xlsx but the commit log itself is the audit trail). Encourage the discipline of committing template changes with descriptive messages: `templates: add target price high/low rows to ANR sheet` is more useful in three months than `update template`.
+
+**Affected docs:** `01_ARCHITECTURE.docx`, `04_BUILD_SEQUENCE.docx`, `07_BLOOMBERG_EXPORT_TEMPLATE.docx` — all require updating in a future doc-revision session before Phase 3 build begins. This entry is canonical reference until then.
+
+**Revisit triggers:**
+- If MFIP transitions to multi-user access — OneDrive (Magnus's personal tenant) becomes a single point of failure; reconsider transport.
+- If the Magnus University OneDrive account ends (graduation, account changes) — migrate to personal Microsoft account or alternative cloud transport.
+- Phase 3 build start: re-scope the watchdog given exports flow directly to `bloomberg_archive\`. Possible outcomes: (a) re-purpose watchdog to validate `bloomberg_archive\` directly, (b) introduce inbox usage as part of Phase 3 to gain format-quarantine benefits, (c) drop watchdog from v1 entirely.
+- If a Bloomberg-export workflow change introduces files outside Magnus's control (e.g. a teammate, an automation) — re-establish `bloomberg_inbox\` + watchdog as the canonical path.
+
+## 2026-05-09 — Master Bloomberg template structure locked in: 7-sheet master + manual RV_Comps per company
+
+**Decision:** The master Bloomberg export template (`MFIP_Bloomberg_Export_Template_Master.xlsx`) ships with seven sheets — six BDP/BDH/BDS data sheets plus CONFIG. RV_Comps is added per-company manually at the lab from the Bloomberg RV terminal screen, renamed from Bloomberg's default sheet name `RV` to `RV_Comps`. Saved company workbooks therefore have eight sheets total. This refines the workflow described in the 2026-05-08 "Bloomberg export workflow confirmed: BDP/BDH template approach adopted" entry — the original entry implied RV_Comps lived in the master, which would have required a placeholder sheet that gets cleared every session and reintroduces template-drift risk.
+
+**Master template — 7 sheets:**
+
+```
+MFIP_Bloomberg_Export_Template_Master.xlsx
+├── CONFIG       (input mechanism — ticker in B3, currency in B4)
+├── BETA         (BDP — BETA_RAW_OVERRIDABLE, BETA_ADJ_OVERRIDABLE, COEF_DETER_R_SQUARED)
+├── DVD          (BDS — DVD_HIST_ALL bulk dividend history)
+├── EE           (BDP — BEST_EPS, BEST_LTG_EEPS, BEST_SALES, BEST_EBITDA, BEST_ANALYST_RATING)
+├── ANR          (BQL — buy/hold/sell counts, target price, broker-level recommendation table)
+├── HP_Monthly   (BDH — PX_LAST monthly, 10y)
+└── HP_Daily     (BDH — PX_LAST daily, 5y)
+```
+
+All BDP/BDH/BDS/BQL formulas reference `CONFIG!$B$3` for ticker. Changing the ticker in CONFIG triggers a session-wide refresh.
+
+**Saved company workbook — 8 sheets:**
+
+```
+<TICKER>_<YYYY-MM-DD>.xlsx
+├── CONFIG       (carries through from master, retained as input documentation)
+├── BETA, DVD, EE, ANR, HP_Monthly, HP_Daily   (paste-as-values from master)
+└── RV_Comps     (manual paste from Bloomberg RV terminal screen, sheet renamed from RV)
+```
+
+CONFIG is intentionally retained in saved files — it documents the ticker and currency that drove the export. The Phase 3 ingestion layer skips CONFIG when parsing.
+
+**Master template fixes already complete (2026-05-08):**
+
+- Duplicate `RV_Comps` BDP sheet removed — RV_Comps was never a candidate for templating because peer sets are company-specific (EQNR's peers are European oil majors, DNB's are Nordic banks, CKN's are shipbrokers).
+- Duplicate `ANR` sheet resolved — the BDP-based `ANR` sheet was deleted; the BQL-based `ANR (2)` was renamed to `ANR` and is the canonical analyst-recommendation sheet.
+
+**RV column-set customisation — required at terminal:**
+
+The default Bloomberg RV peer-screen column set is missing fields the Comps Agent requires. Before each lab session, the RV screen layout must be customised on the terminal to include — at minimum — Last Px, Mkt Cap, P/E, EV/EBITDA, P/Book, EV/Sales, ROE, Rev 1Y growth, EPS 1Y growth. The customised layout should be saved on the terminal under a memorable name (e.g. `MFIP_Default`) so it persists across sessions.
+
+This customisation is a *human contract* — it lives on the Bloomberg Terminal, not in the MFIP repo. If the lab machine resets or the layout drifts, the next export silently has a different column set. Phase 3 ingestion mitigates this by matching columns by header name rather than position and surfacing column-set drift as an Advisory.
+
+**Reasoning:**
+
+- Master with 7 sheets (no RV_Comps) avoids the placeholder-sheet trap: a placeholder either gets accidentally inherited from a previous session (data integrity risk) or requires explicit clearing (extra workflow step). Adding RV_Comps fresh per company eliminates both.
+- Sheet rename `RV` → `RV_Comps` aligns the manually-pasted sheet with the underscore-no-spaces convention already documented in `07_BLOOMBERG_EXPORT_TEMPLATE.docx` for the BDP/BDH/BDS sheets, and matches what Phase 3 ingestion's required-sheet list expects.
+- Retaining CONFIG in saved files makes each export self-documenting — opening a file from six months ago shows immediately which ticker and currency drove it, without cross-referencing decisions.md or the filename.
+- Column-set customisation deferred to terminal-side rather than encoded in the template because BQL/BDP can't override the RV screen's column selection — it's a screen-level setting, not a function-level argument.
+
+**Implication:**
+
+- `07_BLOOMBERG_EXPORT_TEMPLATE.docx` updates already applied in the 2026-05-09 doc-revision pass (REQUIRED SHEETS table, EXPORT SESSION CHECKLIST, and the eight-sheets-vs-seven-sheets explanation in the table caption) reflect this final state.
+- Phase 3 ingestion expects 7 data sheets per company file (HP_Monthly, HP_Daily, DVD, BETA, EE, RV_Comps, ANR). The CONFIG sheet is the 8th sheet present but is metadata, not data, and is skipped during parsing.
+- A test of column-set drift detection should be part of the first Phase 3 end-to-end test on EQNR data.
+
+**Revisit triggers:**
+
+- If Bloomberg ever offers a way to template a peer screen via BDP/BDH/BDS (currently RV is screen-bound, not function-bound) — reconsider whether RV_Comps could be templated to remove the manual-paste step.
+- If the column-set customisation step proves too easy to forget — add a Pre-session checklist item to verify the RV layout name on the terminal before the first company export.
+- If Phase 3 build reveals that CONFIG retention causes parser issues — reconsider whether to strip CONFIG before saving (Magnus's preference is to keep it; this would be a forced revision, not a preferred one).
+
+## 2026-05-09 — ANR sheet enhancements deferred to next lab session
+
+**Decision:** Three additional metrics were identified for the ANR sheet during the 2026-05-09 design review but are deferred to the next Bloomberg lab session for implementation. The metrics will improve News Agent's analyst-tracking and Chief Analyst's confidence-calibration logic, but require BQL field-name verification at a live terminal before being committed to the master template.
+
+**Metrics to add (in priority order):**
+
+1. **Target price high / low (consensus dispersion)**
+   - **Concept:** Two new rows in the ANR top block showing the highest and lowest current target prices across the analyst panel, alongside the consensus mean already in C12.
+   - **Why valuable:** Spread is signal. A consensus target of 353 NOK with a 315–430 spread carries different information than a 350–360 spread. Chief Analyst's confidence in the consensus signal should depend on dispersion. Dashboard Zone 3D (Analyst Consensus Tracker) would surface this.
+   - **Implementation approach:** Pure Excel-native formulas aggregating the per-broker target column (column E) of the existing broker table — no new Bloomberg fields needed. Proposed cells:
+     - `B14: Target Price High`
+     - `C14: =MAX(E16:E314)`
+     - `D14: Target Price Low`
+     - `E14: =IFERROR(MIN(IF(E16:E314>0,E16:E314)),"-")` (array formula; ignores zeros from analysts who haven't set a target)
+   - **Risk:** Lowest — no Bloomberg field-name dependency. Can be added at home without lab access. Marked priority 1 for that reason.
+
+2. **Estimate revisions in last 4 weeks**
+   - **Concept:** Two cells showing the count of upgrades and downgrades in the past month — a leading indicator that the static buy/hold/sell distribution doesn't capture.
+   - **Why valuable:** If 5 analysts upgraded in the past month and 0 downgraded, that's directional momentum even when the headline distribution still shows mostly holds. News Agent's "material event flag" logic explicitly needs revision velocity.
+   - **Candidate BQL/BDP fields (verify at lab):**
+     - `EST_REV_UP_4WK`, `EST_REV_DN_4WK`
+     - `BEST_REVISIONS_UP_4W`, `BEST_REVISIONS_DN_4W`
+     - `EST_NUM_REV_UP_30D`, `EST_NUM_REV_DN_30D`
+   - **Risk:** Medium — Bloomberg's revision-count field naming is inconsistent across vendor docs. Requires terminal-side verification.
+
+3. **Rating from 4 weeks ago (rating trend)**
+   - **Concept:** A second `EQY_REC_CONS` query with a 30-day-ago date offset, alongside the current rating in C11. Combined with metric 2, gives both the "what's changing" (revision counts) and "where it's heading" (rating trajectory).
+   - **Why valuable:** Today's rating of 2.69 and 30-days-ago rating of 2.45 tells a different story than a flat 2.69 → 2.69. Without trajectory, Zone 3D is a snapshot rather than a trend.
+   - **Implementation approach:** Re-use the existing C11 BQL pattern with a date offset. Approximate form:
+
+     ```
+     =_xll.BQL($C$6, "EQY_REC_CONS(Dates=#PriorDate)", "#PriorDate", _xll.BQL.DATE($E$6)-30)
+     ```
+
+   - **Risk:** Low-medium — structurally identical to C11 with a date shift, but BQL date-arithmetic syntax (`-30` vs `EDATE(..., -1)` vs explicit `EOMONTH`) needs lab verification.
+
+**Reasoning:**
+
+- Committing potentially-broken formulas to the master template now would mean every future company export silently produces `#NAME?` or `#VALUE!` errors in those cells. Better to defer than to ship broken cells.
+- Metric 1 has zero Bloomberg-field risk (it's pure Excel arithmetic on data already in the sheet) and could in principle be added at home without lab access. It's bundled with metrics 2 and 3 only because changing the master template once is cleaner than three separate edits, and the next lab session is close enough to make this a reasonable trade.
+- Adding fields to the master template propagates to every subsequent company export automatically — the per-company workflow doesn't change. This is the BDP/BDH approach paying off: template-level changes are universe-wide changes for free.
+
+**Implication:**
+
+- Next Bloomberg lab session has an explicit deliverable beyond export: verify the three field/syntax candidates above and add the working formulas to `MFIP_Bloomberg_Export_Template_Master.xlsx` ANR sheet at the lab. Commit to Git on return. The session brief for that visit should include the cell-by-cell additions worked out in advance.
+- News Agent (Agent 06) and Chief Analyst (Agent 15) prompt seeds in `02_AGENT_DESCRIPTIONS.docx` may need updating once these fields exist — Chief Analyst's confidence-calibration logic should explicitly reference target price dispersion when available.
+- If verification at the lab finds none of the candidate field names work — log an Advisory in `KNOWN DATA GAPS — EXPECTED BEHAVIOUR, NOT BUGS` (in `07_BLOOMBERG_EXPORT_TEMPLATE.docx`) noting the field is unavailable and the agent-side fallback. Do not block the session on a single field that doesn't resolve.
+
+**Revisit trigger:**
+
+- Next lab session: implement metric 1 (low risk, just do it), test candidate fields for metrics 2 and 3, commit the working version of the master template to Git, update this entry with final field names and any failed candidates.
+- If Bloomberg deprecates `EQY_REC_CONS` or the revision-count fields — re-scope this entry, since the agent-side use of these fields is the primary motivation.
+
+## 2026-05-09 — Doc-revision pass complete: Bloomberg BDP/BDH template approach documented, News Agent ANR input corrected
+
+**Decision:** Two design documents updated in a focused doc-revision pass following the 2026-05-08 lab session at Kingston University. The design docs are now in alignment with the architectural state captured in the 2026-05-08 "Bloomberg export workflow confirmed: BDP/BDH template approach adopted" entry — decisions.md no longer supersedes the design docs on the BDP/BDH template workflow, confirmed field mnemonics, RV manual paste decision, or known data gaps.
+
+**Docs updated this session:**
+
+- `07_BLOOMBERG_EXPORT_TEMPLATE.docx` — four edits implementing the BDP/BDH template workflow:
+  - **PURPOSE section:** rewritten to introduce the three master templates (Master, Indices, FX) replacing manual terminal exports.
+  - **REQUIRED SHEETS table:** new "Bloomberg Field Mnemonic" column added between "BBG function" and "Purpose"; populated with confirmed mnemonics from the 2026-05-08 lab session (PX_LAST, DVD_HIST_ALL, BETA_RAW_OVERRIDABLE et al., BEST_EPS et al., TOT_BUY_REC et al.). RV_Comps row flagged as manual paste with USD display, sheet rename from `RV` to `RV_Comps`, and customised column set including EV/EBITDA, P/Book, EV/Sales, ROE, and growth metrics. Caption below the table updated to explain the master-vs-saved-file distinction (master ships with 7 sheets; saved company workbooks have 8).
+  - **EXPORT SESSION CHECKLIST:** full rewrite from per-function manual export to template-driven workflow — pre-session add-in check, per-company workbook (open template, set CONFIG!B3, wait for formulas, paste RV manually, paste-as-values, save), Indices workbook, FX workbook, post-session checks. Session time estimate revised from ~20 min/company to ~25–35 min for the full universe.
+  - **New KNOWN DATA GAPS — EXPECTED BEHAVIOUR, NOT BUGS section** inserted between QUARANTINE CONDITIONS and OUT OF SCOPE FOR V1: tabulates the BEST_LTG_EEPS gaps for DNB and CKN, the EV-multiple gaps for DNB (financial sector), the thin-coverage gaps for CKN, the BEST_ANALYST_RATING anomaly with the raw-counts mitigation, and the CKN GBp double-conversion handling.
+
+- `02_AGENT_DESCRIPTIONS.docx` — Agent 06 News Agent Inputs: "analyst rating changes from Bloomberg EE sheet" corrected to "analyst rating changes from Bloomberg ANR sheet". Closes the deferred fix flagged in the 2026-05-09 ANR-addition decisions.md entry ("Affected docs" line for `02_AGENT_DESCRIPTIONS.docx`).
+
+**Edits 2 and 3 evolved during the session.** The original session brief's REQUIRED SHEETS table and EXPORT SESSION CHECKLIST were drafted before two design refinements landed:
+
+- The master template was confirmed to ship with 7 sheets (no RV_Comps placeholder), with RV_Comps added per-company at the lab from the Bloomberg RV terminal screen and renamed from `RV`. See the 2026-05-09 "Master Bloomberg template structure locked in" entry.
+- The RV column-set customisation (P/E, EV/EBITDA, P/Book, EV/Sales, ROE, growth metrics) is a *terminal-side* contract — saved as a named layout on the Bloomberg Terminal, not encoded in the template — and Phase 3 ingestion will match RV columns by header name rather than position.
+
+The applied edits reflect this final state, not the original brief's draft.
+
+**Reasoning:** Without this alignment, the design docs and decisions.md would have continued to disagree on the Bloomberg export workflow, with decisions.md as the canonical reference and the design docs out of date. Phase 1 build (dashboard shell) needs to start from a clean, internally consistent document set; Phase 3 build (Bloomberg ingestion layer) reads `07_BLOOMBERG_EXPORT_TEMPLATE.docx` as its specification, so the doc must reflect the actual template files committed to the repo rather than the superseded manual-export workflow.
+
+**Implication:**
+
+- decisions.md no longer supersedes the design docs on the BDP/BDH workflow — they are now in alignment for everything settled in the original session brief.
+- The CKN GBp double-conversion note in KNOWN DATA GAPS is the canonical specification for the Phase 3 ingestion-layer behaviour. The Phase 3 build must implement: (1) detect CKN ticker, (2) apply GBp → GBP unit step (divide by 100) before (3) the standard GBP → USD FX conversion via the FX workbook.
+- Three areas remain where decisions.md is canonical and design docs need future updates (tracked separately, not blocking):
+  - **Storage architecture** (per-company date-stamped `bloomberg_archive\<TICKER>\<DATE>\`, dormant `bloomberg_inbox\`, OneDrive transport, templates in `repo\templates\bloomberg\`) — see the 2026-05-09 "Bloomberg storage architecture" entry. Affects `01_ARCHITECTURE.docx`, `04_BUILD_SEQUENCE.docx` Phase 3, and `07_BLOOMBERG_EXPORT_TEMPLATE.docx` Quarantine Conditions.
+  - **Master template structure** (7-sheet master, 8-sheet saved files, CONFIG retention) — see the 2026-05-09 "Master Bloomberg template structure locked in" entry. The relevant sections of `07_BLOOMBERG_EXPORT_TEMPLATE.docx` are already updated in this pass; no remaining gap.
+  - **ANR enhancements** (target price spread, revision counts, rating trend) — see the 2026-05-09 "ANR sheet enhancements deferred" entry. Activates as a TODO at the next lab session; no immediate doc updates required until the new fields exist.
+
+**Affected docs:** `07_BLOOMBERG_EXPORT_TEMPLATE.docx`, `02_AGENT_DESCRIPTIONS.docx` — both updated 2026-05-09.
+
+**Revisit trigger:** None — this is a closeout entry. The architectural decisions that drove the storage layout, master template structure, and ANR enhancements carry their own revisit triggers in their respective decisions.md entries.
+
+## 2026-05-09 — Doc-revision pass complete: storage architecture documented across design docs
+
+**Decision:** Three design documents updated in a focused doc-revision pass to bring storage layout, lab↔home transport, and `bloomberg_inbox\` status into alignment with the storage architecture decided earlier on 2026-05-09. The design docs are now the canonical reference for these concerns; decisions.md no longer supersedes them on storage layout, transport, or dormant-inbox status. This entry closes the storage-architecture thread opened in the 2026-05-09 "Bloomberg storage architecture: per-company date-stamped archive, templates Git-versioned, OneDrive as lab↔home courier" entry, and resolves the first of three remaining-gap items flagged in the 2026-05-09 "Doc-revision pass complete: Bloomberg BDP/BDH template approach documented" closeout.
+
+**Docs updated this session:**
+
+- `01_ARCHITECTURE.docx` — two edits:
+  - **DATA FLOW section:** PDF flow rewritten to specify that PDFs land in `C:\MFIP\filings\<TICKER>\` as durable artefacts identified by fiscal year (no date subfolder). New paragraph added describing the Bloomberg flow: lab → University OneDrive → home → `C:\MFIP\bloomberg_archive\<TICKER>\<YYYY-MM-DD>\` directly, with a note that the `bloomberg_inbox\` watcher described elsewhere in the architecture is dormant in v1 and the inbox folder remains as future infrastructure.
+  - **KEY ARCHITECTURAL CONSTRAINTS list:** new bullet inserted immediately after the existing Bloomberg-scope constraint capturing the asymmetric date handling — Bloomberg as date-versioned snapshots (`bloomberg_archive\<TICKER>\<YYYY-MM-DD>\`) vs PDFs as durable artefacts (no date subfolder). Frames the asymmetry as encoding "snapshot vs durable artefact" structurally rather than by convention.
+
+- `04_BUILD_SEQUENCE.docx` — two edits:
+  - **Phase 3 Bloomberg Ingestion Layer:** v1 storage flow callout added at the top of the phase noting direct OneDrive → archive flow and dormant inbox. Four new ingestion-specific items added — skip CONFIG sheet during parsing, match RV_Comps columns by header name (not position), surface RV column-set drift as Advisory, and handle CKN GBp double conversion (divide by 100 before GBP→USD FX conversion). Quarantine-logic item reframed as documenting the contract for when the inbox is re-activated. Watchdog item replaced with a "decide watchdog scope at Phase 3 build start" item enumerating the three options on the table — (a) re-purpose watchdog to validate `bloomberg_archive\` directly, (b) introduce inbox usage as part of Phase 3 to gain format-quarantine benefits, (c) drop watchdog from v1 entirely.
+  - **Phase 4 Extraction Pipeline (PDFs):** new item added flagging the PDF filename convention for `filings\<TICKER>\` as a Phase 4 build-time decision. Used by Extractor A as fallback when `pdf_publication_date` cannot be extracted from PDF metadata.
+
+- `07_BLOOMBERG_EXPORT_TEMPLATE.docx` — two edits:
+  - **QUARANTINE CONDITIONS section:** v1-status callout added immediately after the section heading, noting that the inbox flow is bypassed in v1 and validation runs only when explicitly invoked (e.g. during Phase 3 development tests). The quarantine contract itself remains documented for when the inbox is re-activated.
+  - **New STORAGE LAYOUT section:** appended at the end of the doc (after RELATIONSHIP TO MODELLING AGENTS). Describes master templates at `C:\MFIP\repo\templates\bloomberg\` with three subfolders (Template_FX, Template_Index, Template_Ticker), University OneDrive as the lab↔home courier (templates flow home → lab, exports flow lab → home), post-export storage at `bloomberg_archive\<TICKER>\<DATE>\` with underscore-prefixed `_INDICES\` and `_FX\` for shared workbooks, and the separate flat `filings\<TICKER>\` structure for annual report PDFs.
+
+**Reasoning:** The 2026-05-09 storage-architecture entry was canonical for storage layout, OneDrive transport, and the dormant inbox until these design-doc updates landed. Phase 3 build (Bloomberg ingestion layer) reads `04_BUILD_SEQUENCE.docx` and `07_BLOOMBERG_EXPORT_TEMPLATE.docx` as its specification; Phase 4 build (PDF extractors) reads `01_ARCHITECTURE.docx` data flow as its specification. Without this alignment, Phase 3 and Phase 4 build would have started from documents that disagreed with the canonical reference. With this pass complete, the design docs and decisions.md are in sync on storage concerns, and future Phase 3/4 work can read the design docs as authoritative without cross-referencing decisions.md for storage-layout questions.
+
+**Implication:**
+
+- decisions.md no longer supersedes the design docs on storage layout, lab↔home transport, or `bloomberg_inbox\` v1 status. The design docs are the canonical reference for these concerns going forward.
+- One of the three remaining-gap items from the 2026-05-09 BDP/BDH closeout entry is now resolved. The other two — master template structure (already substantively addressed in `07` in the previous pass; closed by that entry) and ANR enhancements (deferred until next lab session) — carry their own status.
+- The watchdog scope decision (a/b/c) is now formally a Phase 3 build-start deliverable, recorded in `04_BUILD_SEQUENCE.docx` Phase 3 and tracked here as the canonical place to log the eventual decision.
+- The PDF filename convention is a Phase 4 build-start deliverable. When decided, log in decisions.md and update `01_ARCHITECTURE.docx` data flow to reflect the chosen pattern.
+
+**Affected docs:** `01_ARCHITECTURE.docx`, `04_BUILD_SEQUENCE.docx`, `07_BLOOMBERG_EXPORT_TEMPLATE.docx` — all updated 2026-05-09.
+
+**Revisit trigger:** None — this is a closeout entry. The architectural decisions that drove the storage layout carry their own revisit triggers in the 2026-05-09 "Bloomberg storage architecture" entry.
