@@ -1,0 +1,20 @@
+﻿# Reproducible - no backup value
+.venv/
+
+# Python artefacts
+__pycache__/
+*.pyc
+*.pyo
+
+# Excel lock files (temp files created when a workbook is open)
+~$*.xlsx
+
+# Temp files
+*.tmp
+
+# Windows OS artefacts
+Thumbs.db
+desktop.ini
+
+# Git internals
+.git/
