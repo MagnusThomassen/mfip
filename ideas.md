@@ -85,11 +85,12 @@ threshold breached, and the year it first appeared. You never modify financial d
 and you never make a buy/sell recommendation — your job is to tell the Chief Analyst
 how much to trust the numbers before valuation conclusions are drawn.
 
-**Status:** `APPROVED` — decided for v1. Pending doc update (02_AGENT_DESCRIPTIONS.docx,
-01_ARCHITECTURE.docx, decisions.md) and build phase assignment in 04_BUILD_SEQUENCE.docx.
+**Status:** `GRADUATED` — doc update complete 2026-05-10. Full spec in
+02_AGENT_DESCRIPTIONS.docx (Agent 20). Layer 4 updated in 01_ARCHITECTURE.docx.
+Build step added to 04_BUILD_SEQUENCE.docx Phase 6. Live record in decisions.md
+entry 2026-05-10.
 
-**Decision gate:** Graduates to decisions.md when doc update pass completes and agent
-is assigned to a build phase.
+**Decision gate:** N/A — graduated.
 
 ---
 
@@ -148,11 +149,12 @@ downward without a deliberate re-analysis by Chief Analyst. You alert on every u
 transition. You never alert on INTACT. You never recommend buying or selling — you
 surface what is changing, Magnus decides what to do about it.
 
-**Status:** `APPROVED` — decided for v1. Pending doc update (02_AGENT_DESCRIPTIONS.docx,
-01_ARCHITECTURE.docx, decisions.md) and build phase assignment in 04_BUILD_SEQUENCE.docx.
+**Status:** `GRADUATED` — doc update complete 2026-05-10. Full spec in
+02_AGENT_DESCRIPTIONS.docx (Agent 21). Layer 5.5 added in 01_ARCHITECTURE.docx.
+Build step added to 04_BUILD_SEQUENCE.docx Phase 7. Live record in decisions.md
+entry 2026-05-10.
 
-**Decision gate:** Graduates to decisions.md when doc update pass completes and agent
-is assigned to a build phase.
+**Decision gate:** N/A — graduated.
 
 ---
 
