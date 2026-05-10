@@ -1114,3 +1114,40 @@ Everything else — USD display-currency standardisation, CKN GBp double-convers
 - If employer AzureAD password rotation causes Task Scheduler tasks to stop running — re-register tasks (XML files are in repo). Check untime\backup-logs\ for gap in dates as early warning.
 - If B2 costs become significant (currently negligible at ~1.5 MB stored) — review retention policy.
 - Run full rehearsal (restore a complete multi-file snapshot, not just the single-file test) after the prune script has run once and confirmed clean.
+
+## 2026-05-10 — Design pass: ideas.md introduced, V2_BACKLOG.docx retired, Agents 20 and 21 added to v1 spec
+
+**Decision:** A design pass was completed adding two new v1 agents, retiring V2_BACKLOG.docx in favour of ideas.md, and updating all affected design docs.
+
+**ideas.md introduced:**
+ideas.md is now the canonical log for all ideas, deferred features, and backlog items. It lives in the repo alongside decisions.md and is Git-versioned. V2_BACKLOG.docx is retired — all five entries migrated to ideas.md with original rationale and start criteria preserved. Idea lifecycle: ideas.md (PROPOSED) → ideas.md (APPROVED/BACKLOG) → decisions.md (when built).
+
+**V2_BACKLOG.docx retired:**
+All five original entries (Learning Agent, Time Machine Controller, Outcome Tracker, Calibration Log, Automated Filings Acquisition) migrated to ideas.md as BACKLOG entries. Two new backlog entries added: Portfolio Manager v2 Enhancement (Kelly sizing, conflict detection, proactive rebalancing) and Sector Specialist Agent. V2_BACKLOG.docx deleted from C:\MFIP\docs\ and removed from project knowledge base.
+
+**Agent 20 — Earnings Quality Agent (Layer 4, v1):**
+Forensic earnings quality analysis: Beneish M-Score (8-variable, threshold > -1.78), Sloan accruals decomposition (1996 methodology), cash conversion trend (OCF/NI 5-year), sector-specific flags (Clarkson %-completion, Novo R&D cap, DNB provisions). Rating: CLEAN / WATCH / CONCERN / RED FLAG. RED FLAG floors Chief Analyst confidence at MEDIUM regardless of valuation convergence — non-negotiable constraint.
+Trigger sequence: FSA Agent completes → Earnings Quality runs in parallel with DCF, RE Valuation, DDM, Comps → Shock Agent waits for all five. FSA reformulated statements are a hard prerequisite; falls back to raw financials with reduced confidence flag if unavailable.
+
+**Agent 21 — Thesis Monitor Agent (Layer 5.5, v1):**
+Schedule-driven daily agent — the only agent in MFIP not triggered by a new filing. Parses Chief Analyst thesis and extracts testable conditions (price, macro, growth, competitive assumptions). Four states: INTACT / WATCH / UNDER PRESSURE / BROKEN. Transitions are one-directional; never transitions downward without a new Chief Analyst recommendation. Alerts on every upward transition, never on INTACT. Requires own Task Scheduler XML entry — cannot piggy-back on backup or other scheduled tasks.
+Layer 5.5 rationale: inserting cleanly between Layer 5 and Layer 6 without renumbering. Non-integer layer number is permanent and intentional.
+
+**Doc updates (all updated 2026-05-10):**
+- ideas.md — created, committed as part of b1b0926
+- 02_AGENT_DESCRIPTIONS.docx — agent index updated (Layer 4 +Agent 20, new Layer 5.5 row), full spec blocks for Agents 20 and 21 added
+- 01_ARCHITECTURE.docx — Layer 4 description updated to seven agents with corrected trigger sequence; Layer 5.5 row added to layer summary table
+- 04_BUILD_SEQUENCE.docx — Phase 6 updated to seven agents, Earnings Quality build step added, Thesis Monitor build step added at end of Phase 7, V2 section references ideas.md
+- SYSTEM_PROMPT.docx — document overview table: V2_BACKLOG.docx replaced with ideas.md; V3 clarification note updated
+- CLAUDE.md — no changes needed (already clean from 2026-05-09 rewrite)
+- V2_BACKLOG.docx — deleted
+
+**Agent count after this pass:** 21 agents in v1 (was 19).
+
+**Implication:**
+- ideas.md is now the single backlog reference. V2_BACKLOG.docx references in any old notes are stale.
+- Agents 20 and 21 graduate from ideas.md APPROVED to decisions.md. Their ideas.md entries should be updated to GRADUATED status.
+- Phase 6 and Phase 7 build estimates increase modestly: Earnings Quality adds ~2h to Phase 6; Thesis Monitor adds ~2-3h to Phase 7.
+- Thesis Monitor requires a dedicated Task Scheduler XML entry when built — pattern is identical to backup/prune tasks in scripts\backup\.
+
+**Revisit trigger:** None — this is a closeout entry. Individual agent build decisions carry their own entries when phases are built.
