@@ -47,8 +47,8 @@ C:\MFIP\
 ├── bloomberg_inbox\                      ← dormant in v1; future infrastructure
 ├── bloomberg_archive\
 │   ├── <TICKER>\<YYYY-MM-DD>\<TICKER>_<YYYY-MM-DD>.xlsx   ← per-company snapshots
-│   ├── _INDICES\<YYYY-MM-DD>\INDICES_<YYYY-MM-DD>.xlsx    ← shared workbook
-│   └── _FX\<YYYY-MM-DD>\FX_<YYYY-MM-DD>.xlsx              ← shared workbook
+│   ├── INDICES\<YYYY-MM-DD>\INDICES_<YYYY-MM-DD>.xlsx     ← shared workbook
+│   └── FX\<YYYY-MM-DD>\FX_<YYYY-MM-DD>.xlsx               ← shared workbook
 ├── filings\<TICKER>\                     ← annual report PDFs (flat, no date subfolder)
 ├── models\<TICKER>\<DATE>\               ← agent-generated Excel models (DCF, FSA, Comps, Shock)
 ├── theses\                               ← Chief Analyst Word documents
@@ -65,6 +65,8 @@ C:\MFIP\
     ├── CLAUDE.md
     ├── scripts\
     │   ├── smoke_test_env.py
+    │   ├── ingestion\
+    │   │   └── validate_bloomberg_workbook.py
     │   └── (dashboard, watchers, scheduled_tasks, agents added per phase)
     └── templates\bloomberg\              ← Git-versioned Bloomberg export masters
         ├── Template_FX\

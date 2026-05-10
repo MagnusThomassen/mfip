@@ -1151,3 +1151,33 @@ Layer 5.5 rationale: inserting cleanly between Layer 5 and Layer 6 without renum
 - Thesis Monitor requires a dedicated Task Scheduler XML entry when built — pattern is identical to backup/prune tasks in scripts\backup\.
 
 **Revisit trigger:** None — this is a closeout entry. Individual agent build decisions carry their own entries when phases are built.
+
+## 2026-05-10 — Pre-Phase-3 Bloomberg saved-file validator
+
+**Decision:** A one-shot Python validator (`scripts/ingestion/validate_bloomberg_workbook.py`) was built before Phase 3 begins. It encodes the saved-file contract from `07_BLOOMBERG_EXPORT_TEMPLATE.docx` (8 sheets: CONFIG + 7 data) and the v1 universe membership, validates a workbook against the contract, and emits a structured report with three result tiers (PASS / ADVISORY / FAIL) aligned with the Security Council alert system. Exit code is non-zero only on FAIL.
+
+**Reasoning:** Phase 3 ingestion is the first build phase that consumes Bloomberg exports as production input rather than reference. Without a contract validator, contract drift (sheet renames, paste-as-values failures, RV column-set drift, currency mismatches) would surface as silent parsing bugs deep in the ingestion layer. Building the validator first means Phase 3 starts from a verified-clean input dataset, and the validator itself becomes a reusable component (the eventual watchdog handler can call `validate_workbook(path)` directly to make the quarantine decision).
+
+**Three contract corrections were surfaced by smoke-testing the validator against the real EQNR_NO_2026-05-08 workbook:**
+
+1. **CONFIG!B4 currency contract is fixed at "USD" for all tickers**, not the local listing currency. This matches the 2026-05-08 USD standardisation decision; the validator's first version had the local listing currency from the universe table, which was an error against the standardisation rule.
+
+2. **RV_Comps column names are Bloomberg-native, not simplified.** The actual export uses `Mkt Cap (USD)`, `Last Px (USD)`, `Rev - 1 Yr Gr:Y`, `EPS - 1 Yr Gr:Y`, `Px/Book` (not `Mkt Cap`, `Last Px`, `Rev 1Y growth`, `EPS 1Y growth`, `P/Book` as listed in the 2026-05-09 master-template-structure entry). The validator now uses the actual Bloomberg-native names; the 2026-05-09 entry's column-set list should be read as illustrative of *which fields* are required, not as the canonical naming.
+
+3. **Three planned columns are deliberately absent from the 2026-05-08 export and scheduled for the next lab session: `EV/EBITDA`, `Px/Book`, `EV/Sales`.** The validator handles this with a two-tier required-columns set: `RV_BASELINE_COLUMNS` (must be present, drift surfaces as `RV_COLUMN_DRIFT` Advisory) and `RV_PLANNED_COLUMNS` (informational `RV_PLANNED_COLUMN_PENDING` Advisory until they're added). When the next lab session adds them, promote the three names from `RV_PLANNED_COLUMNS` to `RV_BASELINE_COLUMNS` in the validator and the Advisory disappears automatically.
+
+**Smoke-test result against the 2026-05-08 archive:** `PASS=0 ADVISORY=6 FAIL=0`, exit code 0. Five workbooks each carry the planned-columns Advisory; TEL_NO carries the universe-member-absent Advisory. No FAILs — saved-file contract holds end-to-end.
+
+**Implication:**
+
+- The validator is a Phase 3 prerequisite, not a Phase 3 deliverable. It runs ad-hoc against `bloomberg_archive\` to confirm contract conformance before any other ingestion code is written. After Phase 3 ingestion is built, the same `validate_workbook()` function will be wrapped by the watchdog handler at the inbox quarantine boundary if `bloomberg_inbox\` is ever re-activated.
+- The "find latest workbook per company" logic lives in the validator's `--all` mode for now. When Phase 3 build starts, this logic should be lifted out into a shared helper (target: `scripts/ingestion/archive_lookup.py`) — the watchdog watcher will need it too.
+- TEL_NO is in the validator's `KNOWN_ABSENT` set (universe member, not yet exported at the lab). When the next lab session adds TEL_NO data, remove it from `KNOWN_ABSENT`.
+- A folder-vs-doc mismatch surfaced during this work: `bloomberg_archive\` on disk uses `INDICES\` and `FX\` (no leading underscore) but `CLAUDE.md` documented `_INDICES\` and `_FX\`. Resolution: update docs to match disk. `CLAUDE.md` updated 2026-05-10; `01_ARCHITECTURE.docx` and `07_BLOOMBERG_EXPORT_TEMPLATE.docx` deferred to next doc-revision pass.
+
+**Affected docs:** `CLAUDE.md` (storage-layout section, this pass). `01_ARCHITECTURE.docx`, `07_BLOOMBERG_EXPORT_TEMPLATE.docx` — deferred. `decisions.md` 2026-05-09 master-template-structure entry — RV column-set list is illustrative, not canonical; actual Bloomberg-native names are in the validator.
+
+**Revisit triggers:**
+
+- Next lab session: add `EV/EBITDA`, `Px/Book`, `EV/Sales` to the terminal-side RV layout. Then promote those three names from `RV_PLANNED_COLUMNS` to `RV_BASELINE_COLUMNS` in the validator and remove TEL_NO from `KNOWN_ABSENT` once exported.
+- Phase 3 ingestion build start: lift the "find latest workbook" logic into a shared helper and have the watchdog handler call `validate_workbook()` directly at the quarantine boundary.
