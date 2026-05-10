@@ -1067,3 +1067,50 @@ Everything else — USD display-currency standardisation, CKN GBp double-convers
 **Affected docs:** None — this is a correction to the same-date cleanup-pass entry above, not a design-doc change.
 
 **Revisit trigger:** None — this is a closeout correction. If the four `.py` files are ever restored to the working tree, log a new entry recording the restoration and its motivation.
+## 2026-05-10 — Backup infrastructure: restic + Backblaze B2, automated scripts, recovery rehearsed
+
+**Decision:** MFIP backup infrastructure is complete and verified. Restic 0.18.1 backs up C:\MFIP\ to Backblaze B2 bucket mfip-backup-magnus daily at 02:00 via Windows Task Scheduler. Monthly prune runs on the 1st at 04:00.
+
+**Threat model:** Three failure scenarios addressed — (1) accidental deletion or file corruption (restic snapshots with 30-day daily retention), (2) hardware failure (off-site B2 storage, EU-Central region), (3) credential loss (restic password stored in iCloud Keychain as doomsday recovery).
+
+**Storage tiers:**
+- Tier 1: Git/GitHub — code and decisions log (already in place)
+- Tier 2: Restic/B2 — full C:\MFIP\ backup excluding .venv\, __pycache__\, *.pyc, *.tmp, ~\$*.xlsx, .git\, OS artefacts
+
+**Infrastructure:**
+- B2 bucket: mfip-backup-magnus, Object Lock (Governance), Encryption, Private, s3.eu-central-003.backblazeb2.com
+- Restic repository ID: d9d7e980
+- .resticignore at epo\.resticignore — excludes .venv\ (687 MB, reproducible from requirements.txt) and build artefacts
+- scripts\backup\Invoke-MfipBackup.ps1 — loads .env, runs restic backup, logs summary only to untime\backup-logs\YYYY-MM-DD.log
+- scripts\backup\Invoke-MfipPrune.ps1 — monthly forget/prune (keep-daily 30, keep-weekly 12, keep-monthly 12), restic check, 90-day log retention
+- scripts\backup\Task-MfipBackup.xml and Task-MfipPrune.xml — Task Scheduler entries, "Do not store password" / Interactive only mode
+
+**Task Scheduler credential decision:** Work laptop is AzureAD-joined (employer-managed). "Do not store password" / Interactive only mode used throughout. Restic authenticates to B2 via env vars loaded from .env by the PowerShell script — no Windows network credentials needed. Tasks run when Magnus is logged in; on a sleeping laptop, runs on next wake. Acceptable for personal backup.
+
+**Retention policy:** keep-daily 30, keep-weekly 12, keep-monthly 12. Monthly prune enforces policy and runs estic check for integrity verification.
+
+**Recovery rehearsal (2026-05-10):**
+- Restored test snapshot 7427649b (original single-file test snapshot from 2026-05-09) to C:\Temp\restic-rehearsal\
+- SHA256 hash of restored decisions.md: E3853A99EAB3C5A18B0199F99B8CA2E78D9EF0FCA2514A1385911E53177114D4
+- SHA256 hash of live decisions.md: E3853A99EAB3C5A18B0199F99B8CA2E78D9EF0FCA2514A1385911E53177114D4
+- Result: MATCH — byte-identical restore confirmed
+- Rehearsal directory cleaned up after verification
+
+**Credential storage:**
+- MFIP_B2_KEY_ID, MFIP_B2_APP_KEY, MFIP_B2_BUCKET, MFIP_B2_ENDPOINT, MFIP_RESTIC_PASSWORD stored in .env (gitignored)
+- MFIP_RESTIC_PASSWORD additionally stored in iCloud Keychain as doomsday recovery — the only .env key that cannot be regenerated if .env is lost
+- .env is inside C:\MFIP\repo\ and therefore caught by restic backup automatically. Anyone with restic repo access + restic password recovers all credentials. Acceptable: the password is the gate.
+
+**Snapshots as of 2026-05-10:** 3 snapshots in repository (7427649b test, 1c8c170 first full backup, 79d5e327 second full backup post-script-fix).
+
+**Implication:**
+- Backup runs automatically. Magnus should verify untime\backup-logs\ weekly for the first month to confirm Task Scheduler is firing correctly.
+- Prune script not yet tested end-to-end (would have deleted the test snapshot needed for rehearsal). Run Invoke-MfipPrune.ps1 manually once after the next scheduled daily backup completes.
+- untime\unsent_alerts\ created as part of this pass — used by Phase 2 mfip_alerts.py, not yet active.
+
+**Affected files:** scripts\backup\ (4 new files), .resticignore, untime\ directories (off-repo). Committed as 1b0926.
+
+**Revisit triggers:**
+- If employer AzureAD password rotation causes Task Scheduler tasks to stop running — re-register tasks (XML files are in repo). Check untime\backup-logs\ for gap in dates as early warning.
+- If B2 costs become significant (currently negligible at ~1.5 MB stored) — review retention policy.
+- Run full rehearsal (restore a complete multi-file snapshot, not just the single-file test) after the prune script has run once and confirmed clean.
