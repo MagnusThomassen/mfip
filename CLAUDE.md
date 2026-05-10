@@ -42,6 +42,8 @@ Local Windows filesystem only. No SharePoint, no OneDrive for Business as a runt
 
 The layout encodes a deliberate asymmetry: Bloomberg data is point-in-time snapshots (date-versioned subfolders); annual report PDFs are durable artefacts (no date subfolders, identified by fiscal year in filename).
 
+`<TICKER>` below is the Bloomberg-style ticker with exchange suffix (e.g. `EQNR_NO`, `CKN_LN`, `MSFT_US`), used consistently across `bloomberg_archive\`, `filings\`, and `models\`.
+
 ```
 C:\MFIP\
 ├── bloomberg_inbox\                      ← dormant in v1; future infrastructure
@@ -83,6 +85,30 @@ Six companies: EQNR (primary test company), DNB, TEL, NOVO B, MSFT, CKN.
 **Phase 0 complete.** Repo initialised, GitHub remote configured, Python 3.12 venv with pinned dependencies (`requirements.txt` + `requirements.lock.txt`), finance plugins installed, smoke test passing, Bloomberg master templates Git-versioned under `repo\templates\bloomberg\`.
 
 **Phase 1 next: dashboard shell.** Plotly Dash + AG Grid, four zones, placeholder data throughout. Estimated 3–5 hours. See `04_BUILD_SEQUENCE.docx` Phase 1 and `05_DASHBOARD_SPEC.docx` for the zone specifications.
+
+## Commit message convention
+
+Subject line: imperative mood, under 72 characters, with a prefix from the set below. Body: optional, separated by a blank line, used for non-trivial changes.
+
+| Prefix | When to use |
+|---|---|
+| `feat` | New code or functionality (validators, agents, scripts, dashboard panels) |
+| `fix` | Bug fix |
+| `docs` | Documentation: `CLAUDE.md`, `README.md`, references to design docs |
+| `decision` | Appending to `decisions.md` |
+| `ideas` | Appending to or graduating items from `ideas.md` |
+| `chore` | Repo maintenance and config (`.gitignore`, `requirements.txt` bumps) |
+| `backup` | Backup infrastructure changes (restic, Task Scheduler entries) |
+| `test` | Test or probe commit (rare; usually thrown away in squash-merge) |
+
+Examples:
+
+- `feat(ingestion): add Bloomberg saved-file workbook validator`
+- `docs: align CLAUDE.md storage layout to disk`
+- `decision: 2026-05-10 pre-Phase-3 Bloomberg validator`
+- `chore: pin pandas to 2.2.3`
+
+Optional scope in parentheses (e.g. `feat(ingestion):`, `docs(claude-md):`) when the prefix alone doesn't disambiguate.
 
 ## When updating decisions.md
 
