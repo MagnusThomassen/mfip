@@ -100,6 +100,15 @@
     animation: skeleton-pulse 1.4s var(--motion-ease-linear) infinite;
 }
 
+/* Pipeline status indicator pulse — only when data-state="running" */
+@keyframes pipeline-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.4; }
+}
+[id="pipeline-status"][data-state="running"] [id="pipeline-status-dot"] {
+    animation: pipeline-pulse 2s var(--motion-ease-linear) infinite;
+}
+
 /* -----------------------------------------------------------------
  * Reduced motion — collapse every duration to instant
  * ----------------------------------------------------------------- */

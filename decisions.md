@@ -1282,3 +1282,281 @@ session — evaluate Dash v1 against web-first migration cost at that point.
 **Affected docs:** `decisions.md` (this entry), `ideas.md` (status update on the 2026-05-10 "Project Dashboard View" entry).
 
 **Revisit trigger:** After Zone 1 is functional (end of Session 6 or Session 7). At that point, revisit the Home-vs-Zone-1 destination question with concrete grounding from real Zone 1 use. If a Home screen is added, document the route registration in a follow-up entry.
+
+## 2026-05-11 — ASR blocks venv shims; standing rule: `python -m` form for all tools
+
+**Context.** Session 6 startup: `pytest tests/test_theme.py` failed at the
+shell with "Access is denied" before pytest could load. Windows Defender
+Attack Surface Reduction (ASR) rule
+`01443614-cd74-433a-b99e-2ecdc07bfc25` ("Block executable files from
+running unless they meet a prevalence, age, or trusted list criterion")
+blocked `C:\MFIP\repo\.venv\Scripts\pytest.exe`. The shim is freshly
+created by pip install, unsigned, and below ASR's prevalence threshold,
+so it gets blocked on every invocation.
+
+**Decision.** Always invoke Python tools via the module form
+(`python -m <tool>`), never via the venv shim. Verified working:
+`python -m pytest tests/test_theme.py` → 8 passed.
+
+**Why not an ASR exclusion (option 1).** Hardware is Azure AD-joined
+(`AzureAD\MagnusThomassen`), confirmed Kingston-managed. Defender
+policy is locked from user context — `Add-MpPreference` returns
+permission denied, `Get-MpPreference ... Exclusions` returns "Must be
+an administrator to view exclusions". An IT ticket to whitelist a
+student venv directory is not a battle worth fighting for this project.
+
+**Why not Audit-mode the ASR rule (option 3).** System-wide posture
+change. Out of scope and almost certainly blocked by the same policy.
+
+**Standing rule going forward.**
+- All test invocations: `python -m pytest [...]`
+- All pip invocations: `python -m pip [...]` (already the convention)
+- Any new tool that lands in `.venv\Scripts\`: invoke via `python -m`
+  if it has a module entry point. If a tool has no module form, triage
+  then — likely candidates: linters, formatters, type checkers. Most
+  do have `python -m` forms (`python -m black`, `python -m ruff`,
+  `python -m mypy`).
+- Handoffs, briefs, Definition of Done blocks, and any scripted
+  commands use the module form.
+
+**Open watch.** Session 5 handoff documented `pytest tests/test_theme.py`
+(shim form) as the verification command and claimed it passed. Either
+(a) ASR policy was pushed between Session 5 and Session 6,
+(b) ASR re-evaluated prevalence/age and the shim lost trust, or
+(c) the Session 5 run used the module form and the handoff captured
+the wrong command. Can't distinguish without more data. If other tools
+start failing the same way in coming sessions, escalate to a separate
+investigation — could indicate a tightening policy push.
+
+**Cost.** Three extra keystrokes per invocation. Acceptable.
+
+## 2026-05-11 — Clientside callbacks: inline string form, not separate JS files
+
+**Context.** Session 6 routing shell needed a clientside callback to read
+`prefers-color-scheme` and subscribe to OS theme changes. Session 6
+handoff originally specified a separate `mfip/dashboard/assets/clientside.js`
+file with a `ClientsideFunction` reference. Reconsidered during pre-build:
+the callback is 5-10 lines of JS, and splitting it across two files just
+to use the namespace/function_name pattern adds indirection for no
+readability gain.
+
+**Decision.** Use the inline string form of `clientside_callback` for
+callbacks that fit in roughly 30 lines or less and don't need their own
+test harness. Reach for the separate `assets/clientside.js` +
+`ClientsideFunction` pattern only when JS grows past that, or when it
+needs to be shared across multiple Dash callbacks.
+
+**Why.** Colocation. Reading `app.py` reveals the full theme-store wiring
+in one place. The separate-file pattern earns its keep at scale, not at
+10 lines.
+
+**Scope.** Project-wide pattern for MFIP. Future zones that need
+clientside JS follow the same rule.
+
+## 2026-05-11 — Dash 3.x: `use_pages=True` needs `dash.page_container` in the layout
+
+**Context.** Session 6 routing shell build. Setting `use_pages=True` on
+the Dash 3.4 app caused three "ID not found in layout" runtime errors at
+`127.0.0.1:8050` even though pytest's layout-introspection tests all
+passed. Diagnostic confirmed `app.layout` was intact at both attribute
+and `serve_layout()` level — the missing IDs were internal page-system
+ids (`_pages_location`, `_pages_content`, `_pages_store`) that Dash
+injects via `use_pages=True` and references from internal callbacks.
+Those ids only resolve when `dash.page_container` is present in the
+layout. Without it, the page registry is enabled but has no mount point,
+and Dash's internal callbacks fail validation.
+
+**Decision.** When `use_pages=True`, the layout MUST include
+`dash.page_container` somewhere in the tree. For MFIP this lives where
+zone routing happens — zones will register via `dash.register_page(...)`
+and mount into `page_container`.
+
+**Related:** `pages_folder=""` is also required at app construction
+because MFIP architecture puts zones in `mfip/dashboard/zones/`, not the
+default `pages/` location. The empty string disables folder
+auto-discovery while keeping the page registry available for
+programmatic `dash.register_page` calls from anywhere.
+
+**Tighter than Dash 2.x.** In Dash 2.x, `use_pages=True` worked with no
+pages registered and no page_container in the layout. Dash 3.x rejects
+this and surfaces both issues as runtime errors visible only in the
+browser dev panel, not in pytest's static layout walk.
+
+**Test gap noted.** `tests/test_app.py` walks the Python-side layout and
+did not catch the runtime ID-resolution mismatch. Logged as a future
+ideas.md entry: "smoke test that instantiates the app and asserts all
+callback Input/Output IDs resolve against the served layout." Not a
+blocker; surfaced by the browser dev panel during normal verification.
+
+## 2026-05-11 — Typography token namespace divergence: spec `type.*`, CSS `.text-*`
+
+**Context.** Session 6 Part 2 build. Spec `05_DASHBOARD_SPEC.docx` v1.1
+refers to type tokens as `type.h1`, `type.body`, `type.data.lg` etc.
+The implementing CSS in `mfip/dashboard/assets/typography.css` uses
+`.text-h1`, `.text-body`, `.text-data-lg` etc. — `text-` not `type-`.
+
+**Decision.** CSS class names are the source of truth at the
+implementation layer. Zone code uses `className="text-h1"` etc., not
+`type-h1`. Spec language stays as-is at the token-naming level.
+
+**Cost.** Translation step when reading the spec. Worth a glossary
+entry in the spec or a token-name alignment in a future doc pass —
+deferred, not urgent.
+
+## 2026-05-11 — Zone registration: explicit imports in app.py, not auto-discovery
+
+**Context.** Session 6 Part 1 set `pages_folder=""` on the Dash app so
+zones could live in `mfip/dashboard/zones/` instead of `pages/`. Side
+effect: pages no longer auto-discover by folder scan. Each zone
+module must be explicitly imported somewhere before it can register
+itself with `dash.register_page`.
+
+**Decision.** Import each zone module at the bottom of `app.py`:
+`from mfip.dashboard.zones import zone1` (and similar for zones 2-4 as
+they land). Order: Zone 1, then 2, 3, 4 — same as spec layout order.
+Each new zone in subsequent sessions adds one import line.
+
+**Why not auto-discovery.** Re-enabling `pages_folder="zones"` would
+require renaming zones/ to pages/, which conflicts with the
+architecture's naming convention (zones map to the dashboard spec's
+Zone 1/2/3/4 sections, not Dash's "page" abstraction).
+
+**Cost.** N+1 import lines for N zones. Acceptable; explicit beats
+implicit at this scale.
+
+## 2026-05-11 — Dash 3.x: `suppress_callback_exceptions=True` required for pages-based apps
+
+**Context.** Session 6 Part 2 Zone 1 launch surfaced 16 callback
+errors at startup ("ID not found in layout" x15, "nonexistent object
+in Input" x1) despite all referenced IDs being present in either the
+app-level layout or the page-module layout. Diagnostic confirmed no
+typos, no missing IDs — root cause is Dash's startup callback
+validation running before `page_container` mounts page contents.
+With `use_pages=True`, page layouts are inserted into `page_container`
+only on navigation, so at app boot the served layout has only the
+app-level shell + an empty page slot. Any callback in a page module
+referencing IDs that live in that page's layout fails startup
+validation.
+
+**Decision.** Pass `suppress_callback_exceptions=True` to the Dash
+constructor. This defers callback ID validation from app-boot time to
+callback-fire time. Standard pattern for any Dash multi-page app per
+the Dash docs.
+
+**What we lose.** Typos in callback Input/Output/State IDs no longer
+surface at app boot. They surface at runtime when the callback fires
+and the ID can't resolve. In MFIP this is covered by structural layout
+tests in `tests/test_*.py` that walk each zone's layout tree and assert
+required IDs — typos are caught at pytest time, before browser.
+
+**What we gain.** The app boots cleanly with page-encapsulated
+callbacks. Zones can own both their layout and their callbacks
+without leaking IDs up to the app-level layout.
+
+**Note.** It is surprising this is not Dash's default behaviour when
+`use_pages=True` is set — there is no scenario where strict
+startup validation works correctly for a pages-based app. Possible
+default in future Dash versions; for 3.4 it must be set explicitly.
+
+## 2026-05-11 — Dash 3.x: pages without folder need explicit `layout=` kwarg
+
+**Context.** Session 6 Part 2 launch with Zone 1 registered via
+`dash.register_page(__name__, path="/", name="Command Centre")` left
+Zone 1 unreachable at `/`. Page registry showed the entry with correct
+path and module, but `supplied_layout=None`. URL `/` matched the entry,
+found no layout, fell back to `_pages_dummy` placeholder. All zone1
+IDs absent from served layout → callback validation errors against
+the dummy layout.
+
+**Root cause.** With `pages_folder=""`, Dash's auto-discovery of
+module-level `layout` attributes is disabled. The `layout` variable
+in `zone1.py` was never picked up. Dash needs `layout=` passed
+explicitly to `register_page` in this configuration.
+
+**Decision.** All zone modules call `register_page` at the bottom of
+the file with `layout=layout` as a kwarg, after the `layout` variable
+and all `@callback` definitions. Canonical pattern per Dash docs for
+`pages_folder=""` setups.
+
+**Template for future zones.**
+
+```
+import dash
+# ... imports ...
+
+layout = html.Div([...])  # zone content
+
+@callback(...)
+def some_callback(...):
+    ...
+
+dash.register_page(__name__, path="/path", layout=layout, name="Zone N")
+```
+
+**Related decisions.** This is the third Dash-3.x pages-without-folder
+constraint logged today, alongside:
+- `pages_folder=""` to disable auto-discovery (decision earlier this
+  session)
+- `suppress_callback_exceptions=True` to defer ID validation past app
+  boot (decision earlier this session)
+The three together are the full set needed for the chosen architecture
+(zones in `mfip/dashboard/zones/`, not `pages/`). Future zones inherit
+all three; no further surprises expected from the routing layer.
+
+## 2026-05-11 — Clientside callbacks with global side effects live in app.py
+
+**Context.** Session 6 Part 2 launch surfaced a "nonexistent object"
+error on the clientside callback that applied the `data-theme`
+attribute to `document.documentElement`. The callback was defined in
+zone1.py with Input on `theme-mode-store` (in app layout) and Output
+on a dummy store `theme-css-applied` (in zone1 layout). Dash 3.x
+wires clientside callbacks at app boot regardless of
+`suppress_callback_exceptions`, and the zone1 Output didn't exist in
+the served layout at boot.
+
+**Decision.** Clientside callbacks whose effect is global (mutating
+`document.documentElement`, setting body-level attributes, dispatching
+window-level events) live in app.py, not in zone modules. Their dummy
+Output stores also live in app.py.
+
+**Rule of thumb.** Ask: does this callback's effect belong to a
+specific zone, or to the whole app? If app-wide, it goes in app.py.
+The data-theme attribute affects every zone's styling, so it's
+app-level.
+
+**Cost.** app.py grows slightly. Acceptable; app.py is the right home
+for app-wide concerns.
+
+## 2026-05-11 — Cross-layout callback Inputs deferred from Session 6
+
+**Context.** Session 6 Part 2 Zone 1 theme toggle server callback has
+Inputs spanning two layouts: `theme-toggle-radio.value` (zone1 layout)
+and `theme-system-pref-store.data` (app layout). With one Input in
+app layout, Dash 3.x validates the entire dependency immediately at
+boot; the zone1 Input isn't present until page navigation; validation
+fails with "nonexistent object in Input".
+
+**suppress_callback_exceptions** suppresses purely zone-internal
+callbacks but doesn't suppress callbacks whose Output OR any single
+Input is at app level — Dash treats the presence of any app-level
+component in the dependency as a trigger for immediate validation.
+
+**Decision (deferred).** The fix likely involves one of:
+1. Moving theme-toggle-radio out of zone1 settings panel and into
+   app.py so all theme machinery lives in one layout
+2. Restructuring the callback so the theme-mode-store write happens
+   via a clientside path that doesn't trigger Dash's server-side
+   validator
+3. Splitting into two callbacks: one purely zone1-internal that
+   writes the radio value into an intermediate zone1-local store,
+   one app-level that reads that intermediate store
+None of these are 5-minute fixes; deferring to Session 7 for a fresh
+head and a deliberate decision rather than a patch.
+
+**Current state.** Theme toggle radio renders in settings panel.
+Clicking it does NOT update theme-mode-store. The data-theme
+clientside callback still applies initial dark mode on app boot.
+Visual feedback for theme switching is not yet wired anyway (zones
+don't consume theme-mode-store until their figures route through
+apply_theme); so the missing toggle wiring is invisible in current
+session output.

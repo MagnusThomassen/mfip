@@ -1193,3 +1193,21 @@ cover all required sources, or whether Scrapling is needed for specific IR pages
 Cloudflare-protected sources that cannot be reached otherwise. If adopted, add to
 `requirements.txt` and document the per-source fetcher choice in `config/news_feeds.yaml`.
 If feedparser + NewsAPI prove sufficient in practice, this entry stays PROPOSED indefinitely.
+
+## IDEA-021 — MAX date preset: wire to earliest available data date
+
+**Source:** Session 6 Part 2 build.
+
+**Context.** Zone 1's Global Date Filter has a MAX preset button. Spec
+says "MAX — all available data" without a numeric bound. Current
+implementation in `zone1.py` uses 20 years back from today as a
+placeholder.
+
+**Action.** Once Bloomberg / Excel data loaders land (Phase 2+), wire
+the MAX preset to compute "earliest data date across the loaded
+universe" rather than a hardcoded 20-year window. Likely lives in the
+date-range-store's initial-value computation or a callback that
+resolves "MAX" against the data layer.
+
+**Status:** PROPOSED. Decision gate: end of Phase 2 (when data loading
+is real).
