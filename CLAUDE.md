@@ -4,16 +4,34 @@ You are Claude Code working on MFIP (Magnus Financial Intelligence Platform), a 
 
 ## Project context
 
-MFIP is a multi-agent financial analysis pipeline that takes company filings and Bloomberg data and produces professional investment recommendations presented in a Plotly Dash desktop app. It is a personal learning project for Magnus, an MSc Finance student at Kingston University London. It is **not** a production trading system, **not** a multi-user tool, and **not** related to his MSc dissertation (which is a separate Claude project).
+MFIP is a multi-agent financial analysis pipeline that takes company filings and Bloomberg data and produces professional investment recommendations presented in a Plotly Dash desktop app. It is a personal learning project for Magnus, an MSc Finance student at Kingston University London. It is **not** a production trading system, **not** a multi-user tool, and **not** related to his MSc dissertation (which is a separate Claude project). If insights from MFIP work appear structurally transferable beyond MFIP, flag them with a one-line note suggesting Magnus log them in `C:\Dissertation\inbox\transferable_from_mfip.md` — but do not write to that file directly and do not engage with dissertation content.
+
+## Terminology
+
+These terms are canonical across all MFIP discussions, design docs, decisions log, and ideas log. Use them consistently; do not invent synonyms.
+
+| Term | Refers to |
+|---|---|
+| Project Knowledge | The Claude Project file library / knowledge base — docs uploaded to the chat-based Claude project. Anthropic's own term for it. What chat-based Claude reads. |
+| Local repo | `C:\MFIP\` on the Windows machine — the actual working tree where code is built and run. |
+| GitHub | `github.com/MagnusThomassen/mfip` — the published remote, including rulesets, PRs, and repo metadata. |
+| Design docs | The numbered `.docx` files (`00_PROJECT_OVERVIEW.docx` through `07_BLOOMBERG_EXPORT_TEMPLATE.docx`) plus `SYSTEM_PROMPT.docx`. Live in Project Knowledge; local working copies at `C:\MFIP\docs\`. |
+| Repo docs | `CLAUDE.md`, `decisions.md`, `ideas.md`, `README.md` — Markdown files Git-versioned in the local repo. |
+| Bloomberg templates | The three `.xlsx` master templates (`Master`, `FX`, `Indices`). Defines the export contract. Git-versioned under `repo\templates\bloomberg\`. |
+| Bloomberg export files | The actual saved exports in `bloomberg_archive\<TICKER>\<YYYY-MM-DD>\`. The data, not the contract. |
+| Validator | Reserved for `scripts/ingestion/validate_bloomberg_workbook.py` specifically. Future ingestion components (parser, reconciliation engine) get their own names. |
+| Phase | A build sequence phase (Phase 0, Phase 1, …) per `04_BUILD_SEQUENCE.docx`. |
+| Session | One Claude conversation. |
+| Item | A numbered task within a session. |
 
 ## How to start each session
 
-1. Read `decisions.md` in this repo to catch up on architectural decisions made in chat sessions.
+1. Read `decisions.md` in the local repo to catch up on architectural decisions made in chat sessions.
 2. Check `git log --oneline` to see recent build progress.
-3. Design docs: local copies live at `C:\MFIP\docs\`. The chat-based Claude project knowledge base is the canonical source; local copies are working copies that may drift. `C:\MFIP\docs\README.md` tracks the last sync date.
+3. Design docs: local working copies live at `C:\MFIP\docs\`. Project Knowledge is the canonical source; local copies are working copies that may drift. `C:\MFIP\docs\README.md` tracks the last sync date.
    - **Routine lookups** (colour values, sheet names, zone dimensions) — read local, no confirmation needed.
-   - **Architectural reads** (constraints, agent contracts, decisions you'll encode in code) — read local, then ask the user: "`docs\README.md` last sync is `<date>`. Is the chat project library newer?"
-   - If the user says the chat project is newer, ask them to paste the relevant section. Do not proceed on potentially-stale guidance.
+   - **Architectural reads** (constraints, agent contracts, decisions you'll encode in code) — read local, then ask the user: "`docs\README.md` last sync is `<date>`. Is Project Knowledge newer?"
+   - If the user says Project Knowledge is newer, ask them to paste the relevant section. Do not proceed on potentially-stale guidance.
 
 ## Division of responsibilities
 
@@ -24,7 +42,7 @@ When in doubt about a design question, do not improvise — ask the user to take
 
 ## Architectural rules you must respect
 
-These are non-negotiable and come from the project design docs:
+These are non-negotiable and come from the design docs:
 
 1. **Extractor A and Extractor B never share context.** Independence is the accuracy guarantee. If you find yourself importing one into the other, stop.
 2. **Security Council reports directly to Magnus, never through the Orchestrator.** Any code that routes security alerts via the Orchestrator is a bug.
@@ -40,7 +58,7 @@ These are non-negotiable and come from the project design docs:
 
 Local Windows filesystem only. No SharePoint, no OneDrive for Business as a runtime component. (University OneDrive is used as a one-way courier between the Kingston Bloomberg lab and the home machine — see `07_BLOOMBERG_EXPORT_TEMPLATE.docx` STORAGE LAYOUT.)
 
-The layout encodes a deliberate asymmetry: Bloomberg data is point-in-time snapshots (date-versioned subfolders); annual report PDFs are durable artefacts (no date subfolders, identified by fiscal year in filename).
+The layout encodes a deliberate asymmetry: Bloomberg export files are point-in-time snapshots (date-versioned subfolders); annual report PDFs are durable artefacts (no date subfolders, identified by fiscal year in filename).
 
 `<TICKER>` below is the Bloomberg-style ticker with exchange suffix (e.g. `EQNR_NO`, `CKN_LN`, `MSFT_US`), used consistently across `bloomberg_archive\`, `filings\`, and `models\`.
 
@@ -60,20 +78,24 @@ C:\MFIP\
 │   └── exports\                          ← nightly JSON exports, committed to logs-archive branch
 └── repo\                                 ← you are here
     ├── decisions.md
+    ├── ideas.md
     ├── requirements.txt
     ├── requirements.lock.txt
     ├── .gitignore
     ├── .env                              ← Gmail SMTP creds; gitignored; loaded via python-dotenv
     ├── CLAUDE.md
+    ├── README.md
+    ├── LICENSE
     ├── scripts\
     │   ├── smoke_test_env.py
     │   ├── ingestion\
     │   │   └── validate_bloomberg_workbook.py
     │   └── (dashboard, watchers, scheduled_tasks, agents added per phase)
-    └── templates\bloomberg\              ← Git-versioned Bloomberg export masters
-        ├── Template_FX\
-        ├── Template_Index\
-        └── Template_Ticker\
+    ├── templates\bloomberg\              ← Git-versioned Bloomberg templates
+    │   ├── Template_FX\
+    │   ├── Template_Index\
+    │   └── Template_Ticker\
+    └── design\                           ← JSX prototype, visual reference only (not a deliverable)
 ```
 
 ## Coverage universe (v1)
@@ -82,7 +104,7 @@ Six companies: EQNR (primary test company), DNB, TEL, NOVO B, MSFT, CKN.
 
 ## Current status
 
-**Phase 0 complete.** Repo initialised, GitHub remote configured, Python 3.12 venv with pinned dependencies (`requirements.txt` + `requirements.lock.txt`), finance plugins installed, smoke test passing, Bloomberg master templates Git-versioned under `repo\templates\bloomberg\`.
+**Phase 0 complete.** Repo initialised, GitHub remote configured with branch protection on `main`, Python 3.12 venv with pinned dependencies (`requirements.txt` + `requirements.lock.txt`), finance plugins installed, smoke test passing, Bloomberg templates Git-versioned under `repo\templates\bloomberg\`, validator built and proven against the 2026-05-08 archive.
 
 **Phase 1 next: dashboard shell.** Plotly Dash + AG Grid, four zones, placeholder data throughout. Estimated 3–5 hours. See `04_BUILD_SEQUENCE.docx` Phase 1 and `05_DASHBOARD_SPEC.docx` for the zone specifications.
 
@@ -109,6 +131,17 @@ Examples:
 - `chore: pin pandas to 2.2.3`
 
 Optional scope in parentheses (e.g. `feat(ingestion):`, `docs(claude-md):`) when the prefix alone doesn't disambiguate.
+
+## Working with branch protection
+
+`main` is protected: no direct push, no force push, no merge commits. Every change to `main` goes through a PR with squash-or-rebase merge. Admin bypass is limited to PRs.
+
+Practical implication for routine doc edits (`CLAUDE.md`, `decisions.md`, `ideas.md`, `README.md`):
+
+- **Local-branch flow** (full control, slower): create branch → commit → push → open PR → squash-merge → pull main → delete branch. Use this for substantive edits or anything touching multiple files.
+- **GitHub web UI** (faster for small edits): open the file on GitHub, click the pencil icon, edit, commit straight to a new branch with PR. GitHub handles the branch creation and PR opening in one flow. Use this for typo fixes, small clarifications, single-line edits. Pull main locally afterwards.
+
+Either flow respects branch protection. Choose by edit size.
 
 ## When updating decisions.md
 
