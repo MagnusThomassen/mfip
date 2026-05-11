@@ -1181,3 +1181,30 @@ Layer 5.5 rationale: inserting cleanly between Layer 5 and Layer 6 without renum
 
 - Next lab session: add `EV/EBITDA`, `Px/Book`, `EV/Sales` to the terminal-side RV layout. Then promote those three names from `RV_PLANNED_COLUMNS` to `RV_BASELINE_COLUMNS` in the validator and remove TEL_NO from `KNOWN_ABSENT` once exported.
 - Phase 3 ingestion build start: lift the "find latest workbook" logic into a shared helper and have the watchdog handler call `validate_workbook()` directly at the quarantine boundary.
+
+## 2026-05-11 — Frontend stack deferred; desktop-first confirmed for v1
+
+**Decision:** MFIP v1 frontend is Plotly Dash (Python), desktop-first
+on Windows. No commitment to web-first (React + Next.js + Vercel) until
+post-Mac Mini evaluation in autumn 2026.
+
+**Reasoning:** The web-first stack from the dashboard knowledge base README
+was written speculatively. The Mac Mini acquisition and Claude Code migration
+are both autumn 2026 events. Committing to a frontend migration before that
+point creates unnecessary architectural pressure on v1. The Plotly Dash
+prototype (JSX file) serves as the visual design target only — it is not
+a deliverable and will not run in production.
+
+**The open question:** Whether MFIP migrates to web-first post-Mac Mini
+depends on factors not yet resolved — whether Dash covers the v1 needs
+adequately, whether TypeScript + Next.js genuinely adds value for a
+single-user desktop tool, and whether the migration cost is justified.
+This is a revisit trigger, not a deferred decision.
+
+**Implication:**
+- All v1 build work stays in the Python stack.
+- The JSX prototype lives in C:\MFIP\repo\design\ as visual reference only.
+- Web-first is on ideas.md as PROPOSED, not APPROVED.
+
+**Revisit trigger:** After Mac Mini acquisition and first Claude Code
+session — evaluate Dash v1 against web-first migration cost at that point.
