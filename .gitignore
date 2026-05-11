@@ -29,3 +29,7 @@ Thumbs.db
 .env
 *.key
 credentials.json
+# R session files
+.Rhistory
+.RData
+.Rproj.user/
