@@ -1,0 +1,97 @@
+/*
+ * MFIP — AG Grid theme overrides.
+ *
+ * Maps AG Grid's built-in theme variables to MFIP semantic tokens.
+ * Token names match mfip/dashboard/theme.py exactly (verified by
+ * tests/test_theme.py). Dark and light variants both defined; the
+ * mode store drives a className swap between .ag-theme-alpine-dark
+ * and .ag-theme-alpine on the grid container.
+ *
+ * Spec source: 05_DASHBOARD_SPEC.docx v1.2, Visual Identity > AG Grid.
+ */
+
+/* -----------------------------------------------------------------
+ * Dark mode
+ * ----------------------------------------------------------------- */
+.ag-theme-alpine-dark {
+    /* MFIP tokens — keep in sync with theme.py DARK dict */
+    --bg-canvas: #0D1117;
+    --bg-surface: #161B22;
+    --bg-surface-raised: #1C232C;
+    --border-subtle: #30363D;
+    --border-strong: #444C56;
+    --text-primary: #E6EDF3;
+    --text-secondary: #8B949E;
+    --text-muted: #6E7681;
+    --accent-buy: #3FB950;
+    --accent-sell: #F85149;
+    --accent-hold: #D29922;
+    --accent-interactive: #58A6FF;
+    --accent-critical: #F85149;
+    --chart-series-1: #58A6FF;
+    --chart-series-2: #D29922;
+    --chart-series-3: #A371F7;
+    --chart-series-4: #3FB950;
+    --chart-series-5: #F85149;
+    --chart-series-6: #39C5CF;
+    --chart-series-7: #E780C5;
+    --chart-series-8: #8B949E;
+
+    /* AG Grid variable mapping */
+    --ag-background-color: var(--bg-surface);
+    --ag-foreground-color: var(--text-primary);
+    --ag-header-background-color: var(--bg-surface);
+    --ag-header-foreground-color: var(--text-secondary);
+    --ag-border-color: var(--border-subtle);
+    --ag-row-hover-color: var(--bg-surface-raised);
+    --ag-selected-row-background-color: var(--bg-surface-raised);
+    --ag-odd-row-background-color: var(--bg-surface);
+    --ag-row-border-color: var(--border-subtle);
+    --ag-secondary-foreground-color: var(--text-secondary);
+    --ag-disabled-foreground-color: var(--text-muted);
+    --ag-input-focus-border-color: var(--accent-interactive);
+    --ag-range-selection-border-color: var(--accent-interactive);
+}
+
+/* -----------------------------------------------------------------
+ * Light mode
+ * ----------------------------------------------------------------- */
+.ag-theme-alpine {
+    /* MFIP tokens — keep in sync with theme.py LIGHT dict */
+    --bg-canvas: #FBFCFD;
+    --bg-surface: #FFFFFF;
+    --bg-surface-raised: #F4F6F8;
+    --border-subtle: #E1E4E8;
+    --border-strong: #BCC2CA;
+    --text-primary: #1F2328;
+    --text-secondary: #656D76;
+    --text-muted: #8C959F;
+    --accent-buy: #1A7F37;
+    --accent-sell: #CF222E;
+    --accent-hold: #9A6700;
+    --accent-interactive: #0969DA;
+    --accent-critical: #CF222E;
+    --chart-series-1: #0969DA;
+    --chart-series-2: #9A6700;
+    --chart-series-3: #6639BA;
+    --chart-series-4: #1A7F37;
+    --chart-series-5: #CF222E;
+    --chart-series-6: #0E7C86;
+    --chart-series-7: #B4378F;
+    --chart-series-8: #656D76;
+
+    /* AG Grid variable mapping */
+    --ag-background-color: var(--bg-surface);
+    --ag-foreground-color: var(--text-primary);
+    --ag-header-background-color: var(--bg-surface);
+    --ag-header-foreground-color: var(--text-secondary);
+    --ag-border-color: var(--border-subtle);
+    --ag-row-hover-color: var(--bg-surface-raised);
+    --ag-selected-row-background-color: var(--bg-surface-raised);
+    --ag-odd-row-background-color: var(--bg-surface);
+    --ag-row-border-color: var(--border-subtle);
+    --ag-secondary-foreground-color: var(--text-secondary);
+    --ag-disabled-foreground-color: var(--text-muted);
+    --ag-input-focus-border-color: var(--accent-interactive);
+    --ag-range-selection-border-color: var(--accent-interactive);
+}
