@@ -1282,3 +1282,108 @@ session — evaluate Dash v1 against web-first migration cost at that point.
 **Affected docs:** `decisions.md` (this entry), `ideas.md` (status update on the 2026-05-10 "Project Dashboard View" entry).
 
 **Revisit trigger:** After Zone 1 is functional (end of Session 6 or Session 7). At that point, revisit the Home-vs-Zone-1 destination question with concrete grounding from real Zone 1 use. If a Home screen is added, document the route registration in a follow-up entry.
+
+## 2026-05-11 — ASR blocks venv shims; standing rule: `python -m` form for all tools
+
+**Context.** Session 6 startup: `pytest tests/test_theme.py` failed at the
+shell with "Access is denied" before pytest could load. Windows Defender
+Attack Surface Reduction (ASR) rule
+`01443614-cd74-433a-b99e-2ecdc07bfc25` ("Block executable files from
+running unless they meet a prevalence, age, or trusted list criterion")
+blocked `C:\MFIP\repo\.venv\Scripts\pytest.exe`. The shim is freshly
+created by pip install, unsigned, and below ASR's prevalence threshold,
+so it gets blocked on every invocation.
+
+**Decision.** Always invoke Python tools via the module form
+(`python -m <tool>`), never via the venv shim. Verified working:
+`python -m pytest tests/test_theme.py` → 8 passed.
+
+**Why not an ASR exclusion (option 1).** Hardware is Azure AD-joined
+(`AzureAD\MagnusThomassen`), confirmed Kingston-managed. Defender
+policy is locked from user context — `Add-MpPreference` returns
+permission denied, `Get-MpPreference ... Exclusions` returns "Must be
+an administrator to view exclusions". An IT ticket to whitelist a
+student venv directory is not a battle worth fighting for this project.
+
+**Why not Audit-mode the ASR rule (option 3).** System-wide posture
+change. Out of scope and almost certainly blocked by the same policy.
+
+**Standing rule going forward.**
+- All test invocations: `python -m pytest [...]`
+- All pip invocations: `python -m pip [...]` (already the convention)
+- Any new tool that lands in `.venv\Scripts\`: invoke via `python -m`
+  if it has a module entry point. If a tool has no module form, triage
+  then — likely candidates: linters, formatters, type checkers. Most
+  do have `python -m` forms (`python -m black`, `python -m ruff`,
+  `python -m mypy`).
+- Handoffs, briefs, Definition of Done blocks, and any scripted
+  commands use the module form.
+
+**Open watch.** Session 5 handoff documented `pytest tests/test_theme.py`
+(shim form) as the verification command and claimed it passed. Either
+(a) ASR policy was pushed between Session 5 and Session 6,
+(b) ASR re-evaluated prevalence/age and the shim lost trust, or
+(c) the Session 5 run used the module form and the handoff captured
+the wrong command. Can't distinguish without more data. If other tools
+start failing the same way in coming sessions, escalate to a separate
+investigation — could indicate a tightening policy push.
+
+**Cost.** Three extra keystrokes per invocation. Acceptable.
+
+## 2026-05-11 — Clientside callbacks: inline string form, not separate JS files
+
+**Context.** Session 6 routing shell needed a clientside callback to read
+`prefers-color-scheme` and subscribe to OS theme changes. Session 6
+handoff originally specified a separate `mfip/dashboard/assets/clientside.js`
+file with a `ClientsideFunction` reference. Reconsidered during pre-build:
+the callback is 5-10 lines of JS, and splitting it across two files just
+to use the namespace/function_name pattern adds indirection for no
+readability gain.
+
+**Decision.** Use the inline string form of `clientside_callback` for
+callbacks that fit in roughly 30 lines or less and don't need their own
+test harness. Reach for the separate `assets/clientside.js` +
+`ClientsideFunction` pattern only when JS grows past that, or when it
+needs to be shared across multiple Dash callbacks.
+
+**Why.** Colocation. Reading `app.py` reveals the full theme-store wiring
+in one place. The separate-file pattern earns its keep at scale, not at
+10 lines.
+
+**Scope.** Project-wide pattern for MFIP. Future zones that need
+clientside JS follow the same rule.
+
+## 2026-05-11 — Dash 3.x: `use_pages=True` needs `dash.page_container` in the layout
+
+**Context.** Session 6 routing shell build. Setting `use_pages=True` on
+the Dash 3.4 app caused three "ID not found in layout" runtime errors at
+`127.0.0.1:8050` even though pytest's layout-introspection tests all
+passed. Diagnostic confirmed `app.layout` was intact at both attribute
+and `serve_layout()` level — the missing IDs were internal page-system
+ids (`_pages_location`, `_pages_content`, `_pages_store`) that Dash
+injects via `use_pages=True` and references from internal callbacks.
+Those ids only resolve when `dash.page_container` is present in the
+layout. Without it, the page registry is enabled but has no mount point,
+and Dash's internal callbacks fail validation.
+
+**Decision.** When `use_pages=True`, the layout MUST include
+`dash.page_container` somewhere in the tree. For MFIP this lives where
+zone routing happens — zones will register via `dash.register_page(...)`
+and mount into `page_container`.
+
+**Related:** `pages_folder=""` is also required at app construction
+because MFIP architecture puts zones in `mfip/dashboard/zones/`, not the
+default `pages/` location. The empty string disables folder
+auto-discovery while keeping the page registry available for
+programmatic `dash.register_page` calls from anywhere.
+
+**Tighter than Dash 2.x.** In Dash 2.x, `use_pages=True` worked with no
+pages registered and no page_container in the layout. Dash 3.x rejects
+this and surfaces both issues as runtime errors visible only in the
+browser dev panel, not in pytest's static layout walk.
+
+**Test gap noted.** `tests/test_app.py` walks the Python-side layout and
+did not catch the runtime ID-resolution mismatch. Logged as a future
+ideas.md entry: "smoke test that instantiates the app and asserts all
+callback Input/Output IDs resolve against the served layout." Not a
+blocker; surfaced by the browser dev panel during normal verification.
