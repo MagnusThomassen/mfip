@@ -32,7 +32,13 @@ app = Dash(
     use_pages=True,
     pages_folder="",
     assets_folder="assets",
+    suppress_callback_exceptions=True,
 )
+
+# Import zone modules so their dash.register_page calls populate the
+# page registry. With pages_folder="" there's no auto-discovery — each
+# zone must be imported explicitly. Add a line per new zone here.
+from mfip.dashboard.zones import zone1  # noqa: E402, F401
 
 app.layout = html.Div(
     [
@@ -46,6 +52,10 @@ app.layout = html.Div(
             id="theme-system-pref-store",
             storage_type="memory",
         ),
+        # Dummy Output for the data-theme clientside callback below.
+        # Lives in app.py because the callback's effect (setting an
+        # attribute on <html>) is global, not zone-specific.
+        dcc.Store(id="theme-css-applied", storage_type="memory"),
         dash.page_container,
         html.Div(id="alert-feed-panel"),
     ]
@@ -96,4 +106,21 @@ clientside_callback(
     """,
     Output("theme-system-pref-store", "data"),
     Input("url", "pathname"),
+)
+
+
+# Mode store → document data-theme attribute. Sets the source-of-truth
+# attribute on <html> so any [data-theme="dark"] / [data-theme="light"]
+# CSS selector resolves. Global side effect → lives here, not in a zone.
+clientside_callback(
+    """
+    function(mode) {
+        if (mode) {
+            document.documentElement.setAttribute('data-theme', mode);
+        }
+        return mode;
+    }
+    """,
+    Output("theme-css-applied", "data"),
+    Input("theme-mode-store", "data"),
 )

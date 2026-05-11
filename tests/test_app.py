@@ -49,6 +49,7 @@ def test_layout_contains_required_ids():
         "url",
         "theme-mode-store",
         "theme-system-pref-store",
+        "theme-css-applied",
         "alert-feed-panel",
     ]
     missing = [
