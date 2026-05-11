@@ -1,0 +1,115 @@
+/*
+ * MFIP — Motion rules.
+ *
+ * Default position: almost nothing animates. Motion in financial UIs
+ * is usually noise. Named exceptions only: modal entry/exit, toast
+ * notifications, alert feed panel collapse, card hover, skeleton
+ * loaders.
+ *
+ * Reduced motion: every animated rule respects prefers-reduced-motion.
+ * When set, all durations collapse to 0ms.
+ *
+ * Spec source: 05_DASHBOARD_SPEC.docx v1.2, Visual Identity > Motion.
+ */
+
+:root {
+    /* Duration tokens */
+    --motion-duration-instant: 0ms;
+    --motion-duration-fast: 80ms;
+    --motion-duration-standard: 150ms;
+    --motion-duration-slow: 200ms;
+
+    /* Easing tokens */
+    --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --motion-ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+    --motion-ease-linear: linear;
+}
+
+/* -----------------------------------------------------------------
+ * Defaults — instant
+ * -----------------------------------------------------------------
+ * Plotly figures and AG Grid rows should never animate by default.
+ * Plotly's transition is also disabled in the figure layout
+ * (transition_duration: 0) at the callback level; this is belt-
+ * and-braces for any CSS that would otherwise add a transition.
+ */
+.js-plotly-plot .plot-container,
+.ag-row,
+.ag-cell {
+    transition: none !important;
+}
+
+/* -----------------------------------------------------------------
+ * Named exceptions
+ * ----------------------------------------------------------------- */
+
+/* Modal entry/exit */
+.modal-enter {
+    opacity: 0;
+    transform: translateY(8px);
+}
+.modal-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+        opacity var(--motion-duration-standard) var(--motion-ease-out),
+        transform var(--motion-duration-standard) var(--motion-ease-out);
+}
+.modal-exit {
+    opacity: 1;
+}
+.modal-exit-active {
+    opacity: 0;
+    transition: opacity 100ms var(--motion-ease-in);
+}
+
+/* Toast notifications — slide in from top-right */
+.toast-enter {
+    transform: translateX(100%);
+}
+.toast-enter-active {
+    transform: translateX(0);
+    transition: transform var(--motion-duration-slow) var(--motion-ease-out);
+}
+.toast-exit {
+    transform: translateX(0);
+}
+.toast-exit-active {
+    transform: translateX(100%);
+    transition: transform var(--motion-duration-standard) var(--motion-ease-in);
+}
+
+/* Alert feed panel — collapse/expand */
+.alert-feed-collapsible {
+    overflow: hidden;
+    transition: height 180ms var(--motion-ease-out);
+}
+
+/* Card hover */
+.card-hover {
+    transition: background-color var(--motion-duration-fast)
+                var(--motion-ease-linear);
+}
+
+/* Skeleton loader pulse */
+@keyframes skeleton-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.6; }
+}
+.skeleton {
+    animation: skeleton-pulse 1.4s var(--motion-ease-linear) infinite;
+}
+
+/* -----------------------------------------------------------------
+ * Reduced motion — collapse every duration to instant
+ * ----------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0ms !important;
+        scroll-behavior: auto !important;
+    }
+}

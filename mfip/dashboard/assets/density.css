@@ -1,0 +1,68 @@
+/*
+ * MFIP — Density utility classes.
+ *
+ * Three tiers, applied at zone container level. Components inherit from
+ * their containing zone. Padding/gap/min-row-height per spec v1.2.
+ *
+ * Rules of thumb (from spec):
+ * - A dense panel may be visually busy. Padding around the panel is
+ *   Comfortable; padding inside the panel is Tight. Koyfin pattern.
+ * - Never reduce font size to fit more content. Use fewer columns,
+ *   a scroll container, or a redesign instead.
+ * - Mix density tiers at panel boundaries, never inside one panel.
+ *
+ * Spec source: 05_DASHBOARD_SPEC.docx v1.2, Visual Identity > Density.
+ */
+
+:root {
+    /* Density tokens — referenced by component CSS where needed */
+    --density-tight-padding: 8px;
+    --density-tight-gap: 8px;
+    --density-tight-row-min: 28px;
+
+    --density-comfortable-padding: 16px;
+    --density-comfortable-gap: 12px;
+    --density-comfortable-row-min: 40px;
+
+    --density-roomy-padding: 24px;
+    --density-roomy-gap: 16px;
+    --density-roomy-row-min: 48px;
+}
+
+/* -----------------------------------------------------------------
+ * Tight — data canvas
+ * -----------------------------------------------------------------
+ * Applied to: Zone 2D (FSA heatmap), Zone 4A (holdings table),
+ * Zone 3B (news timeline rows), Zone 3D (consensus tracker rows).
+ */
+.density-tight {
+    padding: var(--density-tight-padding);
+    gap: var(--density-tight-gap);
+    --row-min-height: var(--density-tight-row-min);
+}
+
+/* -----------------------------------------------------------------
+ * Comfortable — decision surfaces
+ * -----------------------------------------------------------------
+ * Applied to: Zone 2A (recommendation card boundary), Zone 2B
+ * (valuation summary cards), Zone 2C (thesis section), Zone 4B
+ * (risk metrics), Zone 4C (rebalancing banner).
+ */
+.density-comfortable {
+    padding: var(--density-comfortable-padding);
+    gap: var(--density-comfortable-gap);
+    --row-min-height: var(--density-comfortable-row-min);
+}
+
+/* -----------------------------------------------------------------
+ * Roomy — chrome and decision focal points
+ * -----------------------------------------------------------------
+ * Applied to: Zone 1 (Command Centre), settings panel, modals, the
+ * security alert overlay, the alert feed panel, and the internal
+ * padding of Zone 2A (the recommendation badge deserves the air).
+ */
+.density-roomy {
+    padding: var(--density-roomy-padding);
+    gap: var(--density-roomy-gap);
+    --row-min-height: var(--density-roomy-row-min);
+}
