@@ -1208,3 +1208,20 @@ This is a revisit trigger, not a deferred decision.
 
 **Revisit trigger:** After Mac Mini acquisition and first Claude Code
 session — evaluate Dash v1 against web-first migration cost at that point.
+
+## 2026-05-11 — Cross-project insight: dissertation inbox established outside MFIP; Model 3 flagging without dissertation context
+
+**Decision:** MFIP-Claude flags insights from MFIP work that are *structurally likely to generalise* — patterns, frameworks, disciplines whose value exceeds their immediate use. MFIP-Claude is not given the dissertation topic, research question, or any dissertation-specific context. Flagging criterion is generality, not dissertation fit. Cross-project synthesis between MFIP work and dissertation work happens in the Dissertation Claude project, where the dissertation context lives.
+
+**Reasoning considered and rejected:** Adding the RQ or topic to MFIP's context was considered. Rejected because (a) MFIP's coverage universe and v1 build scope have minimal content overlap with dissertation territory, so dissertation-aware flagging would fire rarely; (b) the intellectual work of cross-project synthesis is the dissertation work itself and is better protected as Magnus's own thinking, not Claude's; (c) the firewall is structurally stronger when there is no dial to adjust.
+
+**Mechanism:** When MFIP-Claude encounters a general pattern, it flags with a one-line note: *"this pattern may generalise beyond MFIP — log in `C:\Dissertation\inbox\transferable_from_mfip.md` if it strikes you as broadly applicable."* Magnus routes manually from MFIP-Claude's flag to the dissertation inbox. MFIP-Claude never writes to the dissertation inbox.
+
+**Filesystem state established 2026-05-11:**
+- `C:\Dissertation\` — created
+- `C:\Dissertation\inbox\` — created
+- `C:\Dissertation\inbox\transferable_from_mfip.md` — created with one-line header explaining the firewall rule
+
+**Implication:** Magnus's assessment of whether any MFIP learning applies to the dissertation happens in the Dissertation Proposal Claude project (and later, after proposal approval, in the Dissertation Claude project), against the dissertation's own materials, when Magnus chooses to do that assessment. MFIP does not initiate or assist with that connection. `CLAUDE.md` Project context section updated 2026-05-11 with the routing rule (commit `38779c2`, PR #5).
+
+**Revisit trigger:** None expected. If MFIP enters phases that materially overlap with dissertation territory (none currently planned in v1), revisit whether minimal context-sharing is justified. Default remains: no.
