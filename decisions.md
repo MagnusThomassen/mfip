@@ -1225,3 +1225,60 @@ session — evaluate Dash v1 against web-first migration cost at that point.
 **Implication:** Magnus's assessment of whether any MFIP learning applies to the dissertation happens in the Dissertation Proposal Claude project (and later, after proposal approval, in the Dissertation Claude project), against the dissertation's own materials, when Magnus chooses to do that assessment. MFIP does not initiate or assist with that connection. `CLAUDE.md` Project context section updated 2026-05-11 with the routing rule (commit `38779c2`, PR #5).
 
 **Revisit trigger:** None expected. If MFIP enters phases that materially overlap with dissertation territory (none currently planned in v1), revisit whether minimal context-sharing is justified. Default remains: no.
+
+## 2026-05-11 — Visual identity locked: Koyfin-anchored, dual-mode from start, narrowed mono rule
+
+**Decision:** The dashboard visual identity is locked as of `05_DASHBOARD_SPEC.docx` v1.2. Three substantive choices were made in this pass, each of which would have been costly to defer: (1) the visual stance is Koyfin-anchored, Finchat-informed, and Linear-restrained — explicitly rejecting Linear-style generous whitespace on data surfaces and replacing the v1.0 framing of "Bloomberg meets modern UI" which had been flagged as a load-bearing mischaracterisation; (2) both dark and light theme token sets are defined from the start, with a single `mfip/dashboard/theme.py` module, `apply_theme(fig, mode)` helper for Plotly, and an AG Grid CSS overrides file using the same token names — light mode added later was rejected on retrofit cost (every chart's `paper_bgcolor`, every AG Grid theme class, every trace color would need auditing); (3) the v1.0 typography rule "JetBrains Mono for all numbers" was narrowed to "mono only where digits are scanned vertically or compared cell-to-cell" — inline numbers in prose use Inter. These three calls drive the Phase 1 build-order rewrite: theme + type + density + motion scaffolding leads before any Zone layout.
+
+**Reasoning:**
+
+- The Koyfin↔Linear axis is real, and "modern fintech aesthetic" doesn't resolve it. Linear's whitespace works because Linear's content is sparse. MFIP's Zone 2 alone has a recommendation card, three valuation cards, a thesis section, a 5-year FSA heatmap, a P&L waterfall, and a download bar visible simultaneously. Generous whitespace around that data canvas would either shrink the data to fit, defeating the purpose, or read as decorative. Density discipline (Koyfin) with modern type and calmer contrast (Finchat) is the coherent stance. Linear's sensibility applies only to chrome — top bar, modals, settings — never to the data canvas.
+- Defining both token sets up front costs roughly 30 lines of theme scaffolding in Phase 1 plus the discipline of routing every color through it. Deferring costs 2–3x that, applied late, with regression risk on every chart and grid. The decision is also semantic-name based (`bg.canvas`, `accent.buy`, `chart.series.1`) rather than descriptive (`color.gray.900`), matching every modern design system in current use and surviving the inevitable case where a color is reused for a meaning it wasn't originally named for.
+- The v1.0 mono rule over-applied. A date in the news feed or an analyst count inside a sentence reads better in Inter than mono. The narrower rule — mono where digits are being scanned vertically or compared cell-to-cell — preserves the FSA heatmap, holdings table, price displays, and timestamps as mono (where the alignment serves scanning) while letting inline numbers in prose use the body font.
+- The "Bloomberg meets modern UI" v1.0 framing was a compromise that didn't survive scrutiny. The current palette (`#0D1117 / #161B22 / #30363D`) is already Koyfin-adjacent — GitHub dark mode sits in the same family. The framing was wrong, not the palette. The v1.2 spec keeps the palette in spirit and sharpens the framing.
+
+**Implication:**
+
+- Phase 1 build order is changed. The new sequence leads with `mfip/dashboard/theme.py` (both token sets, `apply_theme` helper, AG Grid CSS overrides), then type system (Inter and JetBrains Mono via CDN or local assets, type scale in CSS variables), then density classes (Tight / Comfortable / Roomy as zone-level utilities), then motion CSS (global rules with `prefers-reduced-motion` respected, Plotly figure and AG Grid row transitions disabled by default). Only then do Zone 1 → Zone 2A → Zone 4A → Zone 3B → Zone 2D → Zone 2F build. This is the Phase 1 Definition of Done now: dashboard must look complete and professional in both dark and light mode with placeholder data before any real data is wired in.
+- AG Grid theme switching is a CSS-class swap (`ag-theme-alpine-dark` ↔ `ag-theme-alpine`) driven by the same mode store that drives Plotly. CSS variable overrides for both themes live in `assets/ag-grid-overrides.css` and pull from the same token set as `theme.py`, kept in sync by a unit test that reads both files and asserts equality on shared tokens.
+- Plotly figures never inherit colors from layout templates alone. Every figure-producing callback ends with `return apply_theme(fig, mode)`. No raw hex appears anywhere outside `theme.py`.
+- IDEA-016 (visual identity revision) and the dependent 2026-05-10 design-philosophy ideas in `ideas.md` should be updated to GRADUATED status — they are now resolved by this entry. The 2026-05-10 design-philosophy entry's "Open design questions" are all closed: Inter and JetBrains Mono confirmed (with the narrower mono rule), token-vs-hex resolved as semantic tokens, both-modes-or-dark-only resolved as both-from-start, density discipline made explicit through the three-tier system.
+- The eight-color chart series palette (`chart.series.1` through `chart.series.8`) is now the canonical reference for any chart in the application. Plotly defaults are not used. Charts referencing more than eight series re-use with explicit pattern variation (dashed, dotted), not a ninth color.
+- `accent.buy` / `accent.sell` are reserved for semantic use only — P&L signs, BUY/SELL ratings, waterfall up/down bars, INTACT/BROKEN thesis states. They are never used decoratively. A chart needing a fourth color reaches for `chart.series.3` onwards.
+
+**Affected docs:** `05_DASHBOARD_SPEC.docx` — replaced wholesale at v1.2 in this session. Revision history block at the foot of the spec records v1.0 → v1.1 → v1.2 progression. No other docs touched in this pass.
+
+**Revisit trigger:** Phase 1 build. If during Phase 1 the dual-mode discipline proves heavier than estimated (theme module growing beyond ~100 lines, AG Grid sync test producing false failures, chart callbacks becoming awkward to thread the mode through), revisit whether light mode should be deferred to a v1.x update. Also: if the Mac Mini evaluation in autumn 2026 produces a web-first reconsideration per the 2026-05-11 frontend-stack decision, the token system survives but the AG Grid / Plotly implementation specifics are replaced.
+
+## 2026-05-11 — Phase 1 routing decision: dcc.Location scaffolded in from start; Home-vs-Zone-1 deferred; folder structure and callbacks organisation resolved
+
+**Decision:** Four sub-decisions taken together as Phase 1's structural foundation, ahead of the first build session (Session 5):
+
+1. **Routing layer enabled from Session 5.** The Phase 1 shell scaffolds for `dcc.Location` + a Dash page registry from the start, even though Session 5 only ships theme/type/density/motion scaffolding and Session 6 onward adds the first zone. Initial active route at first `app.py` instantiation will be `/` rendering the analysis dashboard (Zones 1–4 as they get built). Additional routes (e.g. `/home` if Option A wins later) are cheap to add against this scaffolding.
+
+2. **Home-vs-Zone-1 question deferred.** The 2026-05-10 "Project Dashboard View" `ideas.md` entry remains open on the *destination* question (separate Home route vs expanded Zone 1) but its *enabling infrastructure* (routing) is resolved by this entry. The destination question revisits after Phase 1 foundation is built and Zone 1 has been used in practice. Status on the `ideas.md` entry updates from APPROVED-for-design-resolution to PARTIALLY GRADUATED (infrastructure locked, destination open).
+
+3. **Folder structure: `mfip/dashboard/`.** Dashboard code lives inside the `mfip/` package, not under `scripts/`. `scripts/` is reserved for one-off operational tools (`scripts/ingestion/validate_bloomberg_workbook.py`, `scripts/backup/`). Aligns with how Phase 0 already structured the repo.
+
+4. **Callbacks organisation: split per zone.** Zone-specific callbacks live in `mfip/dashboard/zones/zone1.py`, `zone2.py`, etc. A thin `mfip/dashboard/app.py` imports and registers them. Single-file callbacks rejected because it becomes unmanageable past ~3 zones and the splitting work is free to do now.
+
+**Reasoning:**
+
+- The Session 4 draft handoff for Session 5 framed routing as a costly choice to defer, with the implication that adding routing later was the more reversible move. Re-examined in Session 4.5, this is backward: `dcc.Location` plus a minimal page registry is ~30 lines of code written once and trivially removable if unused. Retrofitting routing into callbacks that assumed a single page is a significantly larger refactor. The cheap-now-flexible-later choice is to scaffold for routing from the start.
+
+- The destination question (Home vs expanded Zone 1) is a legitimate design decision but one that requires grounding the four pre-Phase-1 design sessions did not produce. Deciding what *belongs* on a project dashboard is much easier after using Zone 1 for a few sessions and discovering what's actually missing. Resolving the infrastructure question (routing yes/no) without resolving the destination question (which routes) is the lower-cost split.
+
+- Folder structure and callbacks organisation were flagged as blocked pre-Phase-1 micro-decisions in the Session 4 draft. They were blocked on the routing call. With routing resolved, both fall out naturally — `mfip/dashboard/` is the package home for dashboard code, and split-per-zone callbacks are the structurally sound choice for a multi-zone Dash app. No further design work needed on these.
+
+- Resolving these now in a Session 4.5 closeout action, rather than spawning a Session 5 design session, follows IDEA-017's "ship what we have" default. Four pre-Phase-1 design sessions with zero code shipped is exactly the failure mode IDEA-017 was written to prevent.
+
+**Implication:**
+
+- Session 5 builds the visual-identity scaffolding (theme.py, AG Grid overrides, typography/density/motion CSS, tests). Routing wiring (`app.py` with `dcc.Location`) lands in Session 6 alongside Zone 1.
+- Session 5 creates `mfip/dashboard/zones/` as an empty package directory (with `__init__.py`) so the split-per-zone structure is scaffolded before the first zone is written.
+- The 2026-05-10 "Project Dashboard View" ideas.md entry gets a status update appended noting that infrastructure is locked and the destination question persists.
+- No changes to `04_BUILD_SEQUENCE.docx` or `05_DASHBOARD_SPEC.docx` in this pass. The build sequence already says "Phase 1: dashboard shell" without prescribing single-page vs multi-route; the spec's v1.2 Phase 1 build order leads with foundation scaffolding which is unaffected.
+
+**Affected docs:** `decisions.md` (this entry), `ideas.md` (status update on the 2026-05-10 "Project Dashboard View" entry).
+
+**Revisit trigger:** After Zone 1 is functional (end of Session 6 or Session 7). At that point, revisit the Home-vs-Zone-1 destination question with concrete grounding from real Zone 1 use. If a Home screen is added, document the route registration in a follow-up entry.
