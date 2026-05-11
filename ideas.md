@@ -791,14 +791,22 @@ callbacks) — they cannot be resolved until this is.
 deployment dashboard, GitHub's repository overview page. These are modern,
 data-confident, dark-mode interfaces that handle operational status elegantly.
 
-**Status:** `APPROVED for design resolution` — must be settled before Phase 1
-build session. Will graduate to a `decisions.md` entry once the home-vs-zone
-question is resolved and `04_BUILD_SEQUENCE.docx` / `05_DASHBOARD_SPEC.docx`
-are updated accordingly.
+**Status:** `PARTIALLY GRADUATED` — infrastructure locked, destination open.
+Per the 2026-05-11 Phase 1 routing decision in `decisions.md`, the *enabling
+infrastructure* question (routing layer yes/no) is resolved: `dcc.Location` +
+page registry scaffolded into Phase 1 from start, `mfip/dashboard/` folder
+structure, split-per-zone callbacks. The *destination* question (separate
+Home route vs expanded Zone 1) remains open and is deferred to revisit after
+Zone 1 is functional in practice. Rationale for the split: routing is cheap
+to add now and trivially removable if unused; destination questions are much
+easier to answer with grounding from real Zone 1 use than from screenshots
+of other products.
 
-**Decision gate:** Dedicated design session before Phase 1 build kickoff. Per
-2026-05-10 session plan: "Project Dashboard architecture" session, sequenced
-after visual identity is locked and after Magnus's UX reference collection.
+**Decision gate:** Destination question revisits after Zone 1 is functional
+(estimated end of Session 6 or Session 7). At that point, decide whether to
+register a `/home` route showing operational state, or expand Zone 1 in-place.
+If Home wins, document the route registration in a follow-up `decisions.md`
+entry.
 
 ---
 
@@ -836,14 +844,16 @@ financial data tools like Koyfin or Finchat.
 - Dribbble/Behance search "financial dashboard dark mode" filtered for
   data-dense layouts, ignoring decorative-only results
 
-**Status:** `APPROVED for design resolution` — must be settled before Phase 1
-build session. Cheapest of the design gates: roughly one session of
-conversation, output is a revision to `05_DASHBOARD_SPEC.docx` Design
-Philosophy section.
+**Status:** `GRADUATED` — visual identity locked in Session 4 (2026-05-11).
+`05_DASHBOARD_SPEC.docx` v1.2 replaced the Design Philosophy and Colour Palette
+sections with a coherent Visual Identity block: Koyfin-anchored, Finchat-informed,
+Linear-restrained stance; both dark and light theme token sets defined from start;
+typography rule narrowed to mono only where digits are scanned vertically; three-tier
+density (Tight / Comfortable / Roomy); motion stance default-instant with reduced-motion
+respected. Live record in `decisions.md` 2026-05-11 entry "Visual identity locked:
+Koyfin-anchored, dual-mode from start, narrowed mono rule".
 
-**Decision gate:** First of the pre-Phase-1 design sessions. Output: revised
-`05_DASHBOARD_SPEC.docx` design-philosophy block + a short reference list
-committed to `C:\MFIP\design-refs\` for later reference.
+**Decision gate:** N/A — graduated.
 
 ---
 
@@ -949,12 +959,21 @@ prevents weeks of retrofitting.
 - Bring annotated references into the visual-identity and project-dashboard
   design sessions for grounded discussion
 
-**Status:** `APPROVED — Magnus-side prep work` — runs async between the
-visual-identity session and the project-dashboard architecture session. Not a
-Claude session; output is a folder of annotated references.
+**Status:** `PAUSED` — collection started in Session 4.5 (2 raw screenshots
+captured: Vercel projects-overview, Koyfin watchlist+charts dashboard, no
+annotations) then paused as Session 4.5 closeout action. Per the 2026-05-11
+Phase 1 routing decision in `decisions.md`, the project-dashboard architecture
+session this collection was prep for is itself deferred until after Phase 1
+foundation is built. References return when they can be calibrated against
+real Plotly/AG Grid output — annotating reference screenshots before having
+any concrete rendering to compare them to was assessed as the wrong activity
+for Magnus's experience level (first project) and project state (zero code
+shipped after four design sessions). Files live in `C:\MFIP\design-refs\`
+(gitignored).
 
-**Decision gate:** Complete before the project-dashboard architecture session.
-Approximately 1–2 hours of Magnus's time, not blocking other doc work.
+**Decision gate:** Resumes after Phase 1 foundation is built (estimated
+Session 6–7), when reference quality can be calibrated against real working
+code. Magnus-side prep, ~1–2 hours, not blocking subsequent build sessions.
 
 ---
 
@@ -1113,3 +1132,64 @@ boundary.
 **Decision gate:** End of pre-Phase-1 design sessions, before Phase 1
 build kickoff. Output: published definition of done + commitment that
 post-publication, new items default to BACKLOG.
+
+## IDEA-020 — Scrapling as web fetcher for News Agent and Macro Agent
+
+**Status:** PROPOSED
+**Added:** 2026-05-11
+**Source:** Session discussion — Scrapling library review
+
+**The idea:**
+Add [Scrapling](https://github.com/D4Vinci/Scrapling) as an optional fetcher in the
+News Agent and Macro Agent for sources that are Cloudflare-protected or that break
+silently on HTML redesigns. Scrapling is a Python web scraping framework that combines
+HTTP fetching, Cloudflare bypass (via Camoufox, a patched Firefox), and adaptive
+element tracking — elements are fingerprinted using multiple DOM signals so that when
+a site's HTML structure changes, the selector still resolves without manual updates.
+
+**Why this was raised:**
+The News Agent pulls from RSS feeds (feedparser) and NewsAPI. For sources without
+clean RSS — company IR pages, Oslo Børs announcements, LSE regulatory pages, FT — a
+standard `requests` call either fails on Cloudflare or breaks silently when the page
+is redesigned. Scrapling's adaptive tracking solves the silent-breakage problem.
+The Macro Agent has the same exposure for central bank announcement pages (Norges
+Bank, BoE, Fed) that pandas-datareader cannot reach directly.
+
+**Where it fits:**
+
+| Agent | Use case | Fetcher |
+|---|---|---|
+| News Agent | IR pages and news sources without RSS; Cloudflare-protected financial news | `StealthyFetcher` for CF-protected sites; `Fetcher` for standard HTTP with adaptive tracking |
+| Macro Agent | Central bank announcement pages when pandas-datareader fails | `Fetcher` or `StealthyFetcher` as fallback |
+
+**Where it does NOT fit:**
+- Annual report PDFs: the extraction pipeline ingests local files via camelot-py and
+  pymupdf. Scrapling is a web scraper; it adds nothing to local PDF parsing. The act of
+  acquiring PDFs is a manual step by design (durable artefacts, 6 downloads per year).
+- Bloomberg data: no web scraping involved — structured Excel export workflow.
+
+**Scrapling's differentiating feature for MFIP:**
+Adaptive element tracking. Selectors fingerprint DOM elements using tag, attributes,
+text content, and sibling position simultaneously. When a site redesigns its HTML,
+elements are relocated automatically. This is the primary value for MFIP — financial
+IR pages and news sites redesign regularly, and silent selector breakage is exactly
+the failure mode that produces undetected data gaps in the News Agent.
+
+**Dependencies and cost:**
+- `pip install "scrapling[fetchers]"` + `scrapling install` (downloads Camoufox and
+  Playwright browsers — ~500MB, one-time)
+- Python 3.9+ required (compatible with MFIP's Python 3.12 environment)
+- `StealthyFetcher` only needed where Cloudflare bypass is required — `Fetcher` alone
+  is a lightweight alternative with no browser dependency
+
+**Not a core dependency in v1:**
+The current stack (feedparser + NewsAPI) is sufficient for the Phase 1–5 build. This
+is an enhancement to the News Agent and Macro Agent's fetching resilience, not a
+prerequisite for any agent. Phase 5 (Intelligence Layer) is the earliest point it
+becomes relevant.
+
+**Decision gate:** Phase 5 build start. Evaluate then whether feedparser + NewsAPI
+cover all required sources, or whether Scrapling is needed for specific IR pages or
+Cloudflare-protected sources that cannot be reached otherwise. If adopted, add to
+`requirements.txt` and document the per-source fetcher choice in `config/news_feeds.yaml`.
+If feedparser + NewsAPI prove sufficient in practice, this entry stays PROPOSED indefinitely.
