@@ -1,0 +1,15 @@
+/*
+ * MFIP — Focus ring.
+ *
+ * One global rule: every keyboard-focusable element gets a visible
+ * outline ring on `:focus-visible`. Mouse-click focus stays silent
+ * (`:focus-visible` not `:focus`) — the ring is a keyboard-navigation
+ * signal, not a flourish.
+ *
+ * Spec source: 05_DASHBOARD_SPEC.docx v1.2, Visual Identity > Focus.
+ */
+
+*:focus-visible {
+    outline: 2px solid var(--accent-interactive);
+    outline-offset: 2px;
+}
