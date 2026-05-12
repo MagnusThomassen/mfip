@@ -140,6 +140,7 @@ def _date_filter():
 def _settings_panel():
     return html.Div(
         id="settings-panel",
+        className="density-roomy",
         style={
             "display": "none",
             "position": "absolute",
@@ -147,7 +148,6 @@ def _settings_panel():
             "right": "16px",
             "background": "var(--bg-surface-raised)",
             "border": "1px solid var(--border-subtle)",
-            "padding": "12px",
             "minWidth": "160px",
             "zIndex": 1000,
         },
