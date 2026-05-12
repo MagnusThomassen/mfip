@@ -1605,3 +1605,37 @@ global callback takes that store as State and resolves `'system'`
 to `system_pref or 'dark'` before writing to `theme-mode-store`.
 
 **Affected docs:** `decisions.md` (this entry).
+
+
+## 2026-05-12 — Zone 1 density wiring confirmed; focus-ring CSS rule established for all zones
+
+**Density audit.** `mfip/dashboard/assets/density.css` already defined
+`.density-roomy` with the spec values (24px padding, 16px gap, 48px
+row-min-height) via `:root` tokens. Zone 1's Header (`zone1-top-bar`)
+was already applying the class; the gap was the settings panel, which
+spec lists in the Roomy applied-to set but had no className. Fixed:
+`density-roomy` added to `_settings_panel()` and the redundant inline
+`padding: 12px` removed (the class supplies padding). No CSS values
+changed — spec already matched.
+
+**Focus ring.** New `mfip/dashboard/assets/focus.css` adds a single
+global rule: `*:focus-visible { outline: 2px solid var(--accent-interactive);
+outline-offset: 2px; }`. `:focus-visible` (not `:focus`) is deliberate
+— it suppresses the ring on mouse-click focus so the ring serves as a
+keyboard-navigation signal only, matching the spec's "navigation
+signal, not a flourish" intent. The `--accent-interactive` CSS variable
+flips with theme mode (defined in ag-grid-overrides.css for both
+`:root` dark and `[data-theme="light"]`), so the ring stays visible in
+both themes without per-mode rules.
+
+**Rendered-height divergence (deferred).** The Header has inline
+`height: 60px` and the `density-roomy` class. Default `box-sizing:
+content-box` means the rendered height is ~108px (60 + 24×2 padding).
+Spec says Zone 1 is "60px height". Existing
+`test_zone1_top_bar_height` checks the inline-style attribute, not
+rendered geometry, so it passes today. Two candidate fixes (set
+`box-sizing: border-box` globally; or replace `height` with
+`min-height` and let content drive). Logged as `ideas.md` IDEA-025;
+decision gate end of Phase 1.
+
+**Affected docs:** `decisions.md` (this entry).

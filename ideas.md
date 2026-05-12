@@ -1351,3 +1351,26 @@ pytest time.
 pattern of test-passes-but-browser-fails has recurred enough to
 justify the work, or whether the four Session 6 failures were a
 one-time Dash-3.x learning tax.
+
+
+## IDEA-025 — Zone 1 Header rendered height divergence from inline spec
+
+**Status:** PROPOSED
+**Added:** 2026-05-12
+**Source:** Session 7 Part 2 density audit
+
+**Context:** zone1.py Header has inline `height: 60px` and the
+`density-roomy` className. Default `box-sizing: content-box` means
+the rendered height is ~108px (60 + 24×2 padding). Spec
+05_DASHBOARD_SPEC.docx says Zone 1 is "60px height." Two fixes
+possible: (1) set `box-sizing: border-box` globally in a base
+stylesheet, (2) replace inline `height` with `min-height` and let
+content drive actual height. Existing test
+`test_zone1_top_bar_height` checks the inline style attribute,
+not rendered geometry, so it passes today.
+
+**Decision gate:** End of Phase 1. Decide whether to enforce 60px
+literally or update spec to acknowledge density-padded reality.
+The latter is probably correct — the spec's 60px was written
+before the Density table was finalised, and 108px is the actual
+room needed for Roomy chrome.
