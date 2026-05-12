@@ -11,8 +11,7 @@
 
 **Phase 1 — Dashboard Shell** (in progress)
 
-Sessions 5–6 complete. Visual-identity scaffolding, routing shell, and Zone 1 built.
-Session 7 in progress: theme toggle re-wire (Part 1 brief prepared, not yet executed).
+Part 1 (theme toggle re-wire) complete. PR #12 open, pending merge. Next: Part 2 brief to be written.
 
 ---
 
@@ -21,7 +20,7 @@ Session 7 in progress: theme toggle re-wire (Part 1 brief prepared, not yet exec
 | Phase | Name | Status | Notes |
 |---|---|---|---|
 | 0 | Environment Setup | ✅ Complete | Commits `a258675`, `e556617`, `5c9db87`, `af3f02d`, `dac7e3b` |
-| 1 | Dashboard Shell | 🔄 In progress | Sessions 5–6 done; last commit `aea2f25`; theme toggle re-wire next |
+| 1 | Dashboard Shell | 🔄 In progress | Sessions 5–7 Part 1 done; PR #12 open; theme toggle re-wire complete |
 | 2 | Logging Infrastructure | ⬜ Not started | Can parallel Phase 1 |
 | 3 | Bloomberg Ingestion | ⬜ Not started | Requires lab visit |
 | 4 | PDF Extraction | ⬜ Not started | |
@@ -47,20 +46,10 @@ Session 7 in progress: theme toggle re-wire (Part 1 brief prepared, not yet exec
 | `theme.py` | `mfip/dashboard/theme.py` | Both dark + light token sets; `apply_theme(fig, mode)` helper |
 | AG Grid overrides | `assets/ag-grid-overrides.css` | CSS vars from same token set as theme.py; sync enforced by unit test |
 | `app.py` | `mfip/dashboard/app.py` | `dcc.Location` routing scaffolded; clientside callback for OS theme detection (inline string form); `theme-mode-store` declared |
-| `zone1.py` | `mfip/dashboard/zones/zone1.py` | Zone 1 Command Centre built; theme toggle → theme-mode-store callback deferred (cross-layout); 8 zone1 tests passing |
+| `zone1.py` | `mfip/dashboard/zones/zone1.py` | Zone 1 Command Centre built; theme toggle re-wire complete (PR #12); 10 zone1 tests passing; 23 total |
 | Theme tests | `tests/test_theme.py` | 8 passing |
-| Zone 1 tests | `tests/test_zone1.py` | 8 passing; 19 total green as of `aea2f25` |
+| Zone 1 tests | `tests/test_zone1.py` | 10 passing; 23 total green as of PR #12 |
 | `MEMORY.md` | `repo\MEMORY.md` | This file; added Session 7 |
-
----
-
-## Deferred / In-Flight
-
-| Item | Status | Notes |
-|---|---|---|
-| Theme toggle re-wire | Brief prepared, not executed | Part 1 brief ready for Claude Code; branch `phase1/theme-toggle-rewire`; intermediate store pattern (option 3) |
-| IDEA-022 (served-layout smoke test) | PROPOSED | To be added to `ideas.md` by Claude Code during Session 7 Part 1 |
-| decisions.md entry (2026-05-12 theme re-wire) | Pending | Claude Code to append during Session 7 Part 1 |
 
 ---
 
@@ -81,8 +70,8 @@ Session 7 in progress: theme toggle re-wire (Part 1 brief prepared, not yet exec
 | Dashboard folder | `mfip/dashboard/`; scripts/ for operational one-offs only | 2026-05-11 |
 | Cross-project firewall | MFIP-Claude flags general patterns only; dissertation synthesis stays in Dissertation project | 2026-05-11 |
 | Security Council mode | Training mode in v1 — logs everything, does not auto-suspend pipeline | System prompt |
-| Theme toggle cross-layout | Option 3: zone1-local intermediate store `zone1-theme-radio-store` (memory); two-callback relay | 2026-05-12 (pending commit) |
-| Overlay chrome ownership | Deferred to Alert Feed Panel build — decide for all three overlays at once | 2026-05-12 (pending commit) |
+| Theme toggle cross-layout | Option 3: zone1-local intermediate store `zone1-theme-radio-store` (memory); two-callback relay | 2026-05-12 |
+| Overlay chrome ownership | Deferred to Alert Feed Panel build — decide for all three overlays at once | 2026-05-12 |
 
 ---
 
@@ -99,7 +88,7 @@ Session 7 in progress: theme toggle re-wire (Part 1 brief prepared, not yet exec
 | Chief Analyst default weighting (35/35/20/10) | Revisit after 30 recommendations in v2 |
 | MAX date preset (Zone 1) | `ideas.md` IDEA-021 PROPOSED; wire at Phase 2+ when data loading is real |
 | Overlay chrome ownership (settings panel, alert feed, Security Alert Overlay) | Decide at Alert Feed Panel build |
-| Served-layout callback smoke test | `ideas.md` IDEA-022 PROPOSED; decision gate end of Phase 1 |
+| Served-layout callback smoke test | `ideas.md` IDEA-023 PROPOSED; decision gate end of Phase 1 |
 
 ---
 
@@ -189,4 +178,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-12 — Session 7: Zone 1 built (commit aea2f25); theme toggle re-wire brief prepared; IDEA-021 and IDEA-022 added; Deferred section introduced.*
+*Last updated: 2026-05-12 — Session 7 Part 1 complete: theme toggle re-wire done, PR #12 open.*

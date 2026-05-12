@@ -1332,3 +1332,22 @@ for execution in MFIP's environment.
   ecosystem. MFIP uses Plotly Dash. Wrong tech stack.
 - **Drive design skills file** — auth-gated, could not load. Likely the same React
   component guide. Irrelevant regardless.
+
+## 2026-05-12 — IDEA-023 — Served-layout callback ID resolution smoke test
+
+**Idea:** A pytest smoke test that instantiates the Dash app and asserts
+every callback's Input/Output IDs resolve against the served layout.
+
+**Rationale:** Session 6 surfaced four Dash-3.x runtime failures
+(`use_pages` + `page_container`, `suppress_callback_exceptions`,
+explicit `layout=` kwarg, cross-layout Input validation) that all
+passed structural pytest checks and only appeared on browser launch.
+A served-layout resolution test would have caught all four at
+pytest time.
+
+**Status:** PROPOSED.
+
+**Decision gate:** End of Phase 1. By then we'll know whether the
+pattern of test-passes-but-browser-fails has recurred enough to
+justify the work, or whether the four Session 6 failures were a
+one-time Dash-3.x learning tax.

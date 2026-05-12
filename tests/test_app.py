@@ -67,3 +67,22 @@ def test_theme_store_default_dark():
     store = _find_by_id(app.layout, "theme-mode-store")
     assert store is not None
     assert store.data == "dark"
+
+
+def test_local_to_global_theme_store_callback():
+    from dash._callback import GLOBAL_CALLBACK_MAP
+
+    entry = GLOBAL_CALLBACK_MAP.get("theme-mode-store.data")
+    assert entry is not None, (
+        "No callback registered with Output('theme-mode-store', 'data')"
+    )
+    assert any(
+        i["id"] == "zone1-theme-radio-store" and i["property"] == "data"
+        for i in entry["inputs"]
+    ), f"Expected zone1-theme-radio-store.data as Input, got {entry['inputs']}"
+
+
+def test_theme_mode_store_local_storage():
+    store = _find_by_id(app.layout, "theme-mode-store")
+    assert store is not None
+    assert store.storage_type == "local"

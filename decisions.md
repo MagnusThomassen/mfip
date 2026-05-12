@@ -1560,3 +1560,48 @@ Visual feedback for theme switching is not yet wired anyway (zones
 don't consume theme-mode-store until their figures route through
 apply_theme); so the missing toggle wiring is invisible in current
 session output.
+
+## 2026-05-12 — Theme toggle re-wire: zone1-local intermediate store; overlay chrome ownership deferred to alert feed build
+
+**Context.** Session 6 deferred the theme-toggle → theme-mode-store
+callback after Dash 3.x's validator rejected the cross-layout Input
+pattern (radio in zone1's served layout, store in app.py's global
+layout). Three candidate fixes documented in the 2026-05-11
+cross-layout entry.
+
+**Decision.** Option 3 chosen: introduce a zone1-local
+`zone1-theme-radio-store` (memory storage) as an intermediate
+relay. Two callbacks: (1) `theme-toggle-radio → zone1-theme-radio-store`
+registered in zone1.py (same-layout); (2) `zone1-theme-radio-store
+→ theme-mode-store` registered in app.py.
+
+**Why not option 1-refined (move settings panel to app.py).** Option
+1-refined is architecturally cleaner — overlay chrome conventionally
+lives at app root. But it's a larger change than option 3, throws
+away a working settings-panel-toggle, and forces an architectural
+call (where do overlays live?) with only one overlay (settings
+panel) in scope. Two more overlays land later in Phase 1: the alert
+feed panel (slides from Command Centre bar) and the Security Alert
+Overlay (modal). The right moment to make the overlay-ownership
+call is when all three are in hand.
+
+**Cost of option 3.** Introduces a per-zone shadow-store pattern that
+recurs whenever a zone-local control needs to write to a global
+store. Two lines of layout + two callbacks per recurrence.
+Acceptable for v1.
+
+**Revisit trigger.** Alert Feed Panel build (mid-Phase 1, after Zone
+4A per spec build order). At that build, decide overlay chrome
+ownership for all three overlays (settings panel, alert feed panel,
+Security Alert Overlay) as one call. If app-root is chosen, the
+zone1 settings panel migrates and the intermediate store goes away.
+If zone-local is chosen, the intermediate store stays.
+
+**Implementation note.** System-mode resolution moved from the
+deferred zone1 callback body into the new app.py callback: the
+existing prefers-color-scheme clientside callback writes to
+`theme-system-pref-store` (not `theme-mode-store`), so the local→
+global callback takes that store as State and resolves `'system'`
+to `system_pref or 'dark'` before writing to `theme-mode-store`.
+
+**Affected docs:** `decisions.md` (this entry).
