@@ -129,3 +129,25 @@ def test_theme_toggle_default_dark():
     radio = _find_by_id(zone1.layout, "theme-toggle-radio")
     assert radio is not None
     assert radio.value == "dark"
+
+
+def test_zone1_local_theme_store_in_layout():
+    store = _find_by_id(zone1.layout, "zone1-theme-radio-store")
+    assert store is not None
+    assert store.storage_type == "memory"
+
+
+def test_theme_radio_writes_to_local_store():
+    # Importing app ensures all @callback registrations have fired.
+    from mfip.dashboard.app import app  # noqa: F401
+    from dash._callback import GLOBAL_CALLBACK_MAP
+
+    entry = GLOBAL_CALLBACK_MAP.get("zone1-theme-radio-store.data")
+    assert entry is not None, (
+        "No callback registered with Output('zone1-theme-radio-store', 'data')"
+    )
+    inputs = entry["inputs"]
+    assert any(
+        i["id"] == "theme-toggle-radio" and i["property"] == "value"
+        for i in inputs
+    ), f"Expected theme-toggle-radio.value as Input, got {inputs}"

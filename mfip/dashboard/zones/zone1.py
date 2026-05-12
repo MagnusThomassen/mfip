@@ -277,6 +277,10 @@ layout = html.Div(
         ),
         # i. Settings panel (positioned absolutely, hidden by default)
         _settings_panel(),
+        # Zone-local relay for the theme radio. Memory-only; the
+        # persistent layer is theme-mode-store in app.py. See
+        # decisions.md 2026-05-12 entry.
+        dcc.Store(id="zone1-theme-radio-store", storage_type="memory"),
     ],
 )
 
@@ -360,22 +364,18 @@ def _update_date_range(_n1, _n3, _n5, _nmax, _ncust, start, end, picker_style):
     return no_update, no_update
 
 
-# DEFERRED to Session 7 — see decisions.md 2026-05-11 entry on
-# cross-layout callback Inputs. The theme toggle UI still renders;
-# clicking the radio writes to its own value but does not propagate
-# to theme-mode-store yet. theme-css-applied clientside callback
-# still runs on app boot to apply the initial dark mode.
-#
-# @callback(
-#     Output("theme-mode-store", "data"),
-#     Input("theme-toggle-radio", "value"),
-#     Input("theme-system-pref-store", "data"),
-#     prevent_initial_call=True,
-# )
-# def _theme_toggle_to_mode(radio_value, system_pref):
-#     if radio_value == "system":
-#         return system_pref or "dark"
-#     return radio_value
+# Theme radio → zone1-local relay store. Same-layout-to-same-layout
+# (both ids live in zone1's served layout) so Dash 3.x's cross-layout
+# Input validator is satisfied. The app.py-level callback then forwards
+# this value to the global theme-mode-store. See decisions.md
+# 2026-05-12 entry.
+@callback(
+    Output("zone1-theme-radio-store", "data"),
+    Input("theme-toggle-radio", "value"),
+    prevent_initial_call=True,
+)
+def _theme_radio_to_local_store(radio_value):
+    return radio_value
 
 
 # NOTE: the data-theme attribute application (mode store → <html>) is a

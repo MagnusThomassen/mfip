@@ -25,7 +25,7 @@ decisions.md 2026-05-11 "Phase 1 routing decision".
 from __future__ import annotations
 
 import dash
-from dash import Dash, Input, Output, clientside_callback, dcc, html
+from dash import Dash, Input, Output, State, callback, clientside_callback, dcc, html
 
 app = Dash(
     __name__,
@@ -107,6 +107,23 @@ clientside_callback(
     Output("theme-system-pref-store", "data"),
     Input("url", "pathname"),
 )
+
+
+# Zone1-local theme radio relay → global theme-mode-store. The radio
+# itself writes to zone1-theme-radio-store inside zone1.py (same-layout,
+# passes Dash 3.x validation); this callback forwards into the global
+# persistent store. "system" is resolved here against the prefers-color-
+# scheme mirror. See decisions.md 2026-05-12 entry.
+@callback(
+    Output("theme-mode-store", "data"),
+    Input("zone1-theme-radio-store", "data"),
+    State("theme-system-pref-store", "data"),
+    prevent_initial_call=True,
+)
+def _zone1_radio_to_theme_mode(data, system_pref):
+    if data == "system":
+        return system_pref or "dark"
+    return data if data in ("dark", "light") else dash.no_update
 
 
 # Mode store → document data-theme attribute. Sets the source-of-truth

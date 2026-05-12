@@ -1211,3 +1211,143 @@ resolves "MAX" against the data layer.
 
 **Status:** PROPOSED. Decision gate: end of Phase 2 (when data loading
 is real).
+
+## IDEA-022 — External tool review: Obscura, OpenSpace, awesome-claude-skills
+
+**Status:** REFERENCE
+**Added:** 2026-05-12
+**Source:** Session tool review — six external resources assessed against MFIP
+
+Six items were reviewed and assessed for MFIP applicability. Three produced
+findings worth retaining. Three were discarded outright (wrong tech stack or
+irrelevant). Findings are recorded here at the correct phase for each.
+
+---
+
+### Finding A — Obscura headless browser (Phase 5 / v2 PDF fetcher)
+
+**What it is:**
+[Obscura](https://github.com/h4ckf0r0day/obscura) — a Rust-based headless browser engine,
+CDP-compatible with Playwright/Puppeteer. Single binary, ~30MB RAM per instance vs
+~200MB for headless Chrome. Built-in stealth mode with fingerprint randomisation.
+Build-from-source only (Rust 1.75+ required). Released April 2026, MIT licence.
+
+**Why it was assessed:**
+If MFIP ever needs browser-based web scraping, Obscura is a lighter drop-in for
+headless Chrome. The v2 PDF fetcher (IDEA-008) targets SEC EDGAR (JSON API) and
+European regulator pages first — most are structured sources. But some regulator
+pages (Oslo Børs, LSE) may require JS rendering on dynamic content.
+
+**Why not v1:**
+v1 has no web scraping layer. Bloomberg data comes via Excel add-in.
+Annual report PDFs are acquired manually. Scrapling (IDEA-020) already covers
+the HTTP/Cloudflare fetching case for News and Macro agents. Obscura's value
+is specifically JS-heavy pages where a full browser is unavoidable.
+
+**When to revisit:**
+v2 PDF fetcher build (IDEA-008 activation). If SEC EDGAR JSON API and
+regulator static pages cover all sources, Obscura stays dormant. Activate
+only if a required source requires JS rendering and Scrapling's `StealthyFetcher`
+(Camoufox) does not cover it.
+
+**Integration note:**
+CDP-compatible — existing Playwright scripts can point at Obscura's server
+with one line change (`connect_over_cdp("http://localhost:9222")`). Zero
+code rewrite if adopted.
+
+---
+
+### Finding B — OpenSpace skill evolution concepts (Phases 3–7 / Prompt Library)
+
+**What it is:**
+[OpenSpace](https://github.com/HKUDS/OpenSpace) — a self-evolving skill engine for
+AI agents. Agents capture successful execution patterns as versioned skills (FIX /
+DERIVED / CAPTURED), share them via a cloud registry, and evolve them automatically
+from post-execution analysis.
+
+**Why it is NOT being adopted as a tool:**
+OpenSpace's self-mutation is architecturally incompatible with MFIP. The Security
+Council's value depends on the pipeline being observable and auditable. Agents that
+silently rewrite their own behaviour would undermine this entirely. OpenSpace is
+also designed for Claude Code / general-purpose agentic workflows, not a
+Python pipeline inside a Dash desktop app.
+
+**The concept worth keeping:**
+The pattern of capturing successful execution workflows as reusable, versioned,
+named definitions — and referencing them by name rather than re-deriving the
+same reasoning each time — is the right abstraction. MFIP already implements
+this via `PROMPT_LIBRARY.docx` (34 standardised prompts). The Prompt Library is
+MFIP's equivalent of OpenSpace's skill registry, without self-mutation risk.
+
+**Action:**
+When adding new prompts to the Prompt Library at each build phase, explicitly
+ask: "Is this a reusable pattern that will recur across multiple companies and
+analysis cycles?" If yes, add it to the library as a named, versioned entry.
+This is the OpenSpace insight without the OpenSpace risk.
+
+**When to revisit:** At each agent build phase (Phases 3–7). No tooling change
+required — this is a discipline note for Prompt Library maintenance.
+
+---
+
+### Finding C — awesome-claude-skills: three skills worth reading (Phases 1–6)
+
+**What it is:**
+[awesome-claude-skills](https://github.com/ComposioHQ/awesome-claude-skills) — a
+curated registry of Claude Code skills. Mostly Composio SaaS automation (irrelevant
+to MFIP). Three skills are worth reading at specific build phases.
+
+**Skills to read:**
+
+1. **`software-architecture`** (read at Phase 1 — dashboard shell build)
+   Implements Clean Architecture and SOLID principles. Read before writing
+   `mfip/dashboard/` module structure to ensure the theme, layout, and callback
+   layers respect clean module boundaries from the start.
+
+2. **`subagent-driven-development`** (read at Phase 4 — Extraction Layer build)
+   Dispatches independent subagents with code review checkpoints between iterations.
+   Directly relevant to how MFIP's Extraction Layer works: Extractor A and B run
+   independently, output is reconciled by the Reconciliation Engine. The skill
+   encodes patterns for structuring independent parallel agents and their handoff
+   contracts. Read before writing the Extractor agent prompts.
+
+3. **`root-cause-tracing`** (read at Phase 6 — Security Council build)
+   Traces errors deep in execution back to their original trigger. Relevant to
+   Security Council debugging and the Technical Officer's log analysis mandate.
+   May inform the Security Log query patterns and the three-tier alert escalation
+   logic.
+
+**How to access:**
+`git clone https://github.com/ComposioHQ/awesome-claude-skills` and read the
+relevant `SKILL.md` files. No installation required — read for patterns, not
+for execution in MFIP's environment.
+
+---
+
+### Discarded items (recorded for completeness)
+
+- **Shannon AI Pentester** — penetration testing tool. MFIP has no network-exposed
+  surface. Irrelevant.
+- **"3 Free Tools" design guide** (shadcn / 21st.dev / UX Pro Max) — React component
+  ecosystem. MFIP uses Plotly Dash. Wrong tech stack.
+- **Drive design skills file** — auth-gated, could not load. Likely the same React
+  component guide. Irrelevant regardless.
+
+## 2026-05-12 — IDEA-023 — Served-layout callback ID resolution smoke test
+
+**Idea:** A pytest smoke test that instantiates the Dash app and asserts
+every callback's Input/Output IDs resolve against the served layout.
+
+**Rationale:** Session 6 surfaced four Dash-3.x runtime failures
+(`use_pages` + `page_container`, `suppress_callback_exceptions`,
+explicit `layout=` kwarg, cross-layout Input validation) that all
+passed structural pytest checks and only appeared on browser launch.
+A served-layout resolution test would have caught all four at
+pytest time.
+
+**Status:** PROPOSED.
+
+**Decision gate:** End of Phase 1. By then we'll know whether the
+pattern of test-passes-but-browser-fails has recurred enough to
+justify the work, or whether the four Session 6 failures were a
+one-time Dash-3.x learning tax.
