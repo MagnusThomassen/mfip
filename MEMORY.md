@@ -46,9 +46,10 @@ Part 1 (theme toggle re-wire) complete and merged to main as `a5e92b9`. Next: Pa
 | `theme.py` | `mfip/dashboard/theme.py` | Both dark + light token sets; `apply_theme(fig, mode)` helper |
 | AG Grid overrides | `assets/ag-grid-overrides.css` | CSS vars from same token set as theme.py; sync enforced by unit test |
 | `app.py` | `mfip/dashboard/app.py` | `dcc.Location` routing scaffolded; clientside callback for OS theme detection (inline string form); `theme-mode-store` declared |
-| `zone1.py` | `mfip/dashboard/zones/zone1.py` | Zone 1 Command Centre built; theme toggle re-wire complete; 10 zone1 tests passing; 23 total |
+| `zone1.py` | `mfip/dashboard/zones/zone1.py` | Zone 1 Command Centre built; theme toggle re-wire complete; density wiring confirmed (settings panel fixed); focus states wired |
 | Theme tests | `tests/test_theme.py` | 8 passing |
-| Zone 1 tests | `tests/test_zone1.py` | 10 passing; 23 total green on main |
+| Zone 1 tests | `tests/test_zone1.py` | 14 passing; 27 total green on main |
+| `focus.css` | `mfip/dashboard/assets/focus.css` | Global `*:focus-visible` ring (2px solid `--accent-interactive`, 2px offset); inherits in every zone |
 | `MEMORY.md` | `repo\MEMORY.md` | This file; added Session 7 |
 
 ---
@@ -89,6 +90,7 @@ Part 1 (theme toggle re-wire) complete and merged to main as `a5e92b9`. Next: Pa
 | MAX date preset (Zone 1) | `ideas.md` IDEA-021 PROPOSED; wire at Phase 2+ when data loading is real |
 | Overlay chrome ownership (settings panel, alert feed, Security Alert Overlay) | Decide at Alert Feed Panel build |
 | Served-layout callback smoke test | `ideas.md` IDEA-023 PROPOSED; decision gate end of Phase 1 |
+| Zone 1 Header rendered height divergence | `ideas.md` IDEA-025 PROPOSED; decision gate end of Phase 1 |
 
 ---
 
@@ -178,4 +180,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-12 — Session 7 Part 1 complete: theme toggle re-wire merged to main as `a5e92b9`. Part 2 (Zone 1 density + focus) brief ready.*
+*Last updated: 2026-05-12 — Session 7 Part 2 complete: Zone 1 density wiring confirmed (settings panel fixed); global `:focus-visible` ring established; PR open on `phase1/zone1-density-focus`.*
