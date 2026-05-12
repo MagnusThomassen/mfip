@@ -137,6 +137,46 @@ def test_zone1_local_theme_store_in_layout():
     assert store.storage_type == "memory"
 
 
+def test_header_has_roomy_density_class():
+    header = _find_by_id(zone1.layout, "zone1-top-bar")
+    assert header is not None
+    assert "density-roomy" in (header.className or "")
+
+
+def test_settings_panel_has_roomy_density_class():
+    panel = _find_by_id(zone1.layout, "settings-panel")
+    assert panel is not None
+    assert "density-roomy" in (panel.className or "")
+
+
+def test_density_roomy_css_values():
+    import pathlib
+    css_path = pathlib.Path(__file__).resolve().parents[1] / (
+        "mfip/dashboard/assets/density.css"
+    )
+    css = css_path.read_text(encoding="utf-8")
+    # Tokens drive the values — assert both the token definitions and
+    # the .density-roomy rule referencing them.
+    assert "--density-roomy-padding: 24px" in css
+    assert "--density-roomy-gap: 16px" in css
+    assert "--density-roomy-row-min: 48px" in css
+    assert ".density-roomy" in css
+    assert "padding: var(--density-roomy-padding)" in css
+    assert "gap: var(--density-roomy-gap)" in css
+
+
+def test_focus_visible_css_rule():
+    import pathlib
+    css_path = pathlib.Path(__file__).resolve().parents[1] / (
+        "mfip/dashboard/assets/focus.css"
+    )
+    assert css_path.exists(), "focus.css missing from assets/"
+    css = css_path.read_text(encoding="utf-8")
+    assert ":focus-visible" in css
+    assert "outline-offset: 2px" in css
+    assert "var(--accent-interactive)" in css
+
+
 def test_theme_radio_writes_to_local_store():
     # Importing app ensures all @callback registrations have fired.
     from mfip.dashboard.app import app  # noqa: F401
