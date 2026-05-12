@@ -1351,3 +1351,55 @@ pytest time.
 pattern of test-passes-but-browser-fails has recurred enough to
 justify the work, or whether the four Session 6 failures were a
 one-time Dash-3.x learning tax.
+
+
+## IDEA-026 — Zone 1 focus ring not visible on non-native interactive elements
+
+**Status:** PROPOSED
+**Added:** 2026-05-12
+**Source:** Session 7 Part 2 browser verification
+
+**Context:** PR #14 added a global `*:focus-visible` rule with the
+spec values (2px solid var(--accent-interactive), 2px outline-offset).
+The rule loads correctly and produces a visible ring on the company
+selector (which is a native-focusable `dcc.Dropdown`). It does NOT
+produce a visible ring on the settings cog, date filter preset buttons
+(1Y/3Y/5Y/MAX/Custom), or alert badges. These are the ~9 interactive
+Zone 1 elements that Part 2's brief required to be tab-reachable with
+a visible ring.
+
+**Three candidate causes:**
+1. The non-ringed elements aren't actually focusable — they're `<div>`
+   or `<span>` without `tabindex="0"`. Browsers skip them in tab order,
+   so `:focus-visible` never fires. Fix: convert to `<button>` elements
+   (semantically correct anyway), or add `tabindex="0"` and `role="button"`
+   with keyboard handlers.
+2. The elements are focusable but the ring is invisible against Zone 1's
+   pre-existing light-blue header tint. Fix: address the header-tint
+   issue (separate concern; the powder-blue background isn't a spec
+   colour and is itself a defect), OR strengthen the focus ring on chrome
+   surfaces.
+3. A more specific CSS rule somewhere in the cascade overrides
+   `*:focus-visible` for those elements. Fix: grep for `outline:` rules
+   matching on the element selectors involved and remove or refine.
+
+**Diagnostic plan for Session 8 Part 1 (Part 3 of Zone 1):**
+1. Open DevTools → Elements tab → click on the settings cog in the page.
+2. With the cog selected in DevTools, check the Styles panel for any
+   `:focus-visible` rules in the matched-rules list when focused.
+3. Use Tab in the page; in DevTools observe the focused element via
+   the `:focus` indicator in the Elements panel.
+4. If focus is bypassing the elements entirely: candidate 1 confirmed.
+5. If focus lands but ring is drawn outside the visible viewport area
+   or in a colour matching surroundings: candidate 2 confirmed.
+6. If a higher-specificity outline rule appears in the cascade:
+   candidate 3 confirmed.
+
+**Definition of done (Part 3):**
+Every Zone 1 interactive element (settings cog, date preset buttons,
+alert badges, theme radios when settings panel open, company selector,
+unsent alerts indicator when visible) shows a clearly visible focus
+ring when reached by keyboard Tab, and skips the ring when reached by
+mouse click. Browser-verified by Magnus.
+
+**Decision gate:** Session 8 Part 1.

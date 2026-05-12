@@ -1605,3 +1605,56 @@ global callback takes that store as State and resolves `'system'`
 to `system_pref or 'dark'` before writing to `theme-mode-store`.
 
 **Affected docs:** `decisions.md` (this entry).
+
+
+## 2026-05-12 — Part 2 browser verification fallout: focus ring fails on most Zone 1 elements; PR #14 to draft pending Part 3 diagnosis
+
+**Context.** Part 2's brief defined "every interactive element in Zone 1
+is tab-reachable with a visible focus ring" as a definition-of-done
+item. Browser verification with the Dash dev server (debug=True)
+revealed that the `:focus-visible` rule from `focus.css` produces a
+visible ring on the company selector (`dcc.Dropdown`) but NOT on the
+other Zone 1 interactive elements (settings cog, date filter preset
+buttons 1Y/3Y/5Y/MAX/Custom, alert badges). Tab traversal from URL
+bar reaches the company selector at press ~15; Shift+Tab from URL bar
+reaches it at press 1–2, confirming the dropdown is at the end of
+Zone 1's tab order. Intermediate presses move focus somewhere but
+produce no visible ring on the screen.
+
+**Finding.** The CSS rule is loaded (confirmed by company-selector
+behaviour) and the values match spec (2px solid var(--accent-interactive),
+2px outline-offset). The rule is correct; something prevents it from
+being either drawn or seen on the other Zone 1 elements.
+
+**Three candidate causes, not yet diagnosed:**
+1. The settings cog, date preset buttons, and alert badges are
+   non-native focusable elements (`<div>` / `<span>` without
+   `tabindex`); browsers do not move keyboard focus to them by default,
+   so `:focus-visible` never matches.
+2. The elements ARE focusable but the focus ring is invisible against
+   the pre-existing light-blue header tint that Zone 1 currently
+   renders with (a separate styling issue noted but not in scope).
+3. A more specific CSS rule somewhere in the cascade is winning
+   against `*:focus-visible`.
+
+**Decision.** PR #14 converted to draft. The density-class fix on the
+settings panel and the `:focus-visible` CSS rule itself are correct
+and tested (27/27 green). They are NOT abandoned — they wait in PR #14
+for Part 3 to either confirm-and-merge or supersede with a wider fix
+that includes them.
+
+**Why this is not a rollback of the Part 2 entry above.** The earlier
+2026-05-12 entry ("Zone 1 density wiring confirmed; focus-ring CSS
+rule established for all zones") is still factually correct at the
+code-and-test level. The CSS rule exists, is correct, and has tests.
+What it doesn't yet do — produce a visible ring across all Zone 1
+interactive elements — is a separate problem about the elements those
+rules apply to, logged as IDEA-026.
+
+**Affected docs:** `decisions.md` (this entry), `MEMORY.md` (current-
+state and Open Loops updated), `ideas.md` (IDEA-026 added).
+
+**Revisit trigger:** Session 8 Part 1 (Part 3 of Zone 1 finishing pass).
+Diagnose the three candidate causes by browser inspection, fix the
+underlying issue, verify every Zone 1 interactive element rings up
+visibly, then merge PR #14 or supersede.
