@@ -11,7 +11,7 @@
 
 **Phase 1 — Dashboard Shell** (in progress)
 
-Part 1 (theme toggle re-wire) complete. PR #12 open, pending merge. Next: Part 2 brief to be written.
+Part 1 (theme toggle re-wire) complete and merged to main as `a5e92b9`. Next: Part 2 — Zone 1 finishing pass (density + focus states).
 
 ---
 
@@ -20,7 +20,7 @@ Part 1 (theme toggle re-wire) complete. PR #12 open, pending merge. Next: Part 2
 | Phase | Name | Status | Notes |
 |---|---|---|---|
 | 0 | Environment Setup | ✅ Complete | Commits `a258675`, `e556617`, `5c9db87`, `af3f02d`, `dac7e3b` |
-| 1 | Dashboard Shell | 🔄 In progress | Sessions 5–7 Part 1 done; PR #12 open; theme toggle re-wire complete |
+| 1 | Dashboard Shell | 🔄 In progress | Sessions 5–7 Part 1 done; theme toggle re-wire merged at `a5e92b9` |
 | 2 | Logging Infrastructure | ⬜ Not started | Can parallel Phase 1 |
 | 3 | Bloomberg Ingestion | ⬜ Not started | Requires lab visit |
 | 4 | PDF Extraction | ⬜ Not started | |
@@ -46,9 +46,9 @@ Part 1 (theme toggle re-wire) complete. PR #12 open, pending merge. Next: Part 2
 | `theme.py` | `mfip/dashboard/theme.py` | Both dark + light token sets; `apply_theme(fig, mode)` helper |
 | AG Grid overrides | `assets/ag-grid-overrides.css` | CSS vars from same token set as theme.py; sync enforced by unit test |
 | `app.py` | `mfip/dashboard/app.py` | `dcc.Location` routing scaffolded; clientside callback for OS theme detection (inline string form); `theme-mode-store` declared |
-| `zone1.py` | `mfip/dashboard/zones/zone1.py` | Zone 1 Command Centre built; theme toggle re-wire complete (PR #12); 10 zone1 tests passing; 23 total |
+| `zone1.py` | `mfip/dashboard/zones/zone1.py` | Zone 1 Command Centre built; theme toggle re-wire complete; 10 zone1 tests passing; 23 total |
 | Theme tests | `tests/test_theme.py` | 8 passing |
-| Zone 1 tests | `tests/test_zone1.py` | 10 passing; 23 total green as of PR #12 |
+| Zone 1 tests | `tests/test_zone1.py` | 10 passing; 23 total green on main |
 | `MEMORY.md` | `repo\MEMORY.md` | This file; added Session 7 |
 
 ---
@@ -178,4 +178,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-12 — Session 7 Part 1 complete: theme toggle re-wire done, PR #12 open.*
+*Last updated: 2026-05-12 — Session 7 Part 1 complete: theme toggle re-wire merged to main as `a5e92b9`. Part 2 (Zone 1 density + focus) brief ready.*
