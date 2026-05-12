@@ -11,7 +11,7 @@
 
 **Phase 1 — Dashboard Shell** (in progress)
 
-Part 1 (theme toggle re-wire) complete and merged to main as `a5e92b9`. Next: Part 2 — Zone 1 finishing pass (density + focus states).
+Part 1 merged as `a5e92b9`. Part 2 in flight — PR #14 in draft pending Part 3 focus diagnosis. Settings-panel density and `:focus-visible` CSS rule landed in PR #14 (27/27 tests green) but browser verification shows the ring is only visible on the company selector, not on the other ~9 Zone 1 interactive elements. Three candidate causes logged as IDEA-026. Next: Session 8 Part 1 — diagnose and fix.
 
 ---
 
@@ -20,7 +20,7 @@ Part 1 (theme toggle re-wire) complete and merged to main as `a5e92b9`. Next: Pa
 | Phase | Name | Status | Notes |
 |---|---|---|---|
 | 0 | Environment Setup | ✅ Complete | Commits `a258675`, `e556617`, `5c9db87`, `af3f02d`, `dac7e3b` |
-| 1 | Dashboard Shell | 🔄 In progress | Sessions 5–7 Part 1 done; theme toggle re-wire merged at `a5e92b9` |
+| 1 | Dashboard Shell | 🔄 In progress | Sessions 5–7 Part 1 merged at `a5e92b9`; Part 2 PR #14 in draft pending focus diagnosis |
 | 2 | Logging Infrastructure | ⬜ Not started | Can parallel Phase 1 |
 | 3 | Bloomberg Ingestion | ⬜ Not started | Requires lab visit |
 | 4 | PDF Extraction | ⬜ Not started | |
@@ -89,6 +89,7 @@ Part 1 (theme toggle re-wire) complete and merged to main as `a5e92b9`. Next: Pa
 | MAX date preset (Zone 1) | `ideas.md` IDEA-021 PROPOSED; wire at Phase 2+ when data loading is real |
 | Overlay chrome ownership (settings panel, alert feed, Security Alert Overlay) | Decide at Alert Feed Panel build |
 | Served-layout callback smoke test | `ideas.md` IDEA-023 PROPOSED; decision gate end of Phase 1 |
+| Zone 1 focus ring not visible on most elements | `ideas.md` IDEA-026 PROPOSED; PR #14 draft until resolved; Session 8 Part 1 |
 
 ---
 
@@ -178,4 +179,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-12 — Session 7 Part 1 complete: theme toggle re-wire merged to main as `a5e92b9`. Part 2 (Zone 1 density + focus) brief ready.*
+*Last updated: 2026-05-12 — Session 7 Part 2 in flight; PR #14 in draft pending Part 3 focus diagnosis.*
