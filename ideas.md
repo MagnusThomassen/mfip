@@ -791,22 +791,25 @@ callbacks) — they cannot be resolved until this is.
 deployment dashboard, GitHub's repository overview page. These are modern,
 data-confident, dark-mode interfaces that handle operational status elegantly.
 
-**Status:** `PARTIALLY GRADUATED` — infrastructure locked, destination open.
-Per the 2026-05-11 Phase 1 routing decision in `decisions.md`, the *enabling
-infrastructure* question (routing layer yes/no) is resolved: `dcc.Location` +
-page registry scaffolded into Phase 1 from start, `mfip/dashboard/` folder
-structure, split-per-zone callbacks. The *destination* question (separate
-Home route vs expanded Zone 1) remains open and is deferred to revisit after
-Zone 1 is functional in practice. Rationale for the split: routing is cheap
-to add now and trivially removable if unused; destination questions are much
-easier to answer with grounding from real Zone 1 use than from screenshots
-of other products.
+**Status:** `RESOLVED-PARTIALLY` — destination resolved, contents open.
+The 2026-05-13 routing architecture decision in `decisions.md` resolves
+the destination question: separate `/home` route wins, registered via
+`pages/home.py`. Analysis moves to `/analysis`. Zone 1 is a component
+of `/analysis`, not a separate page.
 
-**Decision gate:** Destination question revisits after Zone 1 is functional
-(estimated end of Session 6 or Session 7). At that point, decide whether to
-register a `/home` route showing operational state, or expand Zone 1 in-place.
-If Home wins, document the route registration in a follow-up `decisions.md`
-entry.
+Open: what `/home` actually shows. The original brainstorm questions
+(operational stats? build phase checklist? GitHub links? replace
+analysis on startup?) are unresolved. Home currently ships as a stub
+with placeholder content. Real Home contents are deferred to a future
+session once `/analysis` is in real use and the operational view's
+job is clearer.
+
+**Decision gate:** Home contents — design TBD. Revisits when
+`/analysis` has been in real use for at least a session and the
+contrast between "analysis surface" and "operational surface" is
+concrete enough to design from. If Home contents land, document the
+design choice in a follow-up `decisions.md` entry referencing the
+2026-05-13 routing architecture decision.
 
 ---
 
@@ -1345,61 +1348,16 @@ passed structural pytest checks and only appeared on browser launch.
 A served-layout resolution test would have caught all four at
 pytest time.
 
-**Status:** PROPOSED.
+**Status:** APPROVED — scheduled as Phase 1 close-out deliverable.
 
-**Decision gate:** End of Phase 1. By then we'll know whether the
-pattern of test-passes-but-browser-fails has recurred enough to
-justify the work, or whether the four Session 6 failures were a
-one-time Dash-3.x learning tax.
+**Update 2026-05-13:** Graduates from PROPOSED to APPROVED following
+the three-strikes pattern documented in the 2026-05-13 routing
+architecture decision in `decisions.md`. Session 7 Parts 1-3 each
+surfaced test-passes-but-browser-fails defects (theme-toggle cross-
+layout in Part 1; settings density wiring in Part 2; missing
+Zones 2-4 from served DOM in Part 3). A served-layout smoke test
+would have caught the Part 3 mismatch immediately at Part 1, and is
+now the canonical defence against this failure mode.
 
-
-## IDEA-026 — Zone 1 focus ring not visible on non-native interactive elements
-
-**Status:** PROPOSED
-**Added:** 2026-05-12
-**Source:** Session 7 Part 2 browser verification
-
-**Context:** PR #14 added a global `*:focus-visible` rule with the
-spec values (2px solid var(--accent-interactive), 2px outline-offset).
-The rule loads correctly and produces a visible ring on the company
-selector (which is a native-focusable `dcc.Dropdown`). It does NOT
-produce a visible ring on the settings cog, date filter preset buttons
-(1Y/3Y/5Y/MAX/Custom), or alert badges. These are the ~9 interactive
-Zone 1 elements that Part 2's brief required to be tab-reachable with
-a visible ring.
-
-**Three candidate causes:**
-1. The non-ringed elements aren't actually focusable — they're `<div>`
-   or `<span>` without `tabindex="0"`. Browsers skip them in tab order,
-   so `:focus-visible` never fires. Fix: convert to `<button>` elements
-   (semantically correct anyway), or add `tabindex="0"` and `role="button"`
-   with keyboard handlers.
-2. The elements are focusable but the ring is invisible against Zone 1's
-   pre-existing light-blue header tint. Fix: address the header-tint
-   issue (separate concern; the powder-blue background isn't a spec
-   colour and is itself a defect), OR strengthen the focus ring on chrome
-   surfaces.
-3. A more specific CSS rule somewhere in the cascade overrides
-   `*:focus-visible` for those elements. Fix: grep for `outline:` rules
-   matching on the element selectors involved and remove or refine.
-
-**Diagnostic plan for Session 8 Part 1 (Part 3 of Zone 1):**
-1. Open DevTools → Elements tab → click on the settings cog in the page.
-2. With the cog selected in DevTools, check the Styles panel for any
-   `:focus-visible` rules in the matched-rules list when focused.
-3. Use Tab in the page; in DevTools observe the focused element via
-   the `:focus` indicator in the Elements panel.
-4. If focus is bypassing the elements entirely: candidate 1 confirmed.
-5. If focus lands but ring is drawn outside the visible viewport area
-   or in a colour matching surroundings: candidate 2 confirmed.
-6. If a higher-specificity outline rule appears in the cascade:
-   candidate 3 confirmed.
-
-**Definition of done (Part 3):**
-Every Zone 1 interactive element (settings cog, date preset buttons,
-alert badges, theme radios when settings panel open, company selector,
-unsent alerts indicator when visible) shows a clearly visible focus
-ring when reached by keyboard Tab, and skips the ring when reached by
-mouse click. Browser-verified by Magnus.
-
-**Decision gate:** Session 8 Part 1.
+**Decision gate:** Phase 1 close-out. Implement before merging the
+final Phase 1 PR.

@@ -11,7 +11,7 @@
 
 **Phase 1 — Dashboard Shell** (in progress)
 
-Part 1 merged as `a5e92b9`. Part 2 in flight — PR #14 in draft pending Part 3 focus diagnosis. Settings-panel density and `:focus-visible` CSS rule landed in PR #14 (27/27 tests green) but browser verification shows the ring is only visible on the company selector, not on the other ~9 Zone 1 interactive elements. Three candidate causes logged as IDEA-026. Next: Session 8 Part 1 — diagnose and fix.
+Session 8 routing restructure complete. Two routes via Dash Pages: `/` (Home stub, `pages/home.py`) and `/analysis` (Zone 1 + Zone 2-4 placeholders, `pages/analysis.py`). Zone 1 is now a component composed into `/analysis`, not a separately registered page. PR #14 closed without merging — its underlying architectural mismatch is resolved by the restructure. 24/24 tests green on branch `phase1/routing-restructure`. Next: open PR, squash-merge to `main`.
 
 ---
 
@@ -20,7 +20,7 @@ Part 1 merged as `a5e92b9`. Part 2 in flight — PR #14 in draft pending Part 3 
 | Phase | Name | Status | Notes |
 |---|---|---|---|
 | 0 | Environment Setup | ✅ Complete | Commits `a258675`, `e556617`, `5c9db87`, `af3f02d`, `dac7e3b` |
-| 1 | Dashboard Shell | 🔄 In progress | Sessions 5–7 Part 1 merged at `a5e92b9`; Part 2 PR #14 in draft pending focus diagnosis |
+| 1 | Dashboard Shell | 🔄 In progress | Sessions 5–7 Part 1 merged at `a5e92b9`; Session 8 routing restructure on branch `phase1/routing-restructure` (PR pending) |
 | 2 | Logging Infrastructure | ⬜ Not started | Can parallel Phase 1 |
 | 3 | Bloomberg Ingestion | ⬜ Not started | Requires lab visit |
 | 4 | PDF Extraction | ⬜ Not started | |
@@ -45,10 +45,13 @@ Part 1 merged as `a5e92b9`. Part 2 in flight — PR #14 in draft pending Part 3 
 | `CLAUDE.md` | `repo\CLAUDE.md` | Session-bootstrap file for Claude Code; rewritten 2026-05-09 |
 | `theme.py` | `mfip/dashboard/theme.py` | Both dark + light token sets; `apply_theme(fig, mode)` helper |
 | AG Grid overrides | `assets/ag-grid-overrides.css` | CSS vars from same token set as theme.py; sync enforced by unit test |
-| `app.py` | `mfip/dashboard/app.py` | `dcc.Location` routing scaffolded; clientside callback for OS theme detection (inline string form); `theme-mode-store` declared |
-| `zone1.py` | `mfip/dashboard/zones/zone1.py` | Zone 1 Command Centre built; theme toggle re-wire complete; 10 zone1 tests passing; 23 total |
+| `app.py` | `mfip/dashboard/app.py` | Dash Pages app; imports `pages/home` + `pages/analysis`; `dcc.Location` + theme stores; clientside callback for OS theme detection (inline string form) |
+| `pages/home.py` | `mfip/dashboard/pages/home.py` | Home stub at `/`; placeholder content + link to `/analysis` |
+| `pages/analysis.py` | `mfip/dashboard/pages/analysis.py` | Analysis page at `/analysis`; composes Zone 1 + Zone 2-4 placeholder containers |
+| `zone1.py` | `mfip/dashboard/zones/zone1.py` | Zone 1 Command Centre; exports `layout` as module-level constant; composed into `pages/analysis.py` (not a page itself) |
 | Theme tests | `tests/test_theme.py` | 8 passing |
-| Zone 1 tests | `tests/test_zone1.py` | 10 passing; 23 total green on main |
+| App tests | `tests/test_app.py` | 7 passing (includes `/` and `/analysis` route registration tests) |
+| Zone 1 tests | `tests/test_zone1.py` | 9 passing; 24 total green on branch `phase1/routing-restructure` |
 | `MEMORY.md` | `repo\MEMORY.md` | This file; added Session 7 |
 
 ---
@@ -65,7 +68,7 @@ Part 1 merged as `a5e92b9`. Part 2 in flight — PR #14 in draft pending Part 3 
 | Test invocation | Always `python -m pytest`; never venv shim (ASR blocked) | 2026-05-11 |
 | Clientside callbacks | Inline string form ≤30 lines; `assets/clientside.js` only when larger | 2026-05-11 |
 | Visual identity | Koyfin-anchored; dual dark+light from start; semantic color tokens; narrowed mono rule | 2026-05-11 |
-| Routing | `dcc.Location` scaffolded from Session 5; Home-vs-Zone-1 destination deferred post Zone 1 | 2026-05-11 |
+| Routing | Pages routing; Home (`/`) + analysis (`/analysis`) split; zones are components on `/analysis` | 2026-05-13 |
 | Frontend stack | Plotly Dash for v1; web-first (Next.js) revisit after Mac Mini acquisition (autumn 2026) | 2026-05-11 |
 | Dashboard folder | `mfip/dashboard/`; scripts/ for operational one-offs only | 2026-05-11 |
 | Cross-project firewall | MFIP-Claude flags general patterns only; dissertation synthesis stays in Dissertation project | 2026-05-11 |
@@ -81,15 +84,16 @@ Part 1 merged as `a5e92b9`. Part 2 in flight — PR #14 in draft pending Part 3 
 |---|---|
 | `watchdog` scope decision (option a/b/c) | Phase 3 build-start deliverable; `04_BUILD_SEQUENCE.docx` |
 | PDF filename convention | Phase 4 build-start deliverable; log in `decisions.md` when decided |
-| Home-vs-Zone-1 destination | `ideas.md` PARTIALLY GRADUATED; revisit after Zone 1 in use |
+| Home screen contents | Design TBD; revisit after `/analysis` is in routine use. `ideas.md` 2026-05-10 "Project Dashboard View" RESOLVED-PARTIALLY |
 | ANR enhancements (Bloomberg) | Deferred until next lab session |
 | Learning Agent / backtesting | V2; `ideas.md` BACKLOG |
 | Web-first migration | Revisit trigger: Mac Mini acquisition autumn 2026 |
 | Chief Analyst default weighting (35/35/20/10) | Revisit after 30 recommendations in v2 |
 | MAX date preset (Zone 1) | `ideas.md` IDEA-021 PROPOSED; wire at Phase 2+ when data loading is real |
 | Overlay chrome ownership (settings panel, alert feed, Security Alert Overlay) | Decide at Alert Feed Panel build |
-| Served-layout callback smoke test | `ideas.md` IDEA-023 PROPOSED; decision gate end of Phase 1 |
-| Zone 1 focus ring not visible on most elements | `ideas.md` IDEA-026 PROPOSED; PR #14 draft until resolved; Session 8 Part 1 |
+| Served-layout callback smoke test | `ideas.md` IDEA-023 APPROVED; Phase 1 close-out deliverable |
+| Zone 1 chrome styling completeness (focus rings, badge styling, theme application) | `worklog.md` — multiple OPEN entries; re-evaluate when Zone 2 ships |
+| Phase 1 close-out tidy-up | `worklog.md` — CLAUDE.md repo path, `__main__.py` confirmation, line-endings normalisation, theme visual application |
 
 ---
 
@@ -128,8 +132,12 @@ C:\MFIP\
 │   │   └── dashboard\     ← Dash app
 │   │       ├── theme.py
 │   │       ├── app.py
+│   │       ├── __main__.py    ← enables `python -m mfip.dashboard`
+│   │       ├── pages\
+│   │       │   ├── home.py        ← /
+│   │       │   └── analysis.py    ← /analysis (composes Zone 1)
 │   │       ├── zones\
-│   │       │   └── zone1.py
+│   │       │   └── zone1.py       ← component, not a page
 │   │       └── assets\    ← ag-grid-overrides.css
 │   ├── scripts\
 │   │   ├── ingestion\     ← validate_bloomberg_workbook.py
@@ -137,11 +145,13 @@ C:\MFIP\
 │   ├── templates\
 │   │   └── bloomberg\     ← Master xlsx templates (Git-versioned)
 │   ├── tests\
+│   │   ├── test_app.py
 │   │   ├── test_theme.py
 │   │   └── test_zone1.py
 │   ├── CLAUDE.md          ← Claude Code session bootstrap
 │   ├── decisions.md
 │   ├── ideas.md
+│   ├── worklog.md
 │   └── MEMORY.md          ← this file
 ├── bloomberg_archive\     ← exported Bloomberg data (off Git)
 ├── filings\               ← annual report PDFs (off Git)
@@ -162,11 +172,12 @@ C:\MFIP\
 | `02_AGENT_DESCRIPTIONS.docx` | All 21 agents specified | Claude project library |
 | `03_TECH_STACK.docx` | Tools and libraries | Claude project library |
 | `04_BUILD_SEQUENCE.docx` | Build plan with phases and checklists | Claude project library |
-| `05_DASHBOARD_SPEC.docx` | Dashboard specification v1.2 | Claude project library |
+| `05_DASHBOARD_SPEC.docx` | Dashboard specification v1.3 | Claude project library |
 | `06_SECURITY_COUNCIL.docx` | Security Council detailed design | Claude project library |
 | `07_BLOOMBERG_EXPORT_TEMPLATE.docx` | Bloomberg export contract | Claude project library |
 | `decisions.md` | Architectural decisions log | `repo\decisions.md` |
-| `ideas.md` | Ideas backlog (replaced V2_BACKLOG.docx) | `repo\ideas.md` |
+| `ideas.md` | Forward-looking backlog — phase-gated items | `repo\ideas.md` |
+| `worklog.md` | In-flight observations and bug-shaped items — days-gated | `repo\worklog.md` |
 | `MEMORY.md` | This file — live current-state index | `repo\MEMORY.md` |
 | `CLAUDE.md` | Claude Code session bootstrap | `repo\CLAUDE.md` |
 
@@ -179,4 +190,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-12 — Session 7 Part 2 in flight; PR #14 in draft pending Part 3 focus diagnosis.*
+*Last updated: 2026-05-13 — Session 8 routing restructure complete; PR for `phase1/routing-restructure` pending.*

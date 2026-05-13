@@ -18,8 +18,9 @@ at sunset. The callback fires on dcc.Location pathname changes
 (including initial load); a window-level guard prevents
 re-subscribing the listener on subsequent navigations.
 
-Spec source: 05_DASHBOARD_SPEC.docx v1.2; routing per
-decisions.md 2026-05-11 "Phase 1 routing decision".
+Spec source: 05_DASHBOARD_SPEC.docx v1.3; routing per decisions.md
+2026-05-11 "Phase 1 routing decision" and 2026-05-13 "Routing
+architecture: Pages affirmed; /analysis split".
 """
 
 from __future__ import annotations
@@ -35,10 +36,13 @@ app = Dash(
     suppress_callback_exceptions=True,
 )
 
-# Import zone modules so their dash.register_page calls populate the
+# Import page modules so their dash.register_page calls populate the
 # page registry. With pages_folder="" there's no auto-discovery — each
-# zone must be imported explicitly. Add a line per new zone here.
-from mfip.dashboard.zones import zone1  # noqa: E402, F401
+# page must be imported explicitly. Zone modules are imported
+# transitively by the page modules that compose them (e.g. analysis.py
+# imports zone1 for its layout, which also triggers zone1's @callback
+# registrations).
+from mfip.dashboard.pages import home, analysis  # noqa: E402, F401
 
 app.layout = html.Div(
     [

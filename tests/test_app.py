@@ -69,6 +69,37 @@ def test_theme_store_default_dark():
     assert store.data == "dark"
 
 
+def test_home_registered_at_root():
+    """Home page (stub) registers at path '/' per 2026-05-13 routing
+    architecture decision."""
+    matches = [
+        entry
+        for entry in dash.page_registry.values()
+        if entry.get("path") == "/"
+    ]
+    assert matches, "No page registered at path '/'"
+    assert any(
+        "mfip.dashboard.pages.home" in entry.get("module", "")
+        for entry in matches
+    ), "Page at '/' is not pages.home"
+
+
+def test_analysis_registered_at_analysis_path():
+    """Analysis page registers at path '/analysis' per 2026-05-13
+    routing architecture decision. Zone 1 is composed into this page;
+    it does not register itself as a page."""
+    matches = [
+        entry
+        for entry in dash.page_registry.values()
+        if entry.get("path") == "/analysis"
+    ]
+    assert matches, "No page registered at path '/analysis'"
+    assert any(
+        "mfip.dashboard.pages.analysis" in entry.get("module", "")
+        for entry in matches
+    ), "Page at '/analysis' is not pages.analysis"
+
+
 def test_local_to_global_theme_store_callback():
     from dash._callback import GLOBAL_CALLBACK_MAP
 

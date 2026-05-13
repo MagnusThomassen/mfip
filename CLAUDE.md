@@ -16,7 +16,7 @@ These terms are canonical across all MFIP discussions, design docs, decisions lo
 | Local repo | `C:\MFIP\` on the Windows machine — the actual working tree where code is built and run. |
 | GitHub | `github.com/MagnusThomassen/mfip` — the published remote, including rulesets, PRs, and repo metadata. |
 | Design docs | The numbered `.docx` files (`00_PROJECT_OVERVIEW.docx` through `07_BLOOMBERG_EXPORT_TEMPLATE.docx`) plus `SYSTEM_PROMPT.docx`. Live in Project Knowledge; local working copies at `C:\MFIP\docs\`. |
-| Repo docs | `CLAUDE.md`, `decisions.md`, `ideas.md`, `README.md` — Markdown files Git-versioned in the local repo. |
+| Repo docs | `CLAUDE.md`, `decisions.md`, `ideas.md`, `worklog.md`, `MEMORY.md`, `README.md` — Markdown files Git-versioned in the local repo. |
 | Bloomberg templates | The three `.xlsx` master templates (`Master`, `FX`, `Indices`). Defines the export contract. Git-versioned under `repo\templates\bloomberg\`. |
 | Bloomberg export files | The actual saved exports in `bloomberg_archive\<TICKER>\<YYYY-MM-DD>\`. The data, not the contract. |
 | Validator | Reserved for `scripts/ingestion/validate_bloomberg_workbook.py` specifically. Future ingestion components (parser, reconciliation engine) get their own names. |
@@ -79,6 +79,8 @@ C:\MFIP\
 └── repo\                                 ← you are here
     ├── decisions.md
     ├── ideas.md
+    ├── worklog.md
+    ├── MEMORY.md
     ├── requirements.txt
     ├── requirements.lock.txt
     ├── .gitignore
@@ -119,6 +121,7 @@ Subject line: imperative mood, under 72 characters, with a prefix from the set b
 | `docs` | Documentation: `CLAUDE.md`, `README.md`, references to design docs |
 | `decision` | Appending to `decisions.md` |
 | `ideas` | Appending to or graduating items from `ideas.md` |
+| `worklog` | Appending to or closing items in `worklog.md` |
 | `chore` | Repo maintenance and config (`.gitignore`, `requirements.txt` bumps) |
 | `backup` | Backup infrastructure changes (restic, Task Scheduler entries) |
 | `test` | Test or probe commit (rare; usually thrown away in squash-merge) |
@@ -136,7 +139,7 @@ Optional scope in parentheses (e.g. `feat(ingestion):`, `docs(claude-md):`) when
 
 `main` is protected: no direct push, no force push, no merge commits. Every change to `main` goes through a PR with squash-or-rebase merge. Admin bypass is limited to PRs.
 
-Practical implication for routine doc edits (`CLAUDE.md`, `decisions.md`, `ideas.md`, `README.md`):
+Practical implication for routine doc edits (`CLAUDE.md`, `decisions.md`, `ideas.md`, `worklog.md`, `MEMORY.md`, `README.md`):
 
 - **Local-branch flow** (full control, slower): create branch → commit → push → open PR → squash-merge → pull main → delete branch. Use this for substantive edits or anything touching multiple files.
 - **GitHub web UI** (faster for small edits): open the file on GitHub, click the pencil icon, edit, commit straight to a new branch with PR. GitHub handles the branch creation and PR opening in one flow. Use this for typo fixes, small clarifications, single-line edits. Pull main locally afterwards.
@@ -146,6 +149,27 @@ Either flow respects branch protection. Choose by edit size.
 ## When updating decisions.md
 
 Decisions are made in chat sessions, not by you. The user will paste new entries. Append them to `decisions.md`, commit with message format: `decision: <short summary>`. Do not invent decisions or rephrase them.
+
+## When updating ideas.md and worklog.md
+
+Two backlog files split by lifetime, per the 2026-05-13 decision in
+`decisions.md`:
+
+- **`ideas.md`** — forward-looking, phase-gated items (future features,
+  skills/plugins/agents, design questions deferred to later phases).
+  Items keep `IDEA-NNN` prefix where applicable. Decision gates measured
+  in *phases*.
+- **`worklog.md`** — in-flight observations and bug-shaped items that
+  close within sessions or days. Date-prefixed entries (no `IDEA-NNN`).
+  Statuses: `OPEN` / `CLOSED-<reason>` / `MOVED-TO-IDEAS`. Decision
+  gates measured in *days* or "next session".
+
+**Boundary rule:** if its decision gate is measured in *phases*, it's
+an idea. If measured in *days* or "next session," it's a worklog item.
+
+As with `decisions.md`, content is drafted in chat sessions and pasted
+to you for committing. Commit messages: `ideas: <summary>` and
+`worklog: <summary>`.
 
 ## Ending a session
 

@@ -1,5 +1,5 @@
 """
-Zone 1 — Command Centre. Top-bar chrome that mounts at /.
+Zone 1 — Command Centre. Top-bar chrome that composes into the /analysis page.
 
 All data here is placeholder for Session 6. Pipeline state, alert counts,
 job counts, and the alert feed body are wired in later sessions when
@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import datetime as _dt
 
-import dash
 from dash import (
     Input,
     Output,
@@ -382,14 +381,6 @@ def _theme_radio_to_local_store(radio_value):
 # global side effect, not zone-specific. It lives in app.py.
 
 
-# ---------------------------------------------------------------------------
-# Page registration
-# ---------------------------------------------------------------------------
-# Must come last: with pages_folder="" Dash does not auto-discover the
-# module-level `layout` attribute, so it must be passed explicitly.
-dash.register_page(
-    __name__,
-    path="/",
-    layout=layout,
-    name="Command Centre",
-)
+# Zone 1 is composed into /analysis via mfip/dashboard/pages/analysis.py;
+# it does not register a Dash page directly. See decisions.md 2026-05-13
+# "Routing architecture: Pages affirmed; /analysis split".

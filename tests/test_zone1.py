@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import datetime as _dt
 
-import dash
 import pytest
 
 # Importing zone1 has side effects (register_page, layout build). Import
@@ -44,19 +43,6 @@ def test_zone1_module_imports():
     # Already imported at module load — assert the module object exists.
     assert zone1 is not None
     assert hasattr(zone1, "layout")
-
-
-def test_zone1_registered_as_index_page():
-    matches = [
-        entry
-        for entry in dash.page_registry.values()
-        if entry.get("path") == "/"
-    ]
-    assert matches, "No page registered at path '/'"
-    assert any(
-        "mfip.dashboard.zones.zone1" in entry.get("module", "")
-        for entry in matches
-    ), "Page at '/' is not zone1"
 
 
 def test_zone1_layout_contains_required_ids():
