@@ -18,8 +18,9 @@ at sunset. The callback fires on dcc.Location pathname changes
 (including initial load); a window-level guard prevents
 re-subscribing the listener on subsequent navigations.
 
-Spec source: 05_DASHBOARD_SPEC.docx v1.2; routing per
-decisions.md 2026-05-11 "Phase 1 routing decision".
+Spec source: 05_DASHBOARD_SPEC.docx v1.3; routing per decisions.md
+2026-05-11 "Phase 1 routing decision" and 2026-05-13 "Routing
+architecture: Pages affirmed; /analysis split".
 """
 
 from __future__ import annotations
