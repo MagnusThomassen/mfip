@@ -1658,3 +1658,127 @@ state and Open Loops updated), `ideas.md` (IDEA-026 added).
 Diagnose the three candidate causes by browser inspection, fix the
 underlying issue, verify every Zone 1 interactive element rings up
 visibly, then merge PR #14 or supersede.
+
+## 2026-05-13 — Routing architecture: Pages affirmed; Home (`/`) and analysis (`/analysis`) split; zones are components on `/analysis`
+
+**Decision:** Dash Pages routing is affirmed as the v1 architecture (the
+2026-05-11 routing decision is NOT reversed). The route layout is revised:
+analysis dashboard moves from `/` to `/analysis`, registered via a new
+`pages/analysis.py` that composes Zone 1 plus placeholder containers for
+Zones 2-4 as a single layout. A new `pages/home.py` stub registers at `/`
+as placeholder for the future operational dashboard view. Zones, when
+built, are components imported by `pages/analysis.py` — not pages
+themselves. Zone 1 is migrated from `dash.register_page(path="/")` to a
+module exporting a `layout` constant consumed by `analysis.py`.
+
+**Context.** Session 7 Part 3 began as a focus-ring and header-height
+diagnostic following from IDEA-026 (focus ring not visible on most Zone 1
+interactive elements) and a Session 7 Part 2 observation that Zone 1's
+header was rendering at 108px instead of the spec-defined chrome height.
+Browser diagnostic revealed the 108px figure was the *entire body*, not
+the header — Zones 2-4 weren't in the DOM at all. The two symptoms
+(invisible focus ring on chrome elements; mismeasured header height) were
+both consequences of a single underlying condition: only Zone 1 was being
+rendered, and the powder-blue tint observed as "header colour" was Zone 1's
+own background filling the viewport. Architecture was working as written;
+the written architecture (a single page registered at `/` via Pages) did
+not match the dashboard spec's four-zones-on-one-screen diagram.
+
+**The diagnostic lesson.** Two patterns warrant logging.
+
+The *operational* lesson is the three-strikes pattern: across Session 7
+Parts 1-3, three distinct symptoms (theme-toggle cross-layout callback
+fragility in Session 7 Part 1; settings-panel density wiring in Part 2;
+focus-ring invisibility and header-height anomaly in Part 3) clustered on
+the same rendered surface. Each was treated as an independent defect in
+its session. The third cluster was the one that forced the question of
+whether the surface itself was wrong, not the rules drawn on it. IDEA-023
+(served-layout callback smoke test) graduates from PROPOSED to APPROVED on
+this basis — a smoke test catching "what is actually in the served DOM"
+would have surfaced the missing Zones 2-4 immediately at Session 7 Part 1
+rather than as the diagnosis of Part 3.
+
+The *meta* lesson is general: when multiple symptoms cluster on a single
+rendered page, verify architecture matches intent before debugging
+symptoms. Symptom-level fixes can plaster over an architectural mismatch
+indefinitely. This applies beyond Dash and beyond Phase 1.
+
+**The alternative considered (Option A) and why it was rejected.**
+Option A was: drop Pages routing entirely, single-page layout, four zones
+tiled directly under `app.layout`. The case for Option A was argued twice
+in Session 7 Part 3 — it is simpler, matches the dashboard spec's diagram
+literally, removes the Session 6 cross-layout callback failure surface
+(documented in the 2026-05-11 "Cross-layout callback Inputs deferred from
+Session 6" entry), and would have closed the 2026-05-11 routing decision's
+*destination* question by dissolving it.
+
+Option A was rejected on these grounds:
+
+1. MFIP's eventual scope is multi-surface. A Home / operational view, a
+   Security Council deep view, backtesting (v2), and settings are
+   plausible distinct routes. Single-page-now means re-introducing Pages
+   later under worse conditions (more callbacks already written against
+   single-page assumptions).
+2. Pages infrastructure cost is already sunk. The Session 6 work that
+   established `pages_folder=""`, `suppress_callback_exceptions=True`, and
+   the canonical `register_page` template is in place. Removing Pages
+   discards that work; keeping it pays forward.
+3. The "future flexibility is a trap" objection was named explicitly and
+   deliberately overridden. Standard practice is to defer infrastructure
+   for hypothetical future routes; in this case the routes are not
+   hypothetical — the dashboard spec already names them — and the
+   infrastructure for them is already built. The trap-avoidance heuristic
+   does not apply when the future scope is concrete and the infrastructure
+   is sunk.
+4. Learning Pages is itself transferable. Magnus's stated MFIP rationale
+   includes building professionally transferable patterns. Single-page
+   Dash is not a pattern worth learning; multi-route Dash is.
+
+This entry records the rejection on the merits rather than by default.
+Option A was the simpler choice; Option B is the chosen one.
+
+**What this revises.** Four prior items move:
+
+- The 2026-05-11 "Phase 1 routing decision" entry's stated initial route
+  (`/` rendering analysis) is revised. Analysis moves to `/analysis`; `/`
+  is now reserved for the Home stub. The 2026-05-11 entry's other three
+  sub-decisions (routing layer enabled from Session 5, `mfip/dashboard/`
+  folder structure, split-per-zone callbacks) stand unchanged.
+- The 2026-05-10 "Project Dashboard View" `ideas.md` entry's destination
+  question (separate Home route vs expanded Zone 1) resolves: separate
+  Home route. The entry's status moves from `PARTIALLY GRADUATED` to
+  `RESOLVED-PARTIALLY` — routing destination resolved, Home contents
+  still open.
+- IDEA-023 (served-layout callback smoke test) graduates from PROPOSED to
+  APPROVED. Scheduled as a Phase 1 close-out deliverable.
+- IDEA-026 (focus ring not visible on most Zone 1 elements) moves to
+  `worklog.md` as `CLOSED-PREMATURE`: cannot validate focus rings across
+  multiple interactive elements while only one zone is rendered.
+  Re-evaluate when Zone 2 component ships under `/analysis`.
+
+**Implication for Session 8.** The architectural restructure itself is
+Session 8's primary code deliverable (steps 8-9 of the session plan).
+`pages/analysis.py` and `pages/home.py` are created; Zone 1's
+`register_page` call is removed and its layout exported as a module-level
+constant; `app.py` imports the two page modules so they register; tests
+adjusted for the fact that Zone 1 is no longer a page. The browser
+verification step (step 9) should confirm `/` renders the Home stub,
+`/analysis` renders Zone 1 plus zone-2/3/4 placeholders, and theme
+toggling continues to work across both routes.
+
+**Affected docs:**
+- `decisions.md` (this entry)
+- `MEMORY.md` — Active Decisions row for routing; Open Loops; Document Index (worklog.md added)
+- `ideas.md` — 2026-05-10 "Project Dashboard View" status update; IDEA-023 status update
+- `worklog.md` — created; IDEA-026 migrated as `CLOSED-PREMATURE`; IDEA-027 migrated as `OPEN`; IDEA-025 tombstoned as `CLOSED-MISDIAGNOSED`
+- `05_DASHBOARD_SPEC.docx` — clarifying note that the four-zone diagram describes the `/analysis` route's internal layout, not the app's overall route architecture
+- `04_BUILD_SEQUENCE.docx` — Phase 1 build order: Zone-N items are components on `/analysis`, not separate pages
+- `CLAUDE.md` and `SYSTEM_PROMPT.docx` — reference worklog.md and the ideas.md/worklog.md boundary rule (per the 2026-05-13 Decision 2 entry)
+
+**Revisit trigger:** When Zone 2 ships under `/analysis` — verify that
+multi-zone composition under a single page works as designed and that the
+zone components remain independently testable. If multi-zone composition
+proves heavier than expected (page module accumulating cross-zone state,
+inter-zone callbacks requiring app-level mediation), reconsider whether
+zones should be separately routed sub-pages. Also: when Home contents are
+decided — log the design choice in a follow-up entry referencing this one.
