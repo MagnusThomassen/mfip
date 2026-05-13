@@ -1782,3 +1782,68 @@ proves heavier than expected (page module accumulating cross-zone state,
 inter-zone callbacks requiring app-level mediation), reconsider whether
 zones should be separately routed sub-pages. Also: when Home contents are
 decided — log the design choice in a follow-up entry referencing this one.
+
+## 2026-05-13 — `ideas.md` splits into `ideas.md` + `worklog.md`
+
+**Decision:** `ideas.md` returns to its original scope: forward-looking,
+phase-gated items (future features, skills/plugins/agents, design
+questions deferred to later phases). A new `worklog.md` absorbs in-flight
+observations and bug-shaped items that close within sessions or days.
+Both files live in `repo\` next to `decisions.md` and `MEMORY.md`.
+
+**Context.** During Phase 1, `ideas.md` accumulated a second category of
+entry alongside its original forward-looking content. Four items
+illustrate the drift:
+
+- IDEA-023 — served-layout callback smoke test (PROPOSED, now APPROVED
+  per the 2026-05-13 routing decision)
+- IDEA-025 — header rendering at 108px (logged on a closed PR branch,
+  never on main)
+- IDEA-026 — focus ring not visible on most Zone 1 elements
+- IDEA-027 — app entry-point gate (small infra fix, ~10 minutes work)
+
+These items share three properties that distinguish them from the
+file's original content: they are repo-state-specific (tied to current
+code, not future scope); they are near-term-acting (decision gates
+measured in days, not phases); and they close within one or two
+sessions. The original `ideas.md` content — IDEA-012 (web-first
+migration), IDEA-017 (design-session budgets), the Dreams entry —
+shares none of these properties. Different lifetimes, different
+audiences, wrong file.
+
+**Boundary rule.** If an item's decision gate is measured in *phases*,
+it belongs in `ideas.md`. If measured in *days* or "next session," it
+belongs in `worklog.md`. Items occasionally move between files as their
+status evolves (a `worklog.md` item that grows into a phase-gated
+concern moves to `ideas.md` with status `MOVED-FROM-WORKLOG`; the
+reverse is unusual but possible).
+
+**Naming.** "Worklog" was chosen over `notes.md` (too generic — notes
+about what?) and `observations.md` (too passive — observations don't
+act). `worklog` signals current in-flight session work, which is the
+file's actual content.
+
+**Migration plan** (executed in Session 8 step 6):
+
+- IDEA-023 stays in `ideas.md` — it matured into a real Phase 1
+  close-out deliverable on 2026-05-13 (APPROVED grade).
+- IDEA-025 tombstoned in `worklog.md` as `CLOSED-MISDIAGNOSED` for
+  audit trail, with provenance note about its PR #14 origin.
+- IDEA-026 migrated to `worklog.md` as `CLOSED-PREMATURE`. Cannot
+  validate focus rings across multiple interactive elements while only
+  one zone is rendered; re-evaluate when Zone 2 component ships.
+- IDEA-027 migrated to `worklog.md` as `OPEN`. Schedule for
+  end-of-Phase-1 close-out.
+
+Future `worklog.md` entries are date-prefixed (no IDEA-NNN). Statuses:
+`OPEN` / `CLOSED-<reason>` / `MOVED-TO-IDEAS`.
+
+**Affected docs:** `ideas.md` (status updates per migration plan),
+`worklog.md` (created), `CLAUDE.md` and `SYSTEM_PROMPT.docx` (reference
+the new file and the boundary rule), `MEMORY.md` (Document Index +
+worklog.md row added).
+
+**Revisit trigger:** End of Phase 1 — review whether the split is
+working in practice. If `worklog.md` is being treated as a graveyard
+for items nobody acts on, or if items are routinely landing in the
+wrong file, revisit the boundary rule.
