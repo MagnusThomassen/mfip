@@ -82,7 +82,7 @@ re-assessed with the correct architectural baseline.
 
 ## 2026-05-13 — App entry-point gate (originally IDEA-027)
 
-**Status:** OPEN
+**Status:** CLOSED-ALREADY-DONE
 
 **Observation:** The dashboard currently has no `python -m mfip.dashboard`
 or `python -m mfip` entry-point. Launching the app requires the verbose
@@ -90,18 +90,23 @@ or `python -m mfip` entry-point. Launching the app requires the verbose
 incantation, which is fragile to type, easy to misremember between
 sessions, and surfaces no validation if the import path drifts.
 
-**Fix:** Add a minimal `__main__.py` (or equivalent `__main__` block in
-`app.py`) so the app can be launched as `python -m mfip.dashboard`.
-Approximately 10 minutes of work. No architectural decision required.
+**Status update 2026-05-13 (Session 8):** `mfip/dashboard/__main__.py`
+already exists and works — `python -m mfip.dashboard` launches the
+app cleanly (verified during Session 8 step 9 browser verification).
+The file was created in an unrecorded step (likely Session 6 or 7);
+the IDEA-027 entry in Session 7 Part 3's handoff was based on stale
+context. No action required; closing.
+
+**Fix (no longer needed):** Add a minimal `__main__.py` (or equivalent
+`__main__` block in `app.py`) so the app can be launched as
+`python -m mfip.dashboard`. Approximately 10 minutes of work. No
+architectural decision required.
 
 **Provenance:** Originally logged as IDEA-027 on the
 `phase1/zone1-focus-diagnosis` branch in Session 7 Part 3. That branch
 was abandoned in Session 8 per the 2026-05-13 routing architecture
 decision; the item is re-logged here, in the correct file per the
 2026-05-13 ideas.md/worklog.md split decision.
-
-**Schedule:** End-of-Phase-1 close-out. Bundle with other small infra
-fixes if any accumulate by then.
 
 ---
 
@@ -143,3 +148,81 @@ plus a one-off re-commit pass to apply the normalisation. ~15 minutes.
 **Schedule:** End-of-Phase-1 close-out. Third item in the cohesive
 small-infra-fixes sub-pass alongside the CLAUDE.md and IDEA-027
 entries.
+
+---
+
+## 2026-05-13 — Theme toggle radio updates state but visual result not applied
+
+**Status:** OPEN
+
+**Observation:** After Session 8 routing restructure, `/analysis`
+renders Zone 1 correctly and the theme radio (Dark/Light/System)
+selects state. However, toggling between options produces no visible
+theme change — Home stub and Zone 1 chrome both render as light-mode
+(white background, dark text) regardless of which radio is selected.
+The page shows a brief "loading" indicator when toggling, suggesting
+callbacks fire, but no visual outcome follows.
+
+**Likely cause:** Pre-existing latent issue, not a regression from
+the routing restructure. The theme-toggle callback chain (zone1 →
+`zone1-theme-radio-store` → `theme-mode-store` → clientside
+`data-theme` attribute) was unchanged in Session 8.
+
+**Three diagnostic hypotheses:**
+1. Callback chain fires but `data-theme` attribute isn't being set
+   on `<html>` — break in JS/Python wiring.
+2. `data-theme` attribute IS set but the `[data-theme="..."]` CSS
+   rules don't actually exist in the stylesheets — CSS gap.
+3. Both A and B — partial wiring on both sides.
+
+**Diagnose by:** DevTools → Elements → inspect `<html>` while
+toggling; check whether `data-theme` attribute changes value. If
+yes, (B). If no, (A).
+
+**Fix:** Depends on diagnosis. Likely the same effort that picks up
+the IDEA-026 focus-ring work when Zone 2 ships, since both are about
+Zone 1's chrome-styling completeness.
+
+**Schedule:** With Zone 2 build, or as standalone Zone 1 finishing
+pass earlier if Magnus chooses.
+
+---
+
+## 2026-05-13 — "Master dashboard" terminology vs MFIP route tree
+
+**Status:** OPEN
+
+**Observation:** `05_DASHBOARD_SPEC.docx` paragraphs 164-176 describe
+a "Master dashboard" hosting the RAG Company Status Grid. After the
+2026-05-13 routing decision split `/` (Home stub) and `/analysis`,
+"Master dashboard" doesn't map clearly to either route.
+
+**Pre-existing ambiguity surfaced by Session 8's edit pass** but
+not resolved by it — the routing decision didn't address what
+"Master dashboard" is in relation to MFIP's own route tree.
+
+**Possible interpretations:**
+1. Master = the Home stub once built out, showing portfolio overview.
+2. Master = a third route distinct from both `/` and `/analysis`.
+3. Master = a top-level layout *containing* `/` and `/analysis`.
+
+**Resolution:** Separate design decision needed when RAG grid build
+is scoped.
+
+**Schedule:** Phase 7 build-start (when Thesis Monitor ships), or
+sooner if a related question forces it.
+
+---
+
+## 2026-05-13 — Backtesting Panel "tab view" framing predates multi-route stance
+
+**Status:** OPEN
+
+**Observation:** `05_DASHBOARD_SPEC.docx` paragraph 177 and
+`04_BUILD_SEQUENCE.docx` Phase 1 checklist describe Backtesting as
+"tab view" / "tab in the main area". The 2026-05-13 routing decision
+listed backtesting as a "plausible distinct route" (v2). The "tab"
+framing predates the multi-route stance and may not survive contact
+with the v2 build.
+
+**Schedule:** V2 backtesting build (well past Phase 1).
