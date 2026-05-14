@@ -1847,3 +1847,56 @@ worklog.md row added).
 working in practice. If `worklog.md` is being treated as a graveyard
 for items nobody acts on, or if items are routinely landing in the
 wrong file, revisit the boundary rule.
+
+## 2026-05-14 — SYSTEM_PROMPT.docx: rule to suggest model and effort level per task
+
+**Decision:** A new behavioural rule is added to `SYSTEM_PROMPT.docx`
+in the "HOW YOU BEHAVE IN EVERY CONVERSATION" section, requiring
+MFIP-Claude to suggest a Claude model and effort level for each
+substantive task before execution. The rule reads:
+
+> You suggest a Claude model and effort level for each substantive
+> task before execution. The recommendation is one line, with a
+> one-sentence reason. Use Sonnet + Medium effort for mechanical or
+> fully-specified work where decisions have already been made. Use
+> Opus + High or Extra High effort for substantive code or design
+> work involving architectural judgement, multi-file reasoning, or
+> contested trade-offs. Fast mode stays off unless the task is
+> trivial. Magnus may override; the suggestion is a default, not a
+> gate.
+
+**Context.** Claude offers multiple models (Opus 4.7, Opus 4.7 1M,
+Sonnet 4.6, Haiku 4.5, Opus 4.6 Legacy) and five effort tiers (Low,
+Medium, High, Extra High, Max). Defaulting to a single model and
+effort across all tasks under-uses Sonnet's cost-effectiveness on
+fully-specified mechanical work, and under-uses Opus + High effort on
+work that genuinely benefits from architectural reasoning. The session
+deciding this — Session 9 on 2026-05-14 — produced a worked example:
+the three admin passes (worklog density-roomy, IDEA-018 status update,
+five-edit open-design pass on ideas.md) were correctly executed by
+Sonnet + Medium because every decision was pre-made in the brief;
+Pass 4 (this docx edit) was the same class of task. Future substantive
+work — theme.py build, Zone 2A Recommendation Card, Chief Analyst
+design, agent prompt drafting — is the Opus + High class.
+
+**Implementation:** Edit applied to `C:\MFIP\docs\SYSTEM_PROMPT.docx`
+in Session 9. New bullet appended to the "HOW YOU BEHAVE IN EVERY
+CONVERSATION" list, immediately after "You never break existing
+architecture..." and immediately before the section divider preceding
+"PROJECT CORE — WHAT IS BEING BUILT". Style identical to surrounding
+bullets (`ListParagraph` / `numId=3` / `ilvl=0`, spacing 60/60, colour
+#1A1A2E). Verified at XML level before save.
+
+**Affected docs:** `SYSTEM_PROMPT.docx` (edited; pending re-upload to
+Project Knowledge), `docs\README.md` (sync date updated to 2026-05-14
+in same session), `decisions.md` (this entry).
+
+**Revisit trigger:** Three sessions of MFIP-Claude using the new rule.
+If the per-task model/effort suggestion is consistently useful,
+nothing to do. If the suggestions are consistently wrong (e.g.
+recommending Sonnet for tasks that materially benefit from Opus, or
+vice versa), refine the rule's calibration heuristics in
+`SYSTEM_PROMPT.docx` and update this entry. If the suggestion feels
+like noise more often than signal, evaluate whether the rule should
+be scoped narrower (e.g. only for tasks above a complexity threshold)
+or removed.
