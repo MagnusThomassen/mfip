@@ -668,6 +668,22 @@ educational fit with the Security Council's stated learning purpose).
   data layer) do not benefit enough from the migration to justify
   the disruption mid-build.
 
+**Reference implementation:**
+`nexu-io/open-design` (https://github.com/nexu-io/open-design) is the
+open-source reference implementation for the Frontend Design skill
+concept. It ships 31 `SKILL.md` design skills and 72 portable
+`DESIGN.md` design systems — including Linear, Vercel, and Stripe —
+following the same Claude Code `SKILL.md` convention MFIP would adopt.
+When IDEA-016 comes up for approval at Phase 3, clone the repo and read
+two files before deciding:
+- `design-systems/linear-app/DESIGN.md` — token-level implementation of
+  MFIP's dark-mode restraint benchmark.
+- `skills/dashboard/SKILL.md` — production conventions for data-dense
+  desktop dashboard layouts.
+Do not install or run the stack. Read the files as reference only. The
+frontend is React/Tailwind; code does not transfer to Plotly Dash. The
+value is design discipline, not generated components.
+
 **What needs to be true before APPROVAL:**
 1. Phase 1 and Phase 2 are complete — dashboard shell working,
    Bloomberg export ingestion functional, data layer stable.
@@ -1011,6 +1027,156 @@ post-Phase-1, that domain may narrow or retire from the list).
 
 **Decision gate:** None — reference entry. Revisit the list quarterly or when
 a domain materially changes status.
+
+---
+
+## 2026-05-14 — DESIGN.md token audit before theme.py
+
+**Status:** `REFERENCE`
+**Added:** 2026-05-14
+**Source:** open-design repo review (session 2026-05-14)
+
+**The idea:**
+Before writing `theme.py`, read two `DESIGN.md` files from the
+`nexu-io/open-design` repo (https://github.com/nexu-io/open-design):
+- `design-systems/linear-app/DESIGN.md` — Linear's token-level
+  implementation: colour, typography, spacing, component patterns,
+  motion stance, and anti-patterns. Linear is MFIP's explicit
+  benchmark for dark-mode restraint.
+- `design-systems/vercel/DESIGN.md` — Vercel's implementation of
+  operational stats presented with clarity. MFIP's benchmark for
+  Zone 1 (Command Centre) and Zone 4 (Portfolio View).
+
+Cross-reference against the Visual Identity block in
+`05_DASHBOARD_SPEC.docx` to surface any gaps before coding starts.
+One-time read, ~30 minutes. No installation required — clone the repo
+and open the two files.
+
+**Rationale:** `05_DASHBOARD_SPEC.docx` names Linear and Vercel as
+design benchmarks but does not encode their token-level decisions.
+Reading the canonical `DESIGN.md` files before writing `theme.py`
+closes that gap while it is still cheap to close.
+
+**Decision gate:** Before `theme.py` is written in Phase 1. No later.
+
+---
+
+## IDEA-028 — Chief Analyst discovery form pattern
+
+**Status:** `PROPOSED`
+**Added:** 2026-05-14
+**Source:** open-design repo review (session 2026-05-14)
+
+**The idea:**
+Apply Open Design's "turn-1 discovery form" pattern to the Chief
+Analyst agent prompt design. In Open Design, every design brief begins
+with a structured question form that locks down ambiguous inputs
+(surface, audience, tone, brand context, scale) before the model
+produces a single artifact. The equivalent for the Chief Analyst is a
+structured Pydantic input model that validates and resolves ambiguous
+context — investment horizon, applicable portfolio strategies, risk
+tolerance framing — before the recommendation is generated.
+
+**Why it fits:**
+The Chief Analyst currently receives a fixed input schema and produces
+a BUY/HOLD/SELL recommendation. Unstated assumptions about horizon or
+portfolio applicability can cause the recommendation to be correctly
+argued but wrong for the intended use. Enforcing a pre-flight
+validation step — in code, not in the prompt — reduces the surface area
+for the Chief Analyst to reason from implicit context. This is a prompt
+engineering and schema design idea, not a UI idea.
+
+**The case against:**
+- The input schema (Chief Analyst's Pydantic model) may already be
+  specific enough in practice. This is a hypothetical problem until
+  the agent is built and tested.
+- Adds a validation step that could be over-engineering for a personal
+  tool with a single known user.
+
+**Decision gate:** Phase 7 (Chief Analyst build). Evaluate whether
+input ambiguity is a real problem in practice before implementing.
+If the first 10 test recommendations are coherent without it, skip.
+
+---
+
+## 2026-05-14 — Public APIs directory as reference resource
+
+**Status:** `REFERENCE`
+**Added:** 2026-05-14
+**Source:** Session discussion (2026-05-14)
+
+**The idea:**
+Keep the public-apis GitHub repository
+(https://github.com/public-apis/public-apis) as a standing reference
+for free API integration across both MFIP and the personal scheduler
+project.
+
+**MFIP — News Agent feed:**
+The News Agent needs a real-time news feed. Free financial news APIs
+(e.g. NewsAPI, Finnhub news endpoint) are a clean, low-friction source
+for that layer. Bloomberg is the data spine for market and financial
+statement data and that does not change — but news feed is a separate
+concern and a public API fits it well. Worth evaluating when the News
+Agent is built in Phase 3+.
+
+**MFIP — Post-Bloomberg data layer (long-term):**
+Bloomberg Terminal access ends with the MSc. When it does, the manual
+export workflow at the Kingston lab becomes impossible. A financial
+market data API (e.g. Alpha Vantage, Finnhub, polygon.io) could
+eventually replace the Bloomberg export templates and automate the data
+gathering operation entirely — removing the manual lab step and making
+MFIP self-sufficient. This is a significant architectural change and is
+firmly v2+ territory, but worth keeping the Bloomberg data layer
+cleanly abstracted so the swap is not painful when the time comes.
+
+**Personal scheduler project:**
+The repo's calendar, weather, and translation/language sections are
+worth consulting when that build starts. Not an MFIP concern.
+
+**Decision gate:** None — reference entry. Consult when News Agent
+build begins (Phase 3+) and when Bloomberg access sunset becomes a
+planning horizon.
+
+---
+
+## 2026-05-14 — dotclaude as .claude/ structure reference
+
+**Status:** `REFERENCE`
+**Added:** 2026-05-14
+**Source:** Session tool review (2026-05-14) — github.com/poshan0126/dotclaude
+
+**What it is:**
+A standardised `.claude/` folder template for Claude Code projects. Ships
+a full structure: `CLAUDE.md` project instructions, modular `rules/` files
+(code quality, testing, database safety, error handling, security), a
+`settings.json` / `settings.local.json` split, and a 14-plugin marketplace
+including `code-reviewer`, `security-reviewer`, `debug-fix`, `tdd`, and
+`ship`.
+
+**What is already covered:**
+The `settings.json` / `settings.local.json` split mirrors what MFIP already
+built in PR #4 (IDEA graduated, `decisions.md` 2026-05-11). No action needed.
+
+**What is worth keeping:**
+
+1. **`rules/` contextual loading pattern** — modular instruction files that
+   load near relevant files (e.g. `database.md` near migration files,
+   `security.md` near API and auth files). This is the modular SKILL.md
+   convention IDEA-016 is evaluating. When IDEA-016 comes up for APPROVAL
+   at Phase 3, clone this repo and read `rules/security.md` and
+   `rules/error-handling.md` alongside the open-design reference files.
+   The two repos together (open-design for design discipline, dotclaude for
+   code discipline) are the full reference set for the IDEA-016 decision.
+
+2. **`ship` plugin** — full commit-to-PR workflow with per-step confirmation:
+   scans changes, stages files (skipping secrets, locks, and build output),
+   drafts a commit message in the repo's style, pushes, and opens a PR.
+   Potentially useful now, regardless of IDEA-016 outcome. Evaluate at the
+   start of the next Claude Code session.
+
+**Decision gate:** IDEA-016 approval (Phase 3). Read `rules/` files as
+reference alongside open-design. `ship` plugin can be evaluated earlier —
+no phase gate.
 
 ---
 
