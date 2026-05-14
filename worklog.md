@@ -263,3 +263,24 @@ in `mfip/dashboard/zones/zone1.py`. One-line change.
 
 **Schedule:** With Zone 1 chrome styling completeness work (theme
 visual application, focus rings, etc. — all in the same family).
+
+---
+
+## 2026-05-14 — Session 13 discovered stale branches from Sessions 7–12
+Five branches were left undeleted after their PRs merged across
+Sessions 7–12, despite Session 12's handoff stating cleanup
+happened: `fix/theme-css-layer3`, `docs/decisions-self-indexing`,
+`docs/decisions-theme-css-entry`, `docs/claude-md-decisions-commit-timing`,
+`test/idea-023-served-layout-resolution`. All content was already
+on `main` via PRs #25, #26, #29, #30 — content loss risk was nil,
+but the dirty state caused two pre-flight failures at the start of
+Session 13.
+
+**Lesson:** "Cleanup happened" assertions in handoff documents
+should be verified, not trusted. Cleanup PR conventions going
+forward should explicitly include `git branch -d <branch>` and
+`git push origin --delete <branch>` as the closing steps of any
+work that merges a feature branch, run in the same session as
+the merge.
+
+Cleared in Session 13 via `chore/session-12-cleanup-residue` PR.
