@@ -112,7 +112,11 @@ decision; the item is re-logged here, in the correct file per the
 
 ## 2026-05-13 — CLAUDE.md states repo path only implicitly
 
-**Status:** OPEN
+**Status:** CLOSED-FIXED
+
+**Closed:** 2026-05-14 — Session 9 close-out tidy-up. Working directory
+statement added to `CLAUDE.md`. See `docs: CLAUDE.md state repo working
+directory explicitly` commit on main.
 
 **Observation:** `CLAUDE.md` states the repo working directory
 (`C:\MFIP\repo\`) only implicitly, via a `← you are here` annotation
@@ -133,7 +137,12 @@ suited to one tidy-up sub-pass.
 
 ## 2026-05-13 — Mixed line endings across repo Markdown files
 
-**Status:** OPEN
+**Status:** CLOSED-FIXED
+
+**Closed:** 2026-05-14 — Session 9 close-out tidy-up. `.gitattributes`
+added with `* text=auto eol=lf`; `git add --renormalize .` confirmed no
+content to renormalise (`core.autocrlf=true` already storing all files as
+LF in the object store). All repo text files are LF-stored.
 
 **Observation:** `decisions.md` uses LF line endings; `ideas.md` uses
 CRLF. Surfaced when creating `worklog.md` in Session 8 step 5;
