@@ -1,0 +1,93 @@
+/*
+ * MFIP — Color token definitions.
+ *
+ * Defines --bg-*, --border-*, --text-*, --accent-*, and --chart-series-*
+ * CSS custom properties for dark (default) and light mode. Token values
+ * are the canonical source of truth in theme.py; this file mirrors them
+ * for use by every CSS selector in the dashboard.
+ *
+ * The `data-theme` attribute is written to <html> by the clientside
+ * callback in app.py whenever theme-mode-store changes. Until the first
+ * toggle the :root block supplies dark-mode values so the page always
+ * has tokens regardless of whether the callback has fired.
+ *
+ * Spec source: 05_DASHBOARD_SPEC.docx v1.2, Visual Identity.
+ * Token values: mfip/dashboard/theme.py DARK and LIGHT dicts.
+ */
+
+/* ------------------------------------------------------------------
+ * Dark mode — default + explicit selector
+ * ------------------------------------------------------------------ */
+
+:root,
+[data-theme="dark"] {
+    /* Surfaces */
+    --bg-canvas:        #0D1117;
+    --bg-surface:       #161B22;
+    --bg-surface-raised:#1C232C;
+    /* Borders */
+    --border-subtle:    #30363D;
+    --border-strong:    #444C56;
+    /* Text */
+    --text-primary:     #E6EDF3;
+    --text-secondary:   #8B949E;
+    --text-muted:       #6E7681;
+    /* Accents */
+    --accent-buy:       #3FB950;
+    --accent-sell:      #F85149;
+    --accent-hold:      #D29922;
+    --accent-interactive:#58A6FF;
+    --accent-critical:  #F85149;
+    /* Chart series */
+    --chart-series-1:   #58A6FF;
+    --chart-series-2:   #D29922;
+    --chart-series-3:   #A371F7;
+    --chart-series-4:   #3FB950;
+    --chart-series-5:   #F85149;
+    --chart-series-6:   #39C5CF;
+    --chart-series-7:   #E780C5;
+    --chart-series-8:   #8B949E;
+}
+
+/* ------------------------------------------------------------------
+ * Light mode
+ * ------------------------------------------------------------------ */
+
+[data-theme="light"] {
+    /* Surfaces */
+    --bg-canvas:        #FBFCFD;
+    --bg-surface:       #FFFFFF;
+    --bg-surface-raised:#F4F6F8;
+    /* Borders */
+    --border-subtle:    #E1E4E8;
+    --border-strong:    #BCC2CA;
+    /* Text */
+    --text-primary:     #1F2328;
+    --text-secondary:   #656D76;
+    --text-muted:       #8C959F;
+    /* Accents */
+    --accent-buy:       #1A7F37;
+    --accent-sell:      #CF222E;
+    --accent-hold:      #9A6700;
+    --accent-interactive:#0969DA;
+    --accent-critical:  #CF222E;
+    /* Chart series */
+    --chart-series-1:   #0969DA;
+    --chart-series-2:   #9A6700;
+    --chart-series-3:   #6639BA;
+    --chart-series-4:   #1A7F37;
+    --chart-series-5:   #CF222E;
+    --chart-series-6:   #0E7C86;
+    --chart-series-7:   #B4378F;
+    --chart-series-8:   #656D76;
+}
+
+/* ------------------------------------------------------------------
+ * Base application of canvas + text tokens
+ * ------------------------------------------------------------------ */
+
+html,
+body {
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+}

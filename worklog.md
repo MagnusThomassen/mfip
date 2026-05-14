@@ -169,7 +169,9 @@ entries.
 
 ## 2026-05-13 — Theme toggle radio updates state but visual result not applied
 
-**Status:** OPEN
+**Status:** CLOSED-FIXED
+
+**Closed:** 2026-05-14 — `theme.css` created in `assets/`. Root cause was Layer 3 missing entirely: no `[data-theme]` CSS selectors existed, so the color token custom properties were never defined on `html`/`:root` and all `var(--bg-canvas)` etc. resolved to nothing. Layers 1 and 2 (callback chain and `data-theme` attribute write) were already correct. See `fix: theme toggle visual application` commit on main.
 
 **Observation:** After Session 8 routing restructure, `/analysis`
 renders Zone 1 correctly and the theme radio (Dark/Light/System)

@@ -44,6 +44,7 @@ Session 8 routing restructure complete. Two routes via Dash Pages: `/` (Home stu
 | Bloomberg validator | `scripts/ingestion/validate_bloomberg_workbook.py` | PASS / ADVISORY / FAIL; encodes 07_BLOOMBERG_EXPORT_TEMPLATE.docx contract |
 | `CLAUDE.md` | `repo\CLAUDE.md` | Session-bootstrap file for Claude Code; rewritten 2026-05-09 |
 | `theme.py` | `mfip/dashboard/theme.py` | Both dark + light token sets; `apply_theme(fig, mode)` helper |
+| Theme CSS | `assets/theme.css` | `[data-theme]` selectors; defines all color tokens on `:root`/`html`; mirrors theme.py DARK + LIGHT |
 | AG Grid overrides | `assets/ag-grid-overrides.css` | CSS vars from same token set as theme.py; sync enforced by unit test |
 | `app.py` | `mfip/dashboard/app.py` | Dash Pages app; imports `pages/home` + `pages/analysis`; `dcc.Location` + theme stores; clientside callback for OS theme detection (inline string form) |
 | `pages/home.py` | `mfip/dashboard/pages/home.py` | Home stub at `/`; placeholder content + link to `/analysis` |
@@ -93,7 +94,7 @@ Session 8 routing restructure complete. Two routes via Dash Pages: `/` (Home stu
 | Overlay chrome ownership (settings panel, alert feed, Security Alert Overlay) | Decide at Alert Feed Panel build |
 | Served-layout callback smoke test | `ideas.md` IDEA-023 APPROVED; Phase 1 close-out deliverable |
 | Zone 1 chrome styling completeness (focus rings, badge styling, theme application) | `worklog.md` — multiple OPEN entries; re-evaluate when Zone 2 ships |
-| Phase 1 close-out tidy-up | `worklog.md` — CLAUDE.md repo path, `__main__.py` confirmation, line-endings normalisation, theme visual application |
+| Phase 1 close-out tidy-up | `worklog.md` — all four items CLOSED (CLAUDE.md repo path, `__main__.py` confirmation, line-endings normalisation, theme visual application) |
 
 ---
 
@@ -190,4 +191,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-13 — Session 8 routing restructure complete; PR for `phase1/routing-restructure` pending.*
+*Last updated: 2026-05-14 — Phase 1 close-out complete; theme.css added; all four close-out tidy-up items closed.*
