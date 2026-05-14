@@ -20,7 +20,7 @@ Session 8 routing restructure complete. Two routes via Dash Pages: `/` (Home stu
 | Phase | Name | Status | Notes |
 |---|---|---|---|
 | 0 | Environment Setup | ✅ Complete | Commits `a258675`, `e556617`, `5c9db87`, `af3f02d`, `dac7e3b` |
-| 1 | Dashboard Shell | 🔄 In progress | Sessions 5–7 Part 1 merged at `a5e92b9`; Session 8 routing restructure on branch `phase1/routing-restructure` (PR pending) |
+| 1 | Dashboard Shell | ✅ Complete | Sessions 5–10; final commit `a9cca58` |
 | 2 | Logging Infrastructure | ⬜ Not started | Can parallel Phase 1 |
 | 3 | Bloomberg Ingestion | ⬜ Not started | Requires lab visit |
 | 4 | PDF Extraction | ⬜ Not started | |
@@ -191,4 +191,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-14 — Phase 1 close-out complete; theme.css added; all four close-out tidy-up items closed.*
+*Last updated: 2026-05-14 — Phase 1 complete; theme toggle fixed; CLAUDE.md rule added.*
