@@ -37,7 +37,7 @@ Session 8 routing restructure complete. Two routes via Dash Pages: `/` (Home stu
 
 | Item | Location | Notes |
 |---|---|---|
-| Repo + venv | `C:\MFIP\repo\` | Python 3.12.10, `requirements.lock.txt` pinned |
+| Repo + venv | `C:\MFIP\repo\` | Python 3.12.10, `requirements.lock.txt` pinned. Venv not Git-tracked; recreate via `py -3.12 -m venv .venv` + `pip install -r requirements.lock.txt` if missing. See `worklog.md` 2026-05-14 entry. |
 | Folder structure | `C:\MFIP\` | 8 top-level dirs, bloomberg_archive per-company layout |
 | `.env` | `C:\MFIP\repo\.env` | Off Git; Magnus holds keys |
 | Bloomberg templates | `repo\templates\bloomberg\` | Git-versioned; FX, Indices, Master xlsx + 4 .py support files |

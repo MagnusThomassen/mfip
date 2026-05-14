@@ -284,3 +284,27 @@ work that merges a feature branch, run in the same session as
 the merge.
 
 Cleared in Session 13 via `chore/session-12-cleanup-residue` PR.
+
+---
+
+## 2026-05-14 — Venv missing on Phase 2 PR-A start
+
+**Status:** CLOSED-RECOVERED
+
+`C:\MFIP\repo\.venv\` was found missing at the start of Session 14's
+Phase 2 PR-A work. Phase 0 had declared the venv built; `MEMORY.md`
+listed it as built; Session 13's handoff assumed it. Cause not
+definitively identified — possible candidates include silent
+`git clean -fdx`, partial restic restore not including the `.venv`
+exclusion, or manual removal.
+
+Python 3.12.10 interpreter was intact (`py -3.12 --version` confirmed).
+Recovery was mechanical: `py -3.12 -m venv .venv` +
+`pip install -r requirements.lock.txt`. All 25 existing tests green
+after recovery; dashboard launches cleanly.
+
+**Defensive note for `MEMORY.md`:** the venv is not Git-tracked
+(correctly — venvs never go in repos) and is excluded from restic.
+If it goes missing again, the recovery is `py -3.12 -m venv .venv`
+followed by `pip install -r requirements.lock.txt`. Consider a
+`make venv` or PowerShell convenience script later if this recurs.
