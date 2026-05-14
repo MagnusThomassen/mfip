@@ -1220,7 +1220,7 @@ spend another session?" — and the default answer is ship.
 
 ## IDEA-018 — decisions.md index / compaction pass
 
-**Status:** APPROVED
+**Status:** GRADUATED — see `decisions.md` 2026-05-14 entry "decisions.md indexing: single-file TOC + inline tags supersedes separate index file"
 **Added:** 2026-05-11
 **Source:** Session 3 risk assessment (Concern 2)
 

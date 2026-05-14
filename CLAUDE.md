@@ -154,6 +154,21 @@ Decisions are made in chat sessions, not by you. The user will paste new entries
 
 **Commit decisions.md in the same commit as the code it documents, not as a follow-up commit.** A squash-merge captures exactly the commits on the branch at merge time — a trailing decisions.md commit pushed after the merge races the merge and will be left out.
 
+**Index-touch rules (per the 2026-05-14 self-indexing decision):**
+
+Every new `## YYYY-MM-DD` entry requires two additional edits in the same commit:
+
+1. **Tags line.** Add `**Tags:** <tag>` on the line immediately after the heading (no blank line between heading and tag line). Choose one tag from the locked taxonomy: `architecture`, `infrastructure`, `data-contract`, `process`, `docs`. When two tags apply equally, use the one that best matches *retrieval intent* — the question a future reader would ask when looking for this entry.
+
+2. **TOC line.** Prepend a new line at the top of the `## Index` section (newest-first):
+   ```
+   - [YYYY-MM-DD — <summary>](#<auto-anchor>) `<tag>`
+   ```
+   Summary rules: ≤80 chars; describes what the entry is about, not what it concludes.
+   Anchor algorithm: GitHub lowercases, replaces spaces with hyphens, strips non-word/non-space/non-hyphen chars. Em-dashes (` — `) become `--`. Verify post-push using GitHub's rendered TOC if in doubt.
+
+These two edits are not optional — an entry without a tag or a TOC line is incomplete.
+
 ## When updating ideas.md and worklog.md
 
 Two backlog files split by lifetime, per the 2026-05-13 decision in

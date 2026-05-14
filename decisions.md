@@ -6,7 +6,61 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ---
 
+## Index
+
+- [2026-05-14 — decisions.md self-indexing: single-file TOC + inline tags approach](#2026-05-14--decisionsmd-indexing-single-file-toc--inline-tags-supersedes-separate-index-file) `docs`
+- [2026-05-14 — Theme toggle root cause: theme.css missing from assets](#2026-05-14--theme-toggle-root-cause-themecss-never-created) `infrastructure`
+- [2026-05-14 — Line-ending normalisation: .gitattributes vs global git config](#2026-05-14--line-ending-state-coreautocrlf-vs-gitattributes) `infrastructure`
+- [2026-05-14 — Model and effort suggestion rule added to SYSTEM_PROMPT.docx](#2026-05-14--system_promptdocx-rule-to-suggest-model-and-effort-level-per-task) `process`
+- [2026-05-13 — ideas.md and worklog.md separation: phase-gated vs session-scoped items](#2026-05-13--ideasmd-splits-into-ideasmd--worklogmd) `docs`
+- [2026-05-13 — Routing architecture: Dash Pages affirmed, Home/analysis route split](#2026-05-13--routing-architecture-pages-affirmed-home--and-analysis--analysis--split-zones-are-components-on--analysis) `architecture`
+- [2026-05-12 — Focus ring diagnosis: Zone 1 interactive elements and PR #14 draft status](#2026-05-12--part-2-browser-verification-fallout-focus-ring-fails-on-most-zone-1-elements-pr-14-to-draft-pending-part-3-diagnosis) `infrastructure`
+- [2026-05-12 — Theme toggle cross-layout fix: zone1-local relay store pattern](#2026-05-12--theme-toggle-re-wire-zone1-local-intermediate-store-overlay-chrome-ownership-deferred-to-alert-feed-build) `architecture`
+- [2026-05-11 — Cross-layout callback input constraint deferred from Session 6](#2026-05-11--cross-layout-callback-inputs-deferred-from-session-6) `architecture`
+- [2026-05-11 — Global-effect clientside callbacks belong in app.py](#2026-05-11--clientside-callbacks-with-global-side-effects-live-in-apppy) `architecture`
+- [2026-05-11 — Dash 3.x: explicit layout= kwarg required when pages_folder is empty](#2026-05-11--dash-3x-pages-without-folder-need-explicit-layout-kwarg) `infrastructure`
+- [2026-05-11 — Dash 3.x: suppress_callback_exceptions=True required for pages apps](#2026-05-11--dash-3x-suppress_callback_exceptionstrue-required-for-pages-based-apps) `infrastructure`
+- [2026-05-11 — Zone registration via explicit imports in app.py, not auto-discovery](#2026-05-11--zone-registration-explicit-imports-in-apppy-not-auto-discovery) `architecture`
+- [2026-05-11 — Typography token naming gap between spec and CSS implementation](#2026-05-11--typography-token-namespace-divergence-spec-type-css-text-) `infrastructure`
+- [2026-05-11 — Dash 3.x: page_container required when use_pages=True](#2026-05-11--dash-3x-use_pagestrue-needs-dashpage_container-in-the-layout) `infrastructure`
+- [2026-05-11 — Clientside callbacks: inline string form for ≤30-line JS](#2026-05-11--clientside-callbacks-inline-string-form-not-separate-js-files) `infrastructure`
+- [2026-05-11 — ASR blocks venv shims; python -m module invocation rule](#2026-05-11--asr-blocks-venv-shims-standing-rule-python--m-form-for-all-tools) `infrastructure`
+- [2026-05-11 — Phase 1 routing: dcc.Location scaffolded; folder structure resolved](#2026-05-11--phase-1-routing-decision-dcclocation-scaffolded-in-from-start-home-vs-zone-1-deferred-folder-structure-and-callbacks-organisation-resolved) `architecture`
+- [2026-05-11 — Dashboard visual identity: Koyfin-anchored, dual-mode, narrowed mono rule](#2026-05-11--visual-identity-locked-koyfin-anchored-dual-mode-from-start-narrowed-mono-rule) `architecture`
+- [2026-05-11 — Cross-project firewall: dissertation inbox outside MFIP scope](#2026-05-11--cross-project-insight-dissertation-inbox-established-outside-mfip-model-3-flagging-without-dissertation-context) `process`
+- [2026-05-11 — Frontend stack: Plotly Dash for v1; web-first deferred to post-Mac Mini](#2026-05-11--frontend-stack-deferred-desktop-first-confirmed-for-v1) `architecture`
+- [2026-05-10 — Pre-Phase-3 Bloomberg saved-file validator built and smoke-tested](#2026-05-10--pre-phase-3-bloomberg-saved-file-validator) `data-contract`
+- [2026-05-10 — Agents 20 and 21 (Earnings Quality, Thesis Monitor) added; ideas.md introduced](#2026-05-10--design-pass-ideasmd-introduced-v2_backlogdocx-retired-agents-20-and-21-added-to-v1-spec) `architecture`
+- [2026-05-10 — Backup infrastructure: restic + Backblaze B2, Task Scheduler, recovery verified](#2026-05-10--backup-infrastructure-restic--backblaze-b2-automated-scripts-recovery-rehearsed) `infrastructure`
+- [2026-05-09 — Correction: superseded .py generator scripts were less stale than described](#2026-05-09--correction-superseded-py-generator-scripts-were-less-divergent-than-the-deletion-entry-implied) `docs`
+- [2026-05-09 — Pre-Phase-1 cleanup: seven repo-state gaps closed before build began](#2026-05-09--pre-phase-1-cleanup-and-doc-alignment-pass-state-validated-repo-cleaned-claudemd-and-system_promptdocx-aligned-env-created) `process`
+- [2026-05-09 — Doc-revision pass: storage architecture written into design docs](#2026-05-09--doc-revision-pass-complete-storage-architecture-documented-across-design-docs) `docs`
+- [2026-05-09 — Doc-revision pass: BDP/BDH Bloomberg workflow documented, ANR input corrected](#2026-05-09--doc-revision-pass-complete-bloomberg-bdpbdh-template-approach-documented-news-agent-anr-input-corrected) `docs`
+- [2026-05-09 — ANR sheet enhancements: three metrics deferred to next lab session](#2026-05-09--anr-sheet-enhancements-deferred-to-next-lab-session) `data-contract`
+- [2026-05-09 — Bloomberg master template: 7-sheet structure and RV_Comps workflow locked](#2026-05-09--master-bloomberg-template-structure-locked-in-7-sheet-master--manual-rv_comps-per-company) `data-contract`
+- [2026-05-09 — Bloomberg storage layout: per-company archive, Git-versioned templates](#2026-05-09--bloomberg-storage-architecture-per-company-date-stamped-archive-templates-git-versioned-onedrive-as-labhome-courier) `architecture`
+- [2026-05-09 — Doc-revision pass: Bloomberg template restructured, ANR and FX validator added](#2026-05-09--doc-revision-pass-complete-bloomberg-template-restructured-anr-added-session-execution-matrix-added-build-sequence-phase-3-fx-validator-updated-tech-stack-feedparser-row-added) `docs`
+- [2026-05-09 — ANR Consensus sheet added to Bloomberg export template](#2026-05-09--anr-consensus-added-to-bloomberg-export-template) `data-contract`
+- [2026-05-08 — Bloomberg export workflow: BDP/BDH template approach confirmed at lab](#2026-05-08--bloomberg-export-workflow-confirmed-bdpbdh-template-approach-adopted) `data-contract`
+- [2026-05-08 — Logistics-layer Python packages pinned and smoke-tested](#2026-05-08--logistics-layer-dependencies-pinned-and-smoke-tested) `infrastructure`
+- [2026-05-08 — Bloomberg exports: USD standardisation and Bloomberg as FX source](#2026-05-08--bloomberg-export-usd-standardisation-and-fx-source) `data-contract`
+- [2026-05-08 — Doc-revision pass: design docs aligned with Python logistics architecture](#2026-05-08--doc-revision-pass-complete-design-docs-aligned-with-python-logistics-architecture) `docs`
+- [2026-05-07 — Power Automate replaced with Python logistics layer](#2026-05-07--power-automate-dropped-from-architecture-replaced-with-python--task-scheduler--gmail-smtp--structured-alerting) `architecture`
+- [2026-05-07 — Finance plugins installed via Claude Code CLI](#2026-05-07--phase-0-item-2-finance-plugins-installed-via-claude-code-cli-21132) `infrastructure`
+- [2026-05-07 — Phase 0 item 1: GitHub remote configured and pushed](#2026-05-07--phase-0-closeout-item-1-github-remote-configured) `infrastructure`
+- [2026-05-07 — Python environment: dependencies pinned and smoke-tested](#2026-05-07--stage-02-complete-python-dependencies-pinned-and-smoke-tested) `infrastructure`
+- [2026-05-07 — Session B: design docs aligned to DCF + RE + DDM valuation methodology](#2026-05-07--session-b-complete-design-docs-aligned-to-dcf--re--ddm-methodology) `docs`
+- [2026-05-07 — Bloomberg Export Template as the ingestion contract](#2026-05-07--bloomberg-export-template-as-the-ingestion-contract) `data-contract`
+- [2026-05-07 — Valuation methodology: DCF + Residual Earnings + DDM for modelling layer](#2026-05-07--valuation-methodology-expanded-to-dcf--residual-earnings--ddm) `architecture`
+- [2026-05-07 — Bloomberg data scope: Excel exports, market data only (not financial statements)](#2026-05-07--bloomberg-integration-excel-exports-market-data-only) `data-contract`
+- [2026-05-07 — Bloomberg data strategy: pull-and-cache at lab, not live queries](#2026-05-07--bloomberg-integration-pull-and-cache-not-live) `architecture`
+- [2026-05-07 — Python 3.12 venv pinned for MFIP; system 3.13 untouched](#2026-05-07--python-312-pinned-for-mfip-venv) `infrastructure`
+- [2026-05-07 — Storage: local filesystem + Git, SharePoint rejected](#2026-05-07--storage-layer-local-filesystem--git-not-sharepoint) `infrastructure`
+
+---
+
 ## 2026-05-07 — Storage layer: local filesystem + Git, not SharePoint
+**Tags:** infrastructure
 
 **Decision:** MFIP will use local Windows filesystem (`C:\MFIP\`) as the primary file store, with Git/GitHub for code and prompt versioning. No SharePoint or OneDrive for Business integration.
 
@@ -26,6 +80,7 @@ Format: date, decision, reasoning, implication, affected docs.
 ---
 
 ## 2026-05-07 — Python 3.12 pinned for MFIP venv
+**Tags:** infrastructure
 
 **Decision:** MFIP runs on Python 3.12.10 in a dedicated virtual environment at `C:\MFIP\repo\.venv\`. System Python (3.13.5) is left untouched and may be used for other projects.
 
@@ -41,6 +96,7 @@ Format: date, decision, reasoning, implication, affected docs.
 ---
 
 ## 2026-05-07 — Bloomberg integration: pull-and-cache, not live
+**Tags:** architecture
 
 **Decision:** MFIP does not run live Bloomberg queries during analysis. Bloomberg data is pulled in batch sessions on-site at Kingston University trading lab, exported to portable formats (CSV/Parquet/JSON), and ingested into MFIP's local data layer afterward. Phase 3 of the build sequence is split into 3a (on-site pull scripts) and 3b (off-site ingestion layer).
 
@@ -58,6 +114,7 @@ Format: date, decision, reasoning, implication, affected docs.
 ---
 
 ## 2026-05-07 — Bloomberg integration: Excel exports, market data only
+**Tags:** data-contract
 
 **Decision:** Bloomberg data enters MFIP exclusively via manual Excel exports created at Kingston University's trading lab. The lab terminals are locked-down systems on which no software can be installed, so Python integration (`xbbg`, `blpapi`) is impossible. Magnus uses Bloomberg's native "Export to Excel" function, pastes values only (stripping live BBG formulas), and uploads the resulting `.xlsx` files to MFIP for ingestion.
 
@@ -78,6 +135,7 @@ Critically, Bloomberg's role is restricted to **market data only**. Bloomberg ex
 ---
 
 ## 2026-05-07 — Valuation methodology expanded to DCF + Residual Earnings + DDM
+**Tags:** architecture
 
 **Decision:** MFIP's Modelling Layer (Layer 4) replaces the single "DCF Agent" with three sibling valuation agents: DCF Agent (free cash flow discounted at WACC), RE Valuation Agent (Penman residual earnings on reformulated statements), and DDM Agent (Gordon growth and multi-stage dividend discounting). Chief Analyst triangulates across all three intrinsic-value methods plus Comps, with Shock Analysis as the downside floor.
 
@@ -97,6 +155,7 @@ Critically, Bloomberg's role is restricted to **market data only**. Bloomberg ex
 ---
 
 ## 2026-05-07 — Bloomberg Export Template as the ingestion contract
+**Tags:** data-contract
 
 **Decision:** A formal document, `07_BLOOMBERG_EXPORT_TEMPLATE.docx`, defines the contract between Magnus's Bloomberg export sessions and MFIP's ingestion layer. The template specifies seven required sheets per company file (HP_Monthly, HP_Daily, Index_HP_Monthly, DVD, BETA, EE, RV_Comps), a strict filename convention (`<TICKER>_<YYYY-MM-DD>.xlsx`), an export session checklist with inline rename instructions, and quarantine conditions for non-conforming files. The ingestion layer (Phase 3) validates incoming files against this template — files that do not conform are quarantined or flagged with a clear validation error rather than silently producing garbage data.
 
@@ -113,6 +172,7 @@ Critically, Bloomberg's role is restricted to **market data only**. Bloomberg ex
 ---
 
 ## 2026-05-07 — Session B complete: design docs aligned to DCF + RE + DDM methodology
+**Tags:** docs
 
 **Decision:** Three design documents have been regenerated and uploaded to the project knowledge base, replacing the previous versions:
 
@@ -135,6 +195,7 @@ Critically, Bloomberg's role is restricted to **market data only**. Bloomberg ex
 ---
 
 ## 2026-05-07 — Stage 0.2 complete: Python dependencies pinned and smoke-tested
+**Tags:** infrastructure
 
 **Decision:** Phase 0 Stage 0.2 complete. Python environment fully provisioned per `03_TECH_STACK.docx`, with pinned manifests and an automated environment smoke test.
 
@@ -158,6 +219,7 @@ Critically, Bloomberg's role is restricted to **market data only**. Bloomberg ex
 ---
 
 ## 2026-05-07 — Phase 0 closeout (item 1): GitHub remote configured
+**Tags:** infrastructure
 
 **Decision:** Local repo at `C:\MFIP\repo` pushed to a new private GitHub remote at `https://github.com/MagnusThomassen/mfip`. All 7 commits and 25 objects on `main` now mirrored to GitHub. `origin/main` set as upstream for local `main`.
 
@@ -178,6 +240,7 @@ Critically, Bloomberg's role is restricted to **market data only**. Bloomberg ex
 ---
 
 ## 2026-05-07 — Phase 0 item 2: Finance plugins installed via Claude Code CLI 2.1.132
+**Tags:** infrastructure
 
 **Decision:** Installed `financial-analysis` (core) and `equity-research` plugins from the `claude-for-financial-services` marketplace (source repo: `anthropics/financial-services-plugins` on GitHub). Skipped `investment-banking`, `private-equity`, and `wealth-management` as out of scope for MFIP. The earlier-doc plugin names `model-builder` and `valuation-reviewer` do not exist in the current marketplace — their capabilities (DCF, comps, 3-statement models) are bundled inside the `financial-analysis` core plugin.
 
@@ -196,6 +259,7 @@ Critically, Bloomberg's role is restricted to **market data only**. Bloomberg ex
 ---
 
 ## 2026-05-07 — Power Automate dropped from architecture; replaced with Python + Task Scheduler + Gmail SMTP + structured alerting
+**Tags:** architecture
 
 **Decision:** Power Automate (Cloud and Desktop) is removed from MFIP's architecture entirely. The "Logistics Layer" specified in `01_ARCHITECTURE.docx` is replaced by three native components:
 
@@ -278,6 +342,7 @@ The dashboard remains the canonical state of the system. All approval workflows 
 - Annual review: re-evaluate whether the Gmail account is still the right sender. If the account changes or 2SV gets disabled, alerting silently breaks.
 
 ## 2026-05-08 — Doc-revision pass complete: design docs aligned with Python logistics architecture
+**Tags:** docs
 
 **Decision:** All eight design documents affected by the 2026-05-07 "Power Automate dropped from architecture" decision have been updated and re-uploaded to the project knowledge base. The design docs are now in alignment with the architectural state captured in decisions.md — decisions.md no longer supersedes the design docs on PA, Python logistics, Gmail SMTP, or the Orchestrator heartbeat.
 
@@ -304,6 +369,7 @@ The dashboard remains the canonical state of the system. All approval workflows 
 **Revisit trigger:** None for this entry — it's a closeout. The architectural decisions that drove it (Power Automate dropped, Python logistics adopted) carry their own revisit triggers in their respective decisions.md entries.
 
 ## 2026-05-08 — Bloomberg export: USD standardisation and FX source
+**Tags:** data-contract
 
 **Decision part 1 — Display currency:**
 All Bloomberg exports run with Excel display currency set to USD,
@@ -426,6 +492,7 @@ Phase 4 so it is not silently absorbed during implementation.
   Update this entry with the final decision.
 
 ## 2026-05-08 — Logistics-layer dependencies pinned and smoke-tested
+**Tags:** infrastructure
 
 **Decision:** The three logistics-layer Python packages flagged across
 multiple earlier decisions but never formally pinned (`feedparser`,
@@ -517,6 +584,7 @@ After the doc-revision pass, README.md "Last sync" date moves to
 knowledge base.
 
 ## 2026-05-09 — ANR Consensus added to Bloomberg export template
+**Tags:** data-contract
 
 **Decision:** ANR (Analyst Recommendations) is added as a seventh required
 sheet in each company workbook. Sheet name: ANR. BBG function: ANR on ticker.
@@ -549,6 +617,7 @@ Advisory in the ingestion layer rather than quarantining — missing ANR is
 degraded functionality, not a data-integrity failure.
 
 ## 2026-05-09 — Doc-revision pass complete: Bloomberg template restructured, ANR added, Session Execution Matrix added, Build Sequence Phase 3 FX validator updated, Tech Stack feedparser row added
+**Tags:** docs
 
 **Decision:** Three design documents updated in a focused pre-lab session.
 All changes reflect decisions already logged in decisions.md — this entry
@@ -598,6 +667,7 @@ MFIP transitions to unattended operation (related to the v1.5 heartbeat-watchdog
 When activated: start with SEC EDGAR (MSFT, fully documented JSON API, lowest implementation risk) as the proof-of-concept before expanding to the European regulators.
 
 ## 2026-05-08 — Bloomberg export workflow confirmed: BDP/BDH template approach adopted
+**Tags:** data-contract
 
 **Decision:** Bloomberg data export workflow has been redesigned from manual terminal copy-paste to a structured Excel template approach using Bloomberg's Excel Add-in (BDP/BDH formulas). Three master templates have been created and validated against live Bloomberg data at Kingston University's trading lab.
 
@@ -683,6 +753,7 @@ All 8 files exported and validated:
 - Phase 3 build: implement CKN GBp double-conversion handling in ingestion layer before parsing CKN files.
 
 ## 2026-05-09 — Bloomberg storage architecture: per-company date-stamped archive, templates Git-versioned, OneDrive as lab↔home courier
+**Tags:** architecture
 
 **Decision:** The storage layout for Bloomberg-related files is finalised across three distinct concerns: master templates, post-export data files, and annual report PDFs. The design encodes a deliberate asymmetry between Bloomberg data (point-in-time snapshots, date-versioned) and annual report PDFs (durable artefacts, fiscal-year-versioned).
 
@@ -764,6 +835,7 @@ Per `04_BUILD_SEQUENCE.docx` Phase 3 and `01_ARCHITECTURE.docx`, `bloomberg_inbo
 - If a Bloomberg-export workflow change introduces files outside Magnus's control (e.g. a teammate, an automation) — re-establish `bloomberg_inbox\` + watchdog as the canonical path.
 
 ## 2026-05-09 — Master Bloomberg template structure locked in: 7-sheet master + manual RV_Comps per company
+**Tags:** data-contract
 
 **Decision:** The master Bloomberg export template (`MFIP_Bloomberg_Export_Template_Master.xlsx`) ships with seven sheets — six BDP/BDH/BDS data sheets plus CONFIG. RV_Comps is added per-company manually at the lab from the Bloomberg RV terminal screen, renamed from Bloomberg's default sheet name `RV` to `RV_Comps`. Saved company workbooks therefore have eight sheets total. This refines the workflow described in the 2026-05-08 "Bloomberg export workflow confirmed: BDP/BDH template approach adopted" entry — the original entry implied RV_Comps lived in the master, which would have required a placeholder sheet that gets cleared every session and reintroduces template-drift risk.
 
@@ -824,6 +896,7 @@ This customisation is a *human contract* — it lives on the Bloomberg Terminal,
 - If Phase 3 build reveals that CONFIG retention causes parser issues — reconsider whether to strip CONFIG before saving (Magnus's preference is to keep it; this would be a forced revision, not a preferred one).
 
 ## 2026-05-09 — ANR sheet enhancements deferred to next lab session
+**Tags:** data-contract
 
 **Decision:** Three additional metrics were identified for the ANR sheet during the 2026-05-09 design review but are deferred to the next Bloomberg lab session for implementation. The metrics will improve News Agent's analyst-tracking and Chief Analyst's confidence-calibration logic, but require BQL field-name verification at a live terminal before being committed to the master template.
 
@@ -877,6 +950,7 @@ This customisation is a *human contract* — it lives on the Bloomberg Terminal,
 - If Bloomberg deprecates `EQY_REC_CONS` or the revision-count fields — re-scope this entry, since the agent-side use of these fields is the primary motivation.
 
 ## 2026-05-09 — Doc-revision pass complete: Bloomberg BDP/BDH template approach documented, News Agent ANR input corrected
+**Tags:** docs
 
 **Decision:** Two design documents updated in a focused doc-revision pass following the 2026-05-08 lab session at Kingston University. The design docs are now in alignment with the architectural state captured in the 2026-05-08 "Bloomberg export workflow confirmed: BDP/BDH template approach adopted" entry — decisions.md no longer supersedes the design docs on the BDP/BDH template workflow, confirmed field mnemonics, RV manual paste decision, or known data gaps.
 
@@ -913,6 +987,7 @@ The applied edits reflect this final state, not the original brief's draft.
 **Revisit trigger:** None — this is a closeout entry. The architectural decisions that drove the storage layout, master template structure, and ANR enhancements carry their own revisit triggers in their respective decisions.md entries.
 
 ## 2026-05-09 — Doc-revision pass complete: storage architecture documented across design docs
+**Tags:** docs
 
 **Decision:** Three design documents updated in a focused doc-revision pass to bring storage layout, lab↔home transport, and `bloomberg_inbox\` status into alignment with the storage architecture decided earlier on 2026-05-09. The design docs are now the canonical reference for these concerns; decisions.md no longer supersedes them on storage layout, transport, or dormant-inbox status. This entry closes the storage-architecture thread opened in the 2026-05-09 "Bloomberg storage architecture: per-company date-stamped archive, templates Git-versioned, OneDrive as lab↔home courier" entry, and resolves the first of three remaining-gap items flagged in the 2026-05-09 "Doc-revision pass complete: Bloomberg BDP/BDH template approach documented" closeout.
 
@@ -944,6 +1019,7 @@ The applied edits reflect this final state, not the original brief's draft.
 **Revisit trigger:** None — this is a closeout entry. The architectural decisions that drove the storage layout carry their own revisit triggers in the 2026-05-09 "Bloomberg storage architecture" entry.
 
 ## 2026-05-09 — Pre-Phase-1 cleanup and doc-alignment pass: state validated, repo cleaned, CLAUDE.md and SYSTEM_PROMPT.docx aligned, .env created
+**Tags:** process
 
 **Decision:** Before starting Phase 1 (dashboard shell), the local MFIP state was validated against the design docs and seven gaps were closed in a single coherent pass spanning repo hygiene, doc alignment, and infrastructure. This entry records what was found, what was fixed, the resulting commits, and the off-repo changes (`.env` and the project's Custom Instructions). The pass establishes a fully validated working tree and an internally consistent doc set as the starting point for Phase 1.
 
@@ -1022,6 +1098,7 @@ The originally drafted closeout for this pass flagged the end-of-session rule as
 - If the project library and `C:\MFIP\docs\` drift again — i.e. one is updated and the other is not — surface it as an Advisory at the next doc-revision pass. The freshness check rule in `CLAUDE.md` is the early-warning mechanism, but is not foolproof.
 
 ## 2026-05-09 — Correction: superseded `.py` generator scripts were less divergent than the deletion entry implied
+**Tags:** docs
 
 **Decision:** This entry corrects the previous "Pre-Phase-1 cleanup" entry (this same date), specifically the Gap 6 description of the four deleted `.py` template-generator scripts. On reading the actual file contents post-deletion, the divergence-from-canonical claim was overstated. The deletion is not reversed — the files remain absent from the working tree at HEAD and recoverable from Git history at `5c9db87`. This entry adjusts the record so future sessions reading `decisions.md` understand what was actually deleted.
 
@@ -1068,6 +1145,7 @@ Everything else — USD display-currency standardisation, CKN GBp double-convers
 
 **Revisit trigger:** None — this is a closeout correction. If the four `.py` files are ever restored to the working tree, log a new entry recording the restoration and its motivation.
 ## 2026-05-10 — Backup infrastructure: restic + Backblaze B2, automated scripts, recovery rehearsed
+**Tags:** infrastructure
 
 **Decision:** MFIP backup infrastructure is complete and verified. Restic 0.18.1 backs up C:\MFIP\ to Backblaze B2 bucket mfip-backup-magnus daily at 02:00 via Windows Task Scheduler. Monthly prune runs on the 1st at 04:00.
 
@@ -1116,6 +1194,7 @@ Everything else — USD display-currency standardisation, CKN GBp double-convers
 - Run full rehearsal (restore a complete multi-file snapshot, not just the single-file test) after the prune script has run once and confirmed clean.
 
 ## 2026-05-10 — Design pass: ideas.md introduced, V2_BACKLOG.docx retired, Agents 20 and 21 added to v1 spec
+**Tags:** architecture
 
 **Decision:** A design pass was completed adding two new v1 agents, retiring V2_BACKLOG.docx in favour of ideas.md, and updating all affected design docs.
 
@@ -1153,6 +1232,7 @@ Layer 5.5 rationale: inserting cleanly between Layer 5 and Layer 6 without renum
 **Revisit trigger:** None — this is a closeout entry. Individual agent build decisions carry their own entries when phases are built.
 
 ## 2026-05-10 — Pre-Phase-3 Bloomberg saved-file validator
+**Tags:** data-contract
 
 **Decision:** A one-shot Python validator (`scripts/ingestion/validate_bloomberg_workbook.py`) was built before Phase 3 begins. It encodes the saved-file contract from `07_BLOOMBERG_EXPORT_TEMPLATE.docx` (8 sheets: CONFIG + 7 data) and the v1 universe membership, validates a workbook against the contract, and emits a structured report with three result tiers (PASS / ADVISORY / FAIL) aligned with the Security Council alert system. Exit code is non-zero only on FAIL.
 
@@ -1183,6 +1263,7 @@ Layer 5.5 rationale: inserting cleanly between Layer 5 and Layer 6 without renum
 - Phase 3 ingestion build start: lift the "find latest workbook" logic into a shared helper and have the watchdog handler call `validate_workbook()` directly at the quarantine boundary.
 
 ## 2026-05-11 — Frontend stack deferred; desktop-first confirmed for v1
+**Tags:** architecture
 
 **Decision:** MFIP v1 frontend is Plotly Dash (Python), desktop-first
 on Windows. No commitment to web-first (React + Next.js + Vercel) until
@@ -1210,6 +1291,7 @@ This is a revisit trigger, not a deferred decision.
 session — evaluate Dash v1 against web-first migration cost at that point.
 
 ## 2026-05-11 — Cross-project insight: dissertation inbox established outside MFIP; Model 3 flagging without dissertation context
+**Tags:** process
 
 **Decision:** MFIP-Claude flags insights from MFIP work that are *structurally likely to generalise* — patterns, frameworks, disciplines whose value exceeds their immediate use. MFIP-Claude is not given the dissertation topic, research question, or any dissertation-specific context. Flagging criterion is generality, not dissertation fit. Cross-project synthesis between MFIP work and dissertation work happens in the Dissertation Claude project, where the dissertation context lives.
 
@@ -1227,6 +1309,7 @@ session — evaluate Dash v1 against web-first migration cost at that point.
 **Revisit trigger:** None expected. If MFIP enters phases that materially overlap with dissertation territory (none currently planned in v1), revisit whether minimal context-sharing is justified. Default remains: no.
 
 ## 2026-05-11 — Visual identity locked: Koyfin-anchored, dual-mode from start, narrowed mono rule
+**Tags:** architecture
 
 **Decision:** The dashboard visual identity is locked as of `05_DASHBOARD_SPEC.docx` v1.2. Three substantive choices were made in this pass, each of which would have been costly to defer: (1) the visual stance is Koyfin-anchored, Finchat-informed, and Linear-restrained — explicitly rejecting Linear-style generous whitespace on data surfaces and replacing the v1.0 framing of "Bloomberg meets modern UI" which had been flagged as a load-bearing mischaracterisation; (2) both dark and light theme token sets are defined from the start, with a single `mfip/dashboard/theme.py` module, `apply_theme(fig, mode)` helper for Plotly, and an AG Grid CSS overrides file using the same token names — light mode added later was rejected on retrofit cost (every chart's `paper_bgcolor`, every AG Grid theme class, every trace color would need auditing); (3) the v1.0 typography rule "JetBrains Mono for all numbers" was narrowed to "mono only where digits are scanned vertically or compared cell-to-cell" — inline numbers in prose use Inter. These three calls drive the Phase 1 build-order rewrite: theme + type + density + motion scaffolding leads before any Zone layout.
 
@@ -1251,6 +1334,7 @@ session — evaluate Dash v1 against web-first migration cost at that point.
 **Revisit trigger:** Phase 1 build. If during Phase 1 the dual-mode discipline proves heavier than estimated (theme module growing beyond ~100 lines, AG Grid sync test producing false failures, chart callbacks becoming awkward to thread the mode through), revisit whether light mode should be deferred to a v1.x update. Also: if the Mac Mini evaluation in autumn 2026 produces a web-first reconsideration per the 2026-05-11 frontend-stack decision, the token system survives but the AG Grid / Plotly implementation specifics are replaced.
 
 ## 2026-05-11 — Phase 1 routing decision: dcc.Location scaffolded in from start; Home-vs-Zone-1 deferred; folder structure and callbacks organisation resolved
+**Tags:** architecture
 
 **Decision:** Four sub-decisions taken together as Phase 1's structural foundation, ahead of the first build session (Session 5):
 
@@ -1284,6 +1368,7 @@ session — evaluate Dash v1 against web-first migration cost at that point.
 **Revisit trigger:** After Zone 1 is functional (end of Session 6 or Session 7). At that point, revisit the Home-vs-Zone-1 destination question with concrete grounding from real Zone 1 use. If a Home screen is added, document the route registration in a follow-up entry.
 
 ## 2026-05-11 — ASR blocks venv shims; standing rule: `python -m` form for all tools
+**Tags:** infrastructure
 
 **Context.** Session 6 startup: `pytest tests/test_theme.py` failed at the
 shell with "Access is denied" before pytest could load. Windows Defender
@@ -1331,6 +1416,7 @@ investigation — could indicate a tightening policy push.
 **Cost.** Three extra keystrokes per invocation. Acceptable.
 
 ## 2026-05-11 — Clientside callbacks: inline string form, not separate JS files
+**Tags:** infrastructure
 
 **Context.** Session 6 routing shell needed a clientside callback to read
 `prefers-color-scheme` and subscribe to OS theme changes. Session 6
@@ -1354,6 +1440,7 @@ in one place. The separate-file pattern earns its keep at scale, not at
 clientside JS follow the same rule.
 
 ## 2026-05-11 — Dash 3.x: `use_pages=True` needs `dash.page_container` in the layout
+**Tags:** infrastructure
 
 **Context.** Session 6 routing shell build. Setting `use_pages=True` on
 the Dash 3.4 app caused three "ID not found in layout" runtime errors at
@@ -1389,6 +1476,7 @@ callback Input/Output IDs resolve against the served layout." Not a
 blocker; surfaced by the browser dev panel during normal verification.
 
 ## 2026-05-11 — Typography token namespace divergence: spec `type.*`, CSS `.text-*`
+**Tags:** infrastructure
 
 **Context.** Session 6 Part 2 build. Spec `05_DASHBOARD_SPEC.docx` v1.1
 refers to type tokens as `type.h1`, `type.body`, `type.data.lg` etc.
@@ -1404,6 +1492,7 @@ entry in the spec or a token-name alignment in a future doc pass —
 deferred, not urgent.
 
 ## 2026-05-11 — Zone registration: explicit imports in app.py, not auto-discovery
+**Tags:** architecture
 
 **Context.** Session 6 Part 1 set `pages_folder=""` on the Dash app so
 zones could live in `mfip/dashboard/zones/` instead of `pages/`. Side
@@ -1425,6 +1514,7 @@ Zone 1/2/3/4 sections, not Dash's "page" abstraction).
 implicit at this scale.
 
 ## 2026-05-11 — Dash 3.x: `suppress_callback_exceptions=True` required for pages-based apps
+**Tags:** infrastructure
 
 **Context.** Session 6 Part 2 Zone 1 launch surfaced 16 callback
 errors at startup ("ID not found in layout" x15, "nonexistent object
@@ -1459,6 +1549,7 @@ startup validation works correctly for a pages-based app. Possible
 default in future Dash versions; for 3.4 it must be set explicitly.
 
 ## 2026-05-11 — Dash 3.x: pages without folder need explicit `layout=` kwarg
+**Tags:** infrastructure
 
 **Context.** Session 6 Part 2 launch with Zone 1 registered via
 `dash.register_page(__name__, path="/", name="Command Centre")` left
@@ -1504,6 +1595,7 @@ The three together are the full set needed for the chosen architecture
 all three; no further surprises expected from the routing layer.
 
 ## 2026-05-11 — Clientside callbacks with global side effects live in app.py
+**Tags:** architecture
 
 **Context.** Session 6 Part 2 launch surfaced a "nonexistent object"
 error on the clientside callback that applied the `data-theme`
@@ -1528,6 +1620,7 @@ app-level.
 for app-wide concerns.
 
 ## 2026-05-11 — Cross-layout callback Inputs deferred from Session 6
+**Tags:** architecture
 
 **Context.** Session 6 Part 2 Zone 1 theme toggle server callback has
 Inputs spanning two layouts: `theme-toggle-radio.value` (zone1 layout)
@@ -1562,6 +1655,7 @@ apply_theme); so the missing toggle wiring is invisible in current
 session output.
 
 ## 2026-05-12 — Theme toggle re-wire: zone1-local intermediate store; overlay chrome ownership deferred to alert feed build
+**Tags:** architecture
 
 **Context.** Session 6 deferred the theme-toggle → theme-mode-store
 callback after Dash 3.x's validator rejected the cross-layout Input
@@ -1608,6 +1702,7 @@ to `system_pref or 'dark'` before writing to `theme-mode-store`.
 
 
 ## 2026-05-12 — Part 2 browser verification fallout: focus ring fails on most Zone 1 elements; PR #14 to draft pending Part 3 diagnosis
+**Tags:** infrastructure
 
 **Context.** Part 2's brief defined "every interactive element in Zone 1
 is tab-reachable with a visible focus ring" as a definition-of-done
@@ -1660,6 +1755,7 @@ underlying issue, verify every Zone 1 interactive element rings up
 visibly, then merge PR #14 or supersede.
 
 ## 2026-05-13 — Routing architecture: Pages affirmed; Home (`/`) and analysis (`/analysis`) split; zones are components on `/analysis`
+**Tags:** architecture
 
 **Decision:** Dash Pages routing is affirmed as the v1 architecture (the
 2026-05-11 routing decision is NOT reversed). The route layout is revised:
@@ -1784,6 +1880,7 @@ zones should be separately routed sub-pages. Also: when Home contents are
 decided — log the design choice in a follow-up entry referencing this one.
 
 ## 2026-05-13 — `ideas.md` splits into `ideas.md` + `worklog.md`
+**Tags:** docs
 
 **Decision:** `ideas.md` returns to its original scope: forward-looking,
 phase-gated items (future features, skills/plugins/agents, design
@@ -1849,6 +1946,7 @@ for items nobody acts on, or if items are routinely landing in the
 wrong file, revisit the boundary rule.
 
 ## 2026-05-14 — SYSTEM_PROMPT.docx: rule to suggest model and effort level per task
+**Tags:** process
 
 **Decision:** A new behavioural rule is added to `SYSTEM_PROMPT.docx`
 in the "HOW YOU BEHAVE IN EVERY CONVERSATION" section, requiring
@@ -1902,6 +2000,7 @@ be scoped narrower (e.g. only for tasks above a complexity threshold)
 or removed.
 
 ## 2026-05-14 — Line-ending state: core.autocrlf vs .gitattributes
+**Tags:** infrastructure
 
 **Decision:** `.gitattributes` at repo root declares
 `* text=auto eol=lf` as the repo-local rule, with explicit `binary`
@@ -1978,6 +2077,7 @@ line-ending weirdness after that, update this entry with the
 observed behaviour and the resolution.
 
 ## 2026-05-14 — Theme toggle root cause: theme.css never created
+**Tags:** infrastructure
 
 **Context.** Phase 1 close-out tidy-up Item 3. Theme toggle radio
 updated state (Layers 1 and 2 intact) but produced no visible change.
@@ -1996,3 +2096,57 @@ scaffolding first for exactly this reason — CSS variables must exist
 before any component can consume them. The gap went undetected because
 Phase 1's placeholder components don't fail visibly when CSS vars are
 absent; they silently fall back to browser defaults.
+
+## 2026-05-14 — decisions.md indexing: single-file TOC + inline tags supersedes separate index file
+**Tags:** docs
+
+**Decision:** `decisions.md` is self-indexed via (1) a `## Index`
+TOC section at the top of the file (newest-first, one line per entry,
+with tag badge) and (2) a `**Tags:** <tag>` line immediately after
+every `## YYYY-MM-DD` heading. A separate `decisions_index.md` file
+(IDEA-018) is not built.
+
+**Tag taxonomy (locked, 5 values):**
+
+| Tag | Scope |
+|---|---|
+| `architecture` | System structure: layers, agents, routing, data flow |
+| `infrastructure` | Build/runtime: tooling, repo, git, environment, security |
+| `data-contract` | External/internal data interfaces: Bloomberg sheets, schemas |
+| `process` | How work gets done: behavioural rules, session conventions |
+| `docs` | The documentation system itself |
+
+When a single entry spans two tags, use the tag that best matches
+*retrieval intent* — the question a future reader would ask when
+looking for this entry.
+
+**Reasoning:** IDEA-018 proposed a separate `decisions_index.md`.
+The single-file approach is strictly better: the TOC line and the
+entry it indexes live in the same diff, so index drift — the failure
+mode that motivated the idea — is eliminated by construction rather
+than managed by discipline. A separate file adds a synchronisation
+obligation without adding any capability.
+
+**TOC format:**
+```
+- [YYYY-MM-DD — <summary>](#<auto-anchor>) `<tag>`
+```
+Summary rules: ≤80 chars; written to describe what the entry is about,
+not what it concludes.
+
+**Index-touch rules (also in `CLAUDE.md`):**
+1. Every new `## YYYY-MM-DD` entry gets a `**Tags:** <tag>` line on
+   the very next line (no blank line between heading and tag line).
+2. Every new entry gets a TOC line prepended at the top of `## Index`
+   (newest-first).
+3. Anchor verification: GitHub auto-generates anchors as lowercase,
+   spaces→hyphens, non-word/non-space/non-hyphen chars stripped.
+   Em-dashes become `--` (space-em-dash-space → `-`). Verify anchors
+   post-push using GitHub's rendered TOC.
+4. When a tag taxonomy change is needed, update this entry and
+   `CLAUDE.md` in the same commit.
+
+**Revisit trigger:** If the five-tag taxonomy proves insufficient
+(entries routinely need two tags with no clear winner), add a sixth
+tag or introduce a secondary-tag field. Do not add tags
+opportunistically — wait until a pattern of mis-tagging is clear.
