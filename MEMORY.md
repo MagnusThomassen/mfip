@@ -176,7 +176,7 @@ C:\MFIP\
 | `05_DASHBOARD_SPEC.docx` | Dashboard specification v1.3 | Claude project library |
 | `06_SECURITY_COUNCIL.docx` | Security Council detailed design | Claude project library |
 | `07_BLOOMBERG_EXPORT_TEMPLATE.docx` | Bloomberg export contract | Claude project library |
-| `decisions.md` | Architectural decisions log | `repo\decisions.md` |
+| `decisions.md` | Architectural decisions log — self-indexed (TOC + per-entry tags) | `repo\decisions.md` |
 | `ideas.md` | Forward-looking backlog — phase-gated items | `repo\ideas.md` |
 | `worklog.md` | In-flight observations and bug-shaped items — days-gated | `repo\worklog.md` |
 | `MEMORY.md` | This file — live current-state index | `repo\MEMORY.md` |
