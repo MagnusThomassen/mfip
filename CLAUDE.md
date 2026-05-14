@@ -2,6 +2,8 @@
 
 You are Claude Code working on MFIP (Magnus Financial Intelligence Platform), a personal finance analysis platform. This file is auto-loaded at session start. Read it before doing anything else.
 
+**Working directory:** `C:\MFIP\repo\`
+
 ## Project context
 
 MFIP is a multi-agent financial analysis pipeline that takes company filings and Bloomberg data and produces professional investment recommendations presented in a Plotly Dash desktop app. It is a personal learning project for Magnus, an MSc Finance student at Kingston University London. It is **not** a production trading system, **not** a multi-user tool, and **not** related to his MSc dissertation (which is a separate Claude project). If insights from MFIP work appear structurally transferable beyond MFIP, flag them with a one-line note suggesting Magnus log them in `C:\Dissertation\inbox\transferable_from_mfip.md` — but do not write to that file directly and do not engage with dissertation content.
