@@ -1,0 +1,12 @@
+# Normalise line endings across the repo.
+# All text files: auto-detect text, store as LF in the repo, check out
+# with the platform's native convention (LF on Linux/macOS, CRLF on
+# Windows — though Windows tooling has been LF-tolerant for years).
+* text=auto eol=lf
+
+# Explicit binary marker for Office files so Git never tries to
+# normalise them.
+*.docx binary
+*.xlsx binary
+*.pptx binary
+*.pdf binary
