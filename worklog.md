@@ -140,9 +140,16 @@ suited to one tidy-up sub-pass.
 **Status:** CLOSED-FIXED
 
 **Closed:** 2026-05-14 — Session 9 close-out tidy-up. `.gitattributes`
-added with `* text=auto eol=lf`; `git add --renormalize .` confirmed no
-content to renormalise (`core.autocrlf=true` already storing all files as
-LF in the object store). All repo text files are LF-stored.
+added with `* text=auto eol=lf` to make the LF convention explicit
+and repo-local. `git add --renormalize .` produced no staged changes
+— `core.autocrlf=true` in global git config had already been storing
+all text files as LF in the object database. The original worklog
+observation conflated working-tree state (CRLF on Windows checkout)
+with repo state (always LF in commits). The `.gitattributes` change
+still matters: future clones (e.g. the Mac Mini M4 acquisition in
+autumn 2026, or any CI runner) don't depend on the contributor's
+global git config. See `decisions.md` 2026-05-14 line-endings learning
+entry for the full architectural note.
 
 **Observation:** `decisions.md` uses LF line endings; `ideas.md` uses
 CRLF. Surfaced when creating `worklog.md` in Session 8 step 5;
