@@ -1054,7 +1054,7 @@ spend another session?" — and the default answer is ship.
 
 ## IDEA-018 — decisions.md index / compaction pass
 
-**Status:** PROPOSED
+**Status:** APPROVED
 **Added:** 2026-05-11
 **Source:** Session 3 risk assessment (Concern 2)
 
@@ -1086,9 +1086,11 @@ similar to the cost of building one at 40 entries, but the benefit is
 lower because the doc is still scannable end-to-end. The 40-entry
 threshold is a guess; calibrate when we hit it.
 
-**Decision gate:** When `decisions.md` reaches ~40 entries OR when a
-session demonstrably misses a relevant prior decision because it was
-buried.
+**Decision gate updated:** 2026-05-13 — gate brought forward from "~40 entries"
+to "end of Phase 1 / before Phase 2 kickoff." Index pass confirmed as the
+chosen method (option 1: decisions_index.md). Compaction deferred until
+the index proves insufficient. Schedule as a Phase 1 close-out task alongside
+IDEA-023 and IDEA-027.
 
 ---
 
