@@ -152,6 +152,8 @@ Either flow respects branch protection. Choose by edit size.
 
 Decisions are made in chat sessions, not by you. The user will paste new entries. Append them to `decisions.md`, commit with message format: `decision: <short summary>`. Do not invent decisions or rephrase them.
 
+**Commit decisions.md in the same commit as the code it documents, not as a follow-up commit.** A squash-merge captures exactly the commits on the branch at merge time — a trailing decisions.md commit pushed after the merge races the merge and will be left out.
+
 ## When updating ideas.md and worklog.md
 
 Two backlog files split by lifetime, per the 2026-05-13 decision in
