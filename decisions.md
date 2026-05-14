@@ -8,6 +8,8 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-14 — decision_log schema: medium structure (thin core + two typed columns + JSON payload)](#2026-05-14--decision_log-schema-medium-structure-thin-core--two-typed-columns--json-payload) `data-contract`
+- [2026-05-14 — Branch cleanup convention: local prune + fetch.prune=true, remote auto-deletes](#2026-05-14--branch-cleanup-convention-local-prune--fetchprunetrue-remote-auto-deletes) `process`
 - [2026-05-14 — decisions.md self-indexing: single-file TOC + inline tags approach](#2026-05-14--decisionsmd-indexing-single-file-toc--inline-tags-supersedes-separate-index-file) `docs`
 - [2026-05-14 — Theme toggle root cause: theme.css missing from assets](#2026-05-14--theme-toggle-root-cause-themecss-never-created) `infrastructure`
 - [2026-05-14 — Line-ending normalisation: .gitattributes vs global git config](#2026-05-14--line-ending-state-coreautocrlf-vs-gitattributes) `infrastructure`
@@ -2150,3 +2152,148 @@ not what it concludes.
 (entries routinely need two tags with no clear winner), add a sixth
 tag or introduce a secondary-tag field. Do not add tags
 opportunistically — wait until a pattern of mis-tagging is clear.
+
+## 2026-05-14 — decision_log schema: medium structure (thin core + two typed columns + JSON payload)
+**Tags:** data-contract
+
+The `decision_log` table — written to by every agent in the MFIP
+pipeline — uses a **medium-structure** schema: a thin set of
+typed core columns required on every row, two additional typed
+columns that recur often enough across agents to justify
+first-class status, and a JSON `payload` column for
+agent-specific structured output validated by Pydantic at write
+time.
+
+**Schema:**
+
+| Column | Type | Nullable | Notes |
+|---|---|---|---|
+| `id` | UUID | no | Primary key |
+| `correlation_id` | UUID | no | Ties together every log entry from one analysis run |
+| `timestamp` | TIMESTAMP | no | Default `now()` |
+| `agent` | VARCHAR | no | Issuing agent name (enum at Pydantic layer, not DB-enforced) |
+| `decision_type` | VARCHAR | no | e.g. `extraction_complete`, `dcf_output`, `chief_recommendation` |
+| `phase` | VARCHAR | no | extraction / validation / intelligence / modelling / recommendation / portfolio |
+| `ticker` | VARCHAR(10) | yes | Six-company universe; nullable for system-level decisions |
+| `confidence_score` | DECIMAL(4,3) | yes | Common across extraction, validation, modelling, Chief Analyst |
+| `payload` | JSON | no | Agent-specific structured output, Pydantic-validated at write time |
+
+**Indexes:**
+
+- `correlation_id` (joins across one run)
+- `(ticker, timestamp DESC)` (per-company history queries)
+- `(phase, timestamp DESC)` (phase-level forensics)
+
+**Reasoning.** Three viable shapes were considered:
+
+- **Thin** (id, correlation_id, timestamp, agent, decision_type,
+  payload only): maximally flexible, but every common query —
+  "show me all Chief Analyst BUYs on EQNR with confidence > 0.7"
+  — requires JSON extraction. During development, the
+  `decision_log` will be queried constantly to debug agent
+  behaviour; JSON-extraction overhead on every query is real
+  friction.
+- **Medium** (this decision): thin core plus typed columns for
+  the two values that recur across nearly every agent's output.
+  `ticker` and `confidence_score` are present in nearly every
+  decision the pipeline makes; promoting them to typed columns
+  pays off across every debugging session and every dashboard
+  query.
+- **Thick** (per-agent typed columns or per-agent tables):
+  strongest validation, most rigid. Overengineering for v1 —
+  the typed columns that should exist aren't yet known with
+  enough certainty to commit to a per-agent schema. Migrating
+  from JSON payload to typed columns later is trivial; the
+  reverse is not.
+
+**Implications.**
+
+- `correlation_id` must be minted at pipeline entry (when the
+  user kicks off "analyse <ticker>") and threaded through every
+  agent call. This is a cross-cutting concern that Phase 2's
+  build must address explicitly — not invented mid-build.
+- Pydantic models per `decision_type` define payload shape and
+  validate before the DuckDB insert. Adding a new `decision_type`
+  is a Pydantic model addition, not a schema migration.
+- `agent` is intentionally a free-text VARCHAR rather than a DB
+  enum, so adding a new agent (or renaming one) doesn't require
+  a schema migration. Enum-style validation lives in the
+  Pydantic layer.
+
+**Affected docs.**
+
+- `04_BUILD_SEQUENCE.docx` Phase 2 — schema is now specified;
+  build checklist item 1 ("Design DuckDB schema") becomes
+  "Implement schema per `decisions.md` 2026-05-14 entry."
+- `MEMORY.md` — Phase 2 status update happens with the Phase 2
+  kickoff PR.
+
+## 2026-05-14 — Branch cleanup convention: local prune + fetch.prune=true, remote auto-deletes
+**Tags:** process
+
+Branch cleanup convention is formalised after Session 13
+discovered six stale local branches and fifteen stale
+remote-tracking refs accumulated across Sessions 7–12. The fix
+is two-part:
+
+1. **Remote branches**: GitHub's "Automatically delete head
+   branches" repo setting is enabled and works correctly —
+   remote cleanup happens at PR merge without operator action.
+   No change needed.
+2. **Local branches and tracking refs**: were not being cleaned
+   up. New convention applies going forward.
+
+**New convention.**
+
+After any PR merges to `main`, the session that merged it runs,
+as its final step before session close:
+
+```
+git checkout main
+git pull --ff-only origin main
+git branch -D <merged-branch>
+```
+
+Once per session (or whenever stale tracking refs are noticed):
+
+```
+git fetch --prune
+```
+
+The `--prune` flag deletes local remote-tracking refs whose
+upstream branches no longer exist on the remote.
+
+**Recommended Git config** (one-time, per machine):
+
+```
+git config --global fetch.prune true
+```
+
+With this set, every `git fetch` (including the implicit fetches
+during `git pull`) automatically prunes stale tracking refs. No
+ongoing operator action required.
+
+**Reasoning.** Session 13 began with the pre-flight checks
+failing because `main` was behind, the working tree was on a
+stale test branch, and `git branch -vv` showed five branches
+that should have been deleted. Investigation revealed the root
+cause was not malice or carelessness — it was the absence of an
+explicit convention. Cleanup was happening on the remote (via
+GitHub's auto-delete setting) but not locally, because no
+session-close step required it. The lesson: cleanup conventions
+must be explicit and mechanical, not "obvious."
+
+**Implications.**
+
+- `CLAUDE.md` updates: the branch workflow section gains a
+  "session close" step requiring the local delete + prune.
+- Handoff documents must not assume cleanup happened. Session
+  12's handoff confidently stated "Both branches deleted
+  locally and remote" when neither was true. Future handoffs
+  should verify cleanup state via `git branch -vv` and
+  `git ls-remote --heads origin` rather than asserting it.
+
+**Affected docs.**
+
+- `CLAUDE.md` — new "session close" step in the branch workflow.
+- This entry — formalises the convention.

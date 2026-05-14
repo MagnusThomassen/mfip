@@ -148,6 +148,30 @@ Practical implication for routine doc edits (`CLAUDE.md`, `decisions.md`, `ideas
 
 Either flow respects branch protection. Choose by edit size.
 
+### Session close
+
+Before ending any session that merged a branch to `main`:
+
+1. `git checkout main`
+2. `git pull --ff-only origin main`
+3. `git branch -D <merged-branch>`
+
+Once per session (or whenever stale tracking refs accumulate):
+
+```
+git fetch --prune
+```
+
+Setting `git config --global fetch.prune true` once per machine
+makes the prune automatic on every fetch and is recommended.
+
+Remote branches are auto-deleted by GitHub on PR merge; no
+manual remote deletion needed.
+
+Do not assume cleanup happened in a previous session. Handoff
+documents that assert cleanup state should be verified via
+`git branch -vv` and `git ls-remote --heads origin`, not trusted.
+
 ## When updating decisions.md
 
 Decisions are made in chat sessions, not by you. The user will paste new entries. Append them to `decisions.md`, commit with message format: `decision: <short summary>`. Do not invent decisions or rephrase them.
