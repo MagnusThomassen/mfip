@@ -226,3 +226,22 @@ framing predates the multi-route stance and may not survive contact
 with the v2 build.
 
 **Schedule:** V2 backtesting build (well past Phase 1).
+
+---
+
+## 2026-05-13 — Zone 1 settings-panel needs density-roomy class
+
+**Status:** OPEN
+
+**Observation:** The Roomy density class isn't applied to Zone 1's
+settings panel. Found in Session 7 Part 2 (PR #14) but the PR was
+closed without merging per the 2026-05-13 routing architecture
+decision. The one-line fix lived only on the deleted
+`phase1/zone1-density-focus` branch; re-logging here to preserve the
+finding when Zone 1 chrome styling is taken on.
+
+**Fix:** Apply `density-roomy` class to the settings panel container
+in `mfip/dashboard/zones/zone1.py`. One-line change.
+
+**Schedule:** With Zone 1 chrome styling completeness work (theme
+visual application, focus rings, etc. — all in the same family).
