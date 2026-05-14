@@ -1976,3 +1976,23 @@ working-tree files on those targets without any global config
 dependency. If a contributor (human or AI) reports working-tree
 line-ending weirdness after that, update this entry with the
 observed behaviour and the resolution.
+
+## 2026-05-14 — Theme toggle root cause: theme.css never created
+
+**Context.** Phase 1 close-out tidy-up Item 3. Theme toggle radio
+updated state (Layers 1 and 2 intact) but produced no visible change.
+Symptom traced to Layer 3 absent entirely — `assets/theme.css` was
+never created. All `var(--bg-canvas)` / `var(--text-primary)` CSS
+variable references resolved to nothing; browser rendered white/black
+defaults regardless of toggle state or `data-theme` attribute value.
+
+**Fix.** Created `mfip/dashboard/assets/theme.css` mapping all 23
+MFIP colour tokens onto `:root, [data-theme="dark"]` and
+`[data-theme="light"]`. Applies `bg-canvas` + `text-primary` to
+`html, body`. Commit `08df26d`, PR #25.
+
+**Learning.** The build order in `05_DASHBOARD_SPEC.docx` lists theme
+scaffolding first for exactly this reason — CSS variables must exist
+before any component can consume them. The gap went undetected because
+Phase 1's placeholder components don't fail visibly when CSS vars are
+absent; they silently fall back to browser defaults.
