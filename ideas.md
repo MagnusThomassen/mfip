@@ -1516,7 +1516,7 @@ passed structural pytest checks and only appeared on browser launch.
 A served-layout resolution test would have caught all four at
 pytest time.
 
-**Status:** GRADUATED — implemented as `tests/test_served_layout.py`.
+**Status:** GRADUATED — implemented as `tests/test_served_layout.py` in PR #30.
 
 **Update 2026-05-13:** Graduates from PROPOSED to APPROVED following
 the three-strikes pattern documented in the 2026-05-13 routing
