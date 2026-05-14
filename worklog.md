@@ -308,3 +308,15 @@ after recovery; dashboard launches cleanly.
 If it goes missing again, the recovery is `py -3.12 -m venv .venv`
 followed by `pip install -r requirements.lock.txt`. Consider a
 `make venv` or PowerShell convenience script later if this recurs.
+
+---
+
+## 2026-05-14 — 06_SECURITY_COUNCIL.docx schema text needs update
+
+**Status:** OPEN
+
+`06_SECURITY_COUNCIL.docx` AUDIT TRAIL section contains the original
+`security_log` schema without `correlation_id`. Superseded by
+`decisions.md` 2026-05-14 "security_log schema extension". Design doc
+text needs manual update by Magnus in a non-code pass — not blocking,
+but worth tracking. Close when the docx file is updated.

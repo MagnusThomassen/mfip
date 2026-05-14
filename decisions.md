@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-14 — security_log schema extension: nullable correlation_id for symmetry with decision_log](#2026-05-14--security_log-schema-extension-nullable-correlation_id-for-symmetry-with-decision_log) `data-contract`
 - [2026-05-14 — decision_log schema: medium structure (thin core + two typed columns + JSON payload)](#2026-05-14--decision_log-schema-medium-structure-thin-core--two-typed-columns--json-payload) `data-contract`
 - [2026-05-14 — Branch cleanup convention: local prune + fetch.prune=true, remote auto-deletes](#2026-05-14--branch-cleanup-convention-local-prune--fetchprunetrue-remote-auto-deletes) `process`
 - [2026-05-14 — decisions.md self-indexing: single-file TOC + inline tags approach](#2026-05-14--decisionsmd-indexing-single-file-toc--inline-tags-supersedes-separate-index-file) `docs`
@@ -2297,3 +2298,89 @@ must be explicit and mechanical, not "obvious."
 
 - `CLAUDE.md` — new "session close" step in the branch workflow.
 - This entry — formalises the convention.
+
+---
+
+## 2026-05-14 — security_log schema extension: nullable correlation_id for symmetry with decision_log
+**Tags:** data-contract
+
+The `security_log` table — written to by Security Council agents and by
+the alert delivery path in `mfip_alerts.py` (PR-B) — extends beyond the
+schema specified in `06_SECURITY_COUNCIL.docx` to include a nullable
+`correlation_id UUID` column, mirroring the `correlation_id` column
+on `decision_log` (`decisions.md` 2026-05-14 "decision_log schema:
+medium structure").
+
+**Schema delta:**
+
+| Column | Type | Nullable | Notes |
+|---|---|---|---|
+| `correlation_id` | UUID | yes | Ties the alert to a pipeline run when one exists |
+
+Plus an index: `idx_security_log_correlation ON security_log (correlation_id)`.
+
+**Reasoning.** Without `correlation_id` on `security_log`, joining an
+alert back to the pipeline run that triggered it requires correlating
+on `timestamp` + `issuing_agent` — fragile, lossy, and unworkable for
+the debugging queries that will actually be run during agent
+development. The canonical query — "show me every log entry from the
+run that fired this Critical alert" — should be a one-line SQL JOIN,
+not a forensic reconstruction.
+
+**Nullability.** Required nullable, not non-null. Legitimate
+system-level events occur outside any pipeline run: application
+startup, scheduled maintenance, manual operator interventions,
+Task Scheduler nightly job activity. These events have no
+correlation_id to bind. A non-null constraint would force the
+Security Council to mint a synthetic UUID for these events, which
+would defeat the entire point of the column (joinability to real
+pipeline activity).
+
+**Pattern match with `decision_log`.** Same nullability rationale as
+`decision_log.ticker`: most rows have a value, but a meaningful
+minority legitimately do not, and forcing a non-null constraint
+would require synthetic placeholder values that pollute the data.
+
+**Why this overrides `06_SECURITY_COUNCIL.docx`.** The design doc
+was written before the `decision_log` schema landed. The
+correlation_id pattern is now established across the logging
+substrate, and applying it consistently is more valuable than
+preserving the original schema text. The design doc remains
+authoritative for the Security Council's *behaviour* (severity
+levels, training mode, tamper detection, append-only enforcement);
+the schema text in section "AUDIT TRAIL — APPEND-ONLY" is
+superseded by this entry.
+
+**Implications.**
+
+- Every `SecurityLogEntry` carries a `correlation_id: UUID | None`
+  field. Pipeline-triggered alerts call `get_correlation_id()`;
+  system-level events pass `correlation_id=None`.
+- `mfip_alerts.py` (PR-B) is unaffected — the `Alert` Pydantic model
+  already specified `correlation_id` in `decisions.md` 2026-05-07
+  ("Python Handles Logistics"). That field now flows naturally into
+  the `security_log` delivery-status row.
+- Cross-log debugging queries become trivial:
+  ```sql
+  SELECT d.*, s.severity, s.issue_description
+  FROM decision_log d
+  JOIN security_log s ON d.correlation_id = s.correlation_id
+  WHERE s.severity = 'CRITICAL';
+  ```
+
+**Affected docs.**
+
+- `06_SECURITY_COUNCIL.docx` "AUDIT TRAIL — APPEND-ONLY" schema text — superseded by this entry. Magnus to update the design doc text in a separate non-code pass; flagged in `worklog.md` for tracking.
+- `MEMORY.md` — Phase 2 status updates ride with the PR-A code.
+
+**Revisit trigger.** If a future agent (Security Council or otherwise)
+routinely writes `security_log` entries without a correlation_id when
+one was available — i.e. the nullability is being used as an escape
+hatch instead of a legitimate signal — revisit whether to enforce
+non-null with a sentinel for system events. Audit by running:
+
+```sql
+SELECT COUNT(*) FROM security_log WHERE correlation_id IS NULL;
+```
+
+periodically and confirming the count tracks expected system-event volume.

@@ -1529,3 +1529,37 @@ now the canonical defence against this failure mode.
 
 **Decision gate:** Phase 1 close-out. Implement before merging the
 final Phase 1 PR.
+
+---
+
+## IDEA-028 — Claude Code context management playbook
+
+**Status:** PROPOSED
+**Added:** 2026-05-14
+**Source:** Article "How to Manage Context in Claude Code"
+
+**The idea:**
+When Claude Code is adopted as the primary build harness, apply the
+following context-discipline practices from the session start:
+
+1. `.claudeignore` at repo root — exclude `node_modules/`, `.next/`,
+   `dist/`, build artefacts, `*.log`, `*.min.js`, `coverage/`. Prevents
+   10–20k tokens of noise entering the window on session start.
+2. Subagents for investigation — any task that reads 5+ files and the
+   file contents aren't the deliverable gets pushed into a subagent.
+   Only the summary report returns to the main conversation.
+3. Grep before read — standing instruction in `CLAUDE.md`: run grep
+   across the repo before opening multiple files to locate a symbol
+   or pattern. Read only matching files.
+4. Handover-then-clear over /compact — when context degrades, have the
+   current agent write a handover doc (saved to repo), then `/clear`
+   and paste the generated prompt. `/compact` loses the reasoning
+   behind decisions; handover-then-clear does not.
+
+**What does NOT apply:**
+The session handoff pattern (MEMORY.md, decisions.md, CLAUDE.md
+session-bootstrap) already implements the "plan file as memory"
+principle the article recommends. No new work needed on that front.
+
+**Decision gate:** Claude Code adoption (IDEA-016 approval, Phase 3).
+Read this entry alongside IDEA-016 at that point.

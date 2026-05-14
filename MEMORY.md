@@ -9,9 +9,9 @@
 
 ## Current Focus
 
-**Phase 1 — Dashboard Shell** (in progress)
+**Phase 2 — Logging Infrastructure** (in progress)
 
-Session 8 routing restructure complete. Two routes via Dash Pages: `/` (Home stub, `pages/home.py`) and `/analysis` (Zone 1 + Zone 2-4 placeholders, `pages/analysis.py`). Zone 1 is now a component composed into `/analysis`, not a separately registered page. PR #14 closed without merging — its underlying architectural mismatch is resolved by the restructure. 24/24 tests green on branch `phase1/routing-restructure`. Next: open PR, squash-merge to `main`.
+PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, log writers with append-only enforcement at the module-API layer, pipeline `contextvars`-based correlation-ID module, round-trip tests including cross-log JOIN coverage. Next: PR-B (`mfip_alerts.py` — Gmail SMTP with local fallback queue). PR-C (Task Scheduler nightly export to `logs-archive` branch) follows PR-B.
 
 ---
 
@@ -21,7 +21,7 @@ Session 8 routing restructure complete. Two routes via Dash Pages: `/` (Home stu
 |---|---|---|---|
 | 0 | Environment Setup | ✅ Complete | Commits `a258675`, `e556617`, `5c9db87`, `af3f02d`, `dac7e3b` |
 | 1 | Dashboard Shell | ✅ Complete | Sessions 5–10; final commit `a9cca58` |
-| 2 | Logging Infrastructure | ⬜ Not started | Can parallel Phase 1 |
+| 2 | Logging Infrastructure | 🟡 In progress | PR-A merged: schema, writers, context. PR-B and PR-C remaining |
 | 3 | Bloomberg Ingestion | ⬜ Not started | Requires lab visit |
 | 4 | PDF Extraction | ⬜ Not started | |
 | 5 | Intelligence Layer | ⬜ Not started | |
@@ -54,6 +54,11 @@ Session 8 routing restructure complete. Two routes via Dash Pages: `/` (Home stu
 | App tests | `tests/test_app.py` | 7 passing (includes `/` and `/analysis` route registration tests) |
 | Zone 1 tests | `tests/test_zone1.py` | 9 passing; 24 total green on branch `phase1/routing-restructure` |
 | `MEMORY.md` | `repo\MEMORY.md` | This file; added Session 7 |
+| `decision_log` + `security_log` DuckDB tables | `C:\MFIP\runtime\mfip.duckdb` | Schema per `decisions.md` 2026-05-14 (`decision_log schema` + `security_log schema extension`); init via `python scripts/init_db.py` |
+| Pydantic log entry models | `mfip/logging/models.py` | `DecisionLogEntry`, `SecurityLogEntry`, `PlaceholderPayload` + `DecisionPayload` discriminated-union scaffold |
+| Log writer functions | `mfip/logging/writers.py` | `write_decision`, `append_security_log`; append-only enforced by absence of update/delete functions in module API |
+| Pipeline context module | `mfip/pipeline/context.py` | `contextvars.ContextVar` for `correlation_id`; `new_/get_/set_/reset_` API |
+| Logging tests | `tests/logging/test_writers.py`, `tests/pipeline/test_context.py` | 12 passing (7 writer + 5 context); 37 total green |
 
 ---
 
@@ -76,6 +81,9 @@ Session 8 routing restructure complete. Two routes via Dash Pages: `/` (Home stu
 | Security Council mode | Training mode in v1 — logs everything, does not auto-suspend pipeline | System prompt |
 | Theme toggle cross-layout | Option 3: zone1-local intermediate store `zone1-theme-radio-store` (memory); two-callback relay | 2026-05-12 |
 | Overlay chrome ownership | Deferred to Alert Feed Panel build — decide for all three overlays at once | 2026-05-12 |
+| `security_log` schema extension | Nullable `correlation_id` column added for symmetry with `decision_log`; supersedes `06_SECURITY_COUNCIL.docx` schema text | 2026-05-14 |
+| Served-layout callback smoke test | Open for Phase 2 close-out (IDEA-023 in `ideas.md`) | — |
+| AG Grid dark↔light visual check | Open; 5-minute manual at next app launch | — |
 
 ---
 
@@ -191,4 +199,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-14 — Phase 1 complete; theme toggle fixed; CLAUDE.md rule added.*
+*Last updated: 2026-05-14 — Phase 2 PR-A merged (logging schema, writers, pipeline context).*
