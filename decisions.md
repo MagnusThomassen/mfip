@@ -1900,3 +1900,79 @@ vice versa), refine the rule's calibration heuristics in
 like noise more often than signal, evaluate whether the rule should
 be scoped narrower (e.g. only for tasks above a complexity threshold)
 or removed.
+
+## 2026-05-14 — Line-ending state: core.autocrlf vs .gitattributes
+
+**Decision:** `.gitattributes` at repo root declares
+`* text=auto eol=lf` as the repo-local rule, with explicit `binary`
+markers for `.docx`, `.xlsx`, `.pptx`, `.pdf`. Future contributors and
+CI runners do not need to inherit any specific global git config to
+get correct line-ending behaviour from this repo.
+
+**Context.** Worklog entry `2026-05-13 — Mixed line endings across
+repo Markdown files` observed that `decisions.md` and `worklog.md`
+read as LF while `ideas.md` read as CRLF in the working tree, and
+proposed a normalisation pass via `.gitattributes` plus
+`git add --renormalize .` to fix the divergence. Session 9 executed
+the normalisation. The `.gitattributes` commit landed cleanly; the
+renormalize step produced zero staged changes. Investigation revealed
+`core.autocrlf=true` in the global git config had been silently
+normalising all text files to LF in the object database on commit,
+then converting back to CRLF on Windows checkout. The repo's stored
+state was never mixed; only the working-tree state varied.
+
+**The mental model.** Git has three line-ending state layers:
+
+1. *Working tree* — what's on disk in the checkout. Varies by
+   platform and `core.autocrlf` setting.
+2. *Index* — what's staged for commit. Normalised per `core.autocrlf`
+   on `git add`, or per `.gitattributes` if defined.
+3. *Object database* — what's stored in commits and pushed to the
+   remote. Whatever was in the index at commit time.
+
+The worklog observation was about layer 1 (the working tree). The
+"fix" was about layer 3 (the object database), which was already
+correct. The actual remaining question was: how do future clones —
+without `core.autocrlf=true` in their global config — behave? Answer
+before `.gitattributes`: undefined, contributor-dependent. Answer
+after `.gitattributes`: deterministic, repo-local.
+
+**Why this matters going forward.** Three concrete cases where the
+repo-local rule earns its place:
+
+1. **Mac Mini M4 acquisition** (autumn 2026, per `ideas.md` IDEA-012
+   revisit trigger). Fresh git install, fresh global config. Without
+   `.gitattributes`, the Mac would default to no auto-conversion and
+   the repo would still work — but the *convention* would be
+   undefined. With `.gitattributes`, the convention is part of the
+   repo.
+2. **CI runners** when Phase 2+ scheduled ingestion tests start.
+   Linux runners default to `core.autocrlf=input` (LF in repo, no
+   conversion on checkout); already aligned with our rule, but
+   `.gitattributes` makes the alignment explicit.
+3. **Cloning into Claude Code on a different machine** — already a
+   real case. Session 8's worklog observation arose partly from
+   Claude Code touching files in a working-tree state that wasn't
+   what the on-machine editor showed. Explicit `.gitattributes`
+   removes the dependence on machine-level state.
+
+**The rule, restated:**
+
+- LF in commits, full stop.
+- CRLF in the Windows working tree is fine and expected —
+  `core.autocrlf=true` (global) handles the conversion. Don't try
+  to "fix" working-tree CRLF; it's not broken.
+- Any future "line-endings look wrong" observation: check whether
+  it's about the working tree (don't care) or about a commit
+  (`.gitattributes` should prevent — investigate if it didn't).
+
+**Affected docs:** `.gitattributes` (added; existed from 2026-05-14
+chore commit), `worklog.md` (close-out note corrected in 2026-05-14
+Pass A commit), `decisions.md` (this entry).
+
+**Revisit trigger:** Mac Mini M4 first clone, or first CI runner,
+whichever comes first. Verify that `.gitattributes` produces LF
+working-tree files on those targets without any global config
+dependency. If a contributor (human or AI) reports working-tree
+line-ending weirdness after that, update this entry with the
+observed behaviour and the resolution.
