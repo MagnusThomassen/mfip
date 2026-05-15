@@ -8,6 +8,8 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-15 — decisions.md split ordering: newest-first index, oldest-first body](#2026-05-15--decisionsmd-split-ordering-newest-first-index-oldest-first-body) `meta`
+- [2026-05-15 — Git guardrails hook: Python over shell, settings.json wiring, ship with repo](#2026-05-15--git-guardrails-hook-python-over-shell-settingsjson-wiring-ship-with-repo) `infrastructure` `tooling`
 - [2026-05-14 — Claude Code worktree isolation: parallel Layer 4 agents use --worktree flag per build session](#2026-05-14--claude-code-worktree-isolation-parallel-layer-4-agents-use---worktree-flag-per-build-session) `infrastructure`
 - [2026-05-14 — security_log schema extension: nullable correlation_id for symmetry with decision_log](#2026-05-14--security_log-schema-extension-nullable-correlation_id-for-symmetry-with-decision_log) `data-contract`
 - [2026-05-14 — decision_log schema: medium structure (thin core + two typed columns + JSON payload)](#2026-05-14--decision_log-schema-medium-structure-thin-core--two-typed-columns--json-payload) `data-contract`
@@ -2419,3 +2421,56 @@ periodically and confirming the count tracks expected system-event volume.
 **Affected docs:** `04_BUILD_SEQUENCE.docx` — add worktree setup step to Phase 6 pre-build checklist at next doc refresh. `CLAUDE.md` — no change needed; this is a build-pattern note, not a standing session rule.
 
 **Revisit trigger:** If Claude Code's worktree implementation changes materially in a future version, or if the Phase 6 build reveals that worktree-per-agent creates merge overhead that outweighs the isolation benefit (unlikely given the agents are loosely coupled at the file level).
+
+---
+
+## 2026-05-15 — Git guardrails hook: Python over shell, settings.json wiring, ship with repo
+
+**Tags:** infrastructure, tooling
+
+**Decision:** The Claude Code pre-tool-call guardrail hook that blocks `git push --force`, `git reset --hard`, and destructive `git clean` flags is implemented as a Python script (`.claude/hooks/git-guardrails.py`) wired via `.claude/settings.json`'s `hooks.PreToolUse[]` array. The hook script and `settings.json` are tracked in the repo; only `.claude/settings.local.json` (personal overrides) is gitignored.
+
+**Reasoning:** The Session 15 improvements handoff specified `.claude/hooks/pre-tool-call/git-guardrails.sh` as the working assumption — a shell script in an event-named subdirectory. Verification against Claude Code's actual hook documentation (https://code.claude.com/docs/en/hooks) revealed the real format: event filtering happens via JSON keys in `settings.json` (`PreToolUse`, `PostToolUse`, etc.), not via directory naming. Hook scripts live flat in `.claude/hooks/`, not in event-named subdirectories.
+
+Choice of Python over shell: Windows lacks `bash` in the system `PATH` outside Git Bash. A `.sh` hook would either fail on a clean Windows install or require a fragile assumption about Git Bash availability. Python ships with the MFIP venv (3.12) and is invoked via `py -3.12`, which is on `PATH` after the Python launcher install. Python also gives robust stdlib JSON parsing of the hook's stdin payload (`{tool_name, tool_input.command, ...}`) without external dependencies.
+
+Choice to ship the hook with the repo (rather than blanket-ignoring `.claude/`): the protection is more valuable when it's persistent and shared across machines than when it's local-only and easy to forget. Future clones of the repo get the protection automatically. Personal Claude Code overrides go in `.claude/settings.local.json`, which IS gitignored.
+
+**Implication:**
+
+- The hook fires on every Claude Code Bash tool call. It exits 2 with stderr naming the blocked rule for matching commands; exits 0 silently for everything else.
+- Blocked patterns: `git push` with `--force`, `-f`, or `--force-with-lease`; `git reset --hard`; `git clean` with `-f`, `-fd`, `-fx`, `-fX`. Chained commands (e.g. `git status && git clean -fx`) are detected by full-command-string parsing, not just the leading token.
+- To legitimately bypass the hook for a single command (rare — e.g. a force-push after a deliberate rewrite), disable it explicitly for that one invocation. Do not delete the hook file; do not modify `settings.json` permanently.
+- Future Claude Code sessions using this repo inherit the protection automatically. No additional setup needed.
+- If a future Claude Code version changes the hook discovery format, the script logic is portable — only the wiring in `settings.json` and the directory layout would need updating.
+
+**Affected docs:** `CLAUDE.md` `## Local tooling` section already documents the hook (added in PR #36). No further docs changes required.
+
+**Revisit trigger:** If Claude Code's hook system materially changes (new event names, new wiring format, new stdin payload shape), or if a legitimate operational need to force-push regularly emerges (extremely unlikely under current branch-protection conventions on `main`).
+
+---
+
+## 2026-05-15 — decisions.md split ordering: newest-first index, oldest-first body
+
+**Tags:** meta
+
+**Decision:** `decisions.md` uses split ordering: the `## Index` section lists entries newest-first (most recent at the top of the index); the body of the file lists entries oldest-first (most recent at the bottom of the file). New entries append to the end of the file; new index lines prepend to the top of the index section. This is the convention; do not "fix" either half to match the other.
+
+**Reasoning:** The split convention emerged organically from how the file is used:
+
+- **Index newest-first** so that scanning the index surfaces the freshest decisions immediately. Index entries are for navigation; the most actionable recent thinking should be visible without scrolling.
+- **Body oldest-first** so that the file reads as a chronological log when read top-to-bottom. Commit diffs are also cleaner when new entries append rather than inserting into the middle of the file. Append-only also matches the pattern of `security_log` and `decision_log` — write-once, never-rewrite.
+
+The convention was discovered the hard way in Session 15 when a worktree-isolation decision draft (later landed as PR #35) was written against the assumption that the body was also newest-first. Claude Code's validation gate caught the mismatch before any insertion, and the entry was correctly placed at the end of the file. Recording the convention here so future sessions don't re-discover it.
+
+**Implication:**
+
+- New entries: append to end of file. Add a `---` separator on its own line before the new entry's `##` heading.
+- New index lines: prepend to the top of the `## Index` section (the line immediately after the blank line that follows the `## Index` header — typically line 11 of the file).
+- Same-day entries: still append in body order (oldest of the day first, newest of the day last among that day's entries); index lines for same-day entries prepend in the order they're added (so the most-recently-added entry's index line ends up at the very top of the index).
+- When validating placement before a new entry: check both halves of the file. The body's last entry tells you where to append; the index's first entry tells you what to prepend above.
+- This convention does NOT apply to `worklog.md`, `ideas.md`, or `MEMORY.md`, each of which has its own ordering rules per their respective README sections.
+
+**Affected docs:** None. This entry IS the documentation of the convention. Future session handoffs that touch `decisions.md` should reference this entry if placement ambiguity arises.
+
+**Revisit trigger:** If the file grows large enough that scanning the body top-to-bottom becomes impractical (estimate: ~50+ entries), the convention may need revisiting — perhaps a year-segmented body with newest-year-first, oldest-within-year-first. Not a near-term concern.
