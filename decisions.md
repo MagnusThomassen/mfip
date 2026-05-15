@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-15 — Migrations module refactor: discoverable package, no schema version tracking in v1](#2026-05-15--migrations-module-refactor-discoverable-package-no-schema-version-tracking-in-v1) `infrastructure` `convention`
 - [2026-05-15 — Phase 1 close-out: Dashboard Shell complete, validation pattern proves prospective value](#2026-05-15--phase-1-close-out-dashboard-shell-complete-validation-pattern-proves-prospective-value) `process`
 - [2026-05-15 — Severity casing normalised to Title-case across logging models; `--migrate` flag added to `init_db.py`](#2026-05-15--severity-casing-normalised-to-title-case-across-logging-models---migrate-flag-added-to-init_dbpy) `convention` `infrastructure`
 - [2026-05-15 — `phase-validations/` pattern established](#2026-05-15--phase-validations-pattern-established) `process` `docs`
@@ -2886,3 +2887,88 @@ walkthrough findings carry their own revisit triggers in their
 worklog entries (Zone 1 chrome cluster paired with Zone 2 build;
 F7 architectural scheduled before Zone 2's first component ships).
 The Phase 1 close-out itself is durable: Phase 1 is done.
+
+---
+
+## 2026-05-15 — Migrations module refactor: discoverable package, no schema version tracking in v1
+**Tags:** infrastructure, convention
+
+**Decision:** The single-constant `ROW_TRANSFORM` shape in
+`scripts/init_db.py` introduced in PR #49 (Session 16) is
+refactored into a dedicated `mfip/logging/migrations/` package.
+Each migration lives in a numbered file
+(`NNN_description.py`) exporting `description: str` and
+`transform(row, table_name) -> dict | None`. The `--migrate`
+runner discovers migration files by glob and applies them in
+numeric prefix order. No schema-version tracking in v1.
+
+**Context.** The `worklog.md` 2026-05-15 entry "Migrations
+module refactor trigger flagged" set migration #2 as the
+trigger for this refactor. Item 2a (adding `row_seq` IDENTITY
+column) is migration #2; this refactor lands as Item 2a-prereq
+ahead of it.
+
+**Why discoverable package over single-constant:**
+"Building the abstraction from one example is a guess; building
+it from two is a fit." With migration #2 imminent, the right
+shape becomes clear: one file per migration, runner discovers
+them. The original PR #49 entry on the row-transform pattern
+explicitly anticipated this refactor with this trigger.
+
+**Why no schema version tracking in v1:**
+Schema version tracking (Django/Alembic/Flyway-style) requires
+a `schema_meta` table tracking applied migrations. Adding that
+table is itself a schema change requiring its own migration —
+chicken-and-egg. The marginal value at the current scale (one
+migration in history, soon to be two) is below the marginal
+cost. The runner trusts the operator to run `--migrate` after
+each pull; `init_db.py`'s EXPECTED_SCHEMA verifier catches
+schema drift and exits non-zero, which is a sufficient safety
+net for v1.
+
+**Revisit trigger:** When migration history accumulates past 5
+entries, or when MFIP starts running on multiple machines (lab
++ home, or a second analyst joins), add schema-version tracking
+via a new migration that creates a `schema_meta` table.
+
+**Implication:**
+- All future schema migrations land as new `NNN_*.py` files in
+  `mfip/logging/migrations/`. The runner needs no changes for
+  new migrations to be picked up.
+- The migration discovery order is the integer prefix, sorted
+  ascending. Numbering gaps are allowed (skip a number if a
+  migration is later removed) but discouraged.
+- Migrations are idempotent on their target output state by
+  convention. The severity migration (001) is idempotent on
+  already-Title-case input; future migrations should follow.
+- Migrations preserve the existing skip-at-INSERT-layer
+  behaviour for v1. The
+  `transform(row, table_name) -> dict | None` signature is the
+  new package-level convention, but migration 001 never returns
+  `None` — unknown severities still reach the DB INSERT layer
+  where the CHECK constraint rejects them and `_replay_rows`
+  records the skip. Future migrations may use `None`-return to
+  skip rows at the transform layer (e.g. dropping rows that
+  violate a new invariant); when they do, the migration file's
+  docstring should document the skip semantics. The two skip
+  loci (transform vs INSERT) accumulate to separate counters
+  that contribute to the same exit-code-2 trigger.
+
+**Affected files:**
+- `mfip/logging/migrations/__init__.py` (new)
+- `mfip/logging/migrations/001_severity_title_case.py` (new;
+  content moved from `scripts/init_db.py`)
+- `scripts/init_db.py` (refactored runner; removed
+  `ROW_TRANSFORM` constant and local transform function)
+- `tests/logging/test_migrations.py` (new; discovery order
+  test)
+- `MEMORY.md` — `What Is Built` table updated to reflect
+  migrations package location.
+- `worklog.md` — "Migrations module refactor trigger flagged"
+  entry closes (status `CLOSED — fixed in this PR`).
+
+**Revisit trigger (operational):** If the discovery order ever
+needs to depend on something other than the integer prefix (e.g.
+hot-fix migration that must apply before a number-larger
+migration that already ran), the file-renaming workaround is
+the v1 answer; a real dependency-graph runner is the v2 answer.

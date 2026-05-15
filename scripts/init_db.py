@@ -28,12 +28,13 @@ against the canonical form is more reliable than parsing the source.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Callable
+from types import ModuleType
 
 import duckdb
 
@@ -188,32 +189,40 @@ def init_db(db_path: Path | None = None) -> Path:
     return db_path
 
 
-RowTransform = Callable[[dict, str], dict]
+def _discover_migrations() -> list[tuple[str, ModuleType]]:
+    """Discover migration modules in `mfip/logging/migrations/`.
 
+    Returns ``[(filename, module), ...]`` ordered by the integer
+    prefix of the filename (`001_*.py`, `002_*.py`, …). Files not
+    matching `NNN_*.py` are ignored. See decisions.md 2026-05-15
+    "Migrations module refactor: discoverable package, no schema
+    version tracking in v1".
 
-def _transform_row_severity_to_title_case(row: dict, table_name: str) -> dict:
-    """Row transform for the 2026-05-15 severity-casing migration.
-
-    Maps UPPER-case severity values to Title-case on `security_log` rows.
-    Returns the row unchanged for any other table.
+    Modules are loaded by absolute file path via ``importlib.util``
+    rather than ``import_module`` so this works whether the script
+    is invoked as ``python scripts/init_db.py`` (script-on-sys.path)
+    or ``python -m mfip.something`` (package-on-sys.path).
     """
-    if table_name != "security_log":
-        return row
-    severity_map = {
-        "ADVISORY": "Advisory",
-        "WARNING": "Warning",
-        "CRITICAL": "Critical",
-    }
-    if "severity" in row and row["severity"] in severity_map:
-        row = dict(row)
-        row["severity"] = severity_map[row["severity"]]
-    return row
-
-
-# Registered as the current migration's transform. When migration #2 lands,
-# refactor to a dedicated `mfip/logging/migrations/` module per
-# `worklog.md` 2026-05-15 "Migrations module refactor trigger flagged".
-ROW_TRANSFORM: RowTransform = _transform_row_severity_to_title_case
+    pkg_path = (
+        Path(__file__).resolve().parent.parent
+        / "mfip"
+        / "logging"
+        / "migrations"
+    )
+    migration_files = sorted(
+        pkg_path.glob("[0-9][0-9][0-9]_*.py"),
+        key=lambda p: int(p.stem.split("_", 1)[0]),
+    )
+    discovered: list[tuple[str, ModuleType]] = []
+    for f in migration_files:
+        module_name = f"mfip.logging.migrations.{f.stem}"
+        spec = importlib.util.spec_from_file_location(module_name, f)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Could not build spec for migration {f}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        discovered.append((f.name, module))
+    return discovered
 
 
 def _read_table_rows(
@@ -263,20 +272,30 @@ def _dump_rows_to_jsonl(
 def _replay_rows(
     conn: duckdb.DuckDBPyConnection,
     rows_by_table: dict[str, tuple[list[str], list[dict]]],
-    transform: RowTransform | None,
-) -> tuple[dict[str, int], dict[str, int]]:
+    migrations: list[tuple[str, ModuleType]],
+) -> tuple[dict[str, int], dict[str, int], dict[str, int]]:
     """Re-insert rows into the freshly-created tables.
 
-    Each row is transformed via `transform` (if provided) before INSERT.
-    Rows that violate the new schema (e.g. CHECK constraint failures) are
-    caught per-row and counted as skipped. Returns
-    (preserved_per_table, skipped_per_table) keyed by table name.
+    Each row is passed through every discovered migration's
+    ``transform(row, table)`` in order before INSERT. A migration
+    returning ``None`` skips the row at the transform layer
+    (counted in ``transform_skipped``). Rows that survive every
+    transform but violate the new schema (e.g. CHECK constraint
+    failures) are caught per-row at INSERT time (counted in
+    ``insert_skipped``). Both skip loci contribute to the same
+    exit-code-2 trigger; see decisions.md 2026-05-15 entry on
+    the migrations refactor.
+
+    Returns (preserved, transform_skipped, insert_skipped), each
+    keyed by table name.
     """
     preserved: dict[str, int] = {}
-    skipped: dict[str, int] = {}
+    transform_skipped: dict[str, int] = {}
+    insert_skipped: dict[str, int] = {}
     for table, (columns, rows) in rows_by_table.items():
         preserved[table] = 0
-        skipped[table] = 0
+        transform_skipped[table] = 0
+        insert_skipped[table] = 0
         if not rows:
             continue
         placeholders = ", ".join(["?"] * len(columns))
@@ -285,28 +304,42 @@ def _replay_rows(
             f"INSERT INTO {table} ({col_list}) VALUES ({placeholders})"
         )
         for row in rows:
-            transformed = transform(row, table) if transform else row
+            transformed: dict | None = row
+            skipped_at_transform = False
+            for filename, mig in migrations:
+                transformed = mig.transform(transformed, table)
+                if transformed is None:
+                    transform_skipped[table] += 1
+                    print(
+                        f"  skipped row in {table} at {filename}",
+                        file=sys.stderr,
+                    )
+                    skipped_at_transform = True
+                    break
+            if skipped_at_transform:
+                continue
+            assert transformed is not None  # narrow for type checker
             values = tuple(transformed.get(col) for col in columns)
             try:
                 conn.execute(insert_sql, values)
             except duckdb.Error as exc:
-                skipped[table] += 1
+                insert_skipped[table] += 1
                 print(
                     f"  skipped row in {table}: {type(exc).__name__}",
                     file=sys.stderr,
                 )
                 continue
             preserved[table] += 1
-    return preserved, skipped
+    return preserved, transform_skipped, insert_skipped
 
 
 def _migrate_with_preservation(
     conn: duckdb.DuckDBPyConnection,
     db_path: Path,
-    transform: RowTransform | None,
+    migrations: list[tuple[str, ModuleType]],
     yes: bool,
 ) -> int:
-    """Dump → drop → recreate → re-insert with optional transform."""
+    """Dump → drop → recreate → re-insert through discovered migrations."""
     existing = sorted(_list_application_tables(conn))
     if not existing:
         print("No existing application tables; applying fresh schema.")
@@ -323,6 +356,13 @@ def _migrate_with_preservation(
     dump_path = _migration_dump_path(db_path)
     _dump_rows_to_jsonl(conn, existing, dump_path)
     print(f"Pre-migration dump: {dump_path}")
+
+    if migrations:
+        print(f"Applying {len(migrations)} migration(s):")
+        for filename, mig in migrations:
+            print(f"  {filename}: {getattr(mig, 'description', '<no description>')}")
+    else:
+        print("No migrations discovered; rows will be reinserted as-is.")
 
     if not yes:
         ans = input(
@@ -345,18 +385,29 @@ def _migrate_with_preservation(
         conn.execute("ROLLBACK")
         raise
 
-    preserved, skipped = _replay_rows(conn, rows_by_table, transform)
+    preserved, transform_skipped, insert_skipped = _replay_rows(
+        conn, rows_by_table, migrations
+    )
 
     total_preserved = sum(preserved.values())
-    total_skipped = sum(skipped.values())
+    total_transform_skipped = sum(transform_skipped.values())
+    total_insert_skipped = sum(insert_skipped.values())
+    total_skipped = total_transform_skipped + total_insert_skipped
     print(f"Preserved: {total_preserved} row(s)")
     for table, count in preserved.items():
         print(f"  {table}: {count}")
     if total_skipped:
         print(f"Skipped: {total_skipped} row(s) — review dump")
-        for table, count in skipped.items():
-            if count:
-                print(f"  {table}: {count}")
+        if total_transform_skipped:
+            print(f"  at transform layer: {total_transform_skipped}")
+            for table, count in transform_skipped.items():
+                if count:
+                    print(f"    {table}: {count}")
+        if total_insert_skipped:
+            print(f"  at INSERT layer: {total_insert_skipped}")
+            for table, count in insert_skipped.items():
+                if count:
+                    print(f"    {table}: {count}")
         return 2
     return 0
 
@@ -434,7 +485,7 @@ def main(argv: list[str] | None = None) -> int:
             if args.no_preserve:
                 return _migrate_no_preserve(conn, yes=args.yes)
             return _migrate_with_preservation(
-                conn, db_path, ROW_TRANSFORM, yes=args.yes
+                conn, db_path, _discover_migrations(), yes=args.yes
             )
 
         present = _list_application_tables(conn)
