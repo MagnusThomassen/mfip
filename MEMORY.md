@@ -59,6 +59,9 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 | Log writer functions | `mfip/logging/writers.py` | `write_decision`, `append_security_log`; append-only enforced by absence of update/delete functions in module API |
 | Pipeline context module | `mfip/pipeline/context.py` | `contextvars.ContextVar` for `correlation_id`; `new_/get_/set_/reset_` API |
 | Logging tests | `tests/logging/test_writers.py`, `tests/pipeline/test_context.py` | 12 passing (7 writer + 5 context); 37 total green |
+| `CONTEXT.md` | `repo\CONTEXT.md` | Canonical pipeline/agent domain language; session/build terms remain in `CLAUDE.md` |
+| Debugging protocol | `CLAUDE.md § Debugging protocol` | Six-step loop for runtime-only failures (reproduce → minimise → hypothesise → instrument → fix → regression-test) |
+| Git guardrails hook | `.claude/hooks/git-guardrails.py` | Blocks `git push --force` (any variant), `git reset --hard`, destructive `git clean` flags; wired via `.claude/settings.json` `PreToolUse` |
 
 ---
 
@@ -199,4 +202,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-14 — Phase 2 PR-A merged (logging schema, writers, pipeline context).*
+*Last updated: 2026-05-15 — Session 15A improvements merged (CONTEXT.md, debugging protocol, git guardrails hook).*
