@@ -56,6 +56,42 @@ These are non-negotiable and come from the design docs:
 8. **Bloomberg = market data only.** Financial statements come from annual report PDFs via Extractor A. Bloomberg's normalised FA data is excluded by design.
 9. **FSA Agent is a hard prerequisite for RE Valuation Agent.** RE cannot run without reformulated statements.
 
+## Debugging protocol
+
+When a bug passes pytest but fails at runtime, follow this loop
+exactly. Do not jump to "fix" before completing reproduce and
+minimise.
+
+1. **Reproduce** — Confirm the failure is consistent. State the
+   exact command, the exact output, and the exact line it fails on.
+2. **Minimise** — Strip the reproduction to the smallest case that
+   still fails. If it involves a Dash callback, test the callback
+   in isolation before testing the full page.
+3. **Hypothesise** — State one or two specific candidate causes
+   before touching any code. Write them out explicitly.
+4. **Instrument** — Add a targeted log entry to confirm or refute
+   each hypothesis. Where to write:
+   - If a pipeline `correlation_id` is in context (via
+     `mfip.pipeline.context`), write to `decision_log`.
+   - If no pipeline context exists (system-level event), write to
+     `security_log` — `correlation_id` is nullable there.
+   - For one-shot debugging that should never persist, use a
+     temporary `print` with a `# DEBUG` tag and remove before
+     commit.
+   Do not add permanent logging for debug purposes.
+5. **Fix** — Apply the minimal change that resolves the confirmed
+   cause. Do not fix adjacent issues in the same commit.
+6. **Regression-test** — Add or update a test that would have caught
+   this failure before it reached the browser. If a served-layout
+   smoke test would have caught it (see
+   `tests/test_served_layout.py` — Phase 1 pattern that catches Dash
+   callback registration and layout-rendering bugs that unit tests
+   miss), add one there.
+
+If the bug survives step 3 without a clear hypothesis, stop and
+escalate to the chat-based Claude before proceeding. Do not
+guess-and-fix.
+
 ## Storage layout
 
 Local Windows filesystem only. No SharePoint, no OneDrive for Business as a runtime component. (University OneDrive is used as a one-way courier between the Kingston Bloomberg lab and the home machine — see `07_BLOOMBERG_EXPORT_TEMPLATE.docx` STORAGE LAYOUT.)
