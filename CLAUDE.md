@@ -10,6 +10,10 @@ MFIP is a multi-agent financial analysis pipeline that takes company filings and
 
 ## Terminology
 
+This section covers session and build terms only. For pipeline and
+agent terminology (Extractors, Validator Agent, Approved Package,
+Reformulated statements, etc.), see `CONTEXT.md` at repo root.
+
 These terms are canonical across all MFIP discussions, design docs, decisions log, and ideas log. Use them consistently; do not invent synonyms.
 
 | Term | Refers to |
@@ -34,6 +38,9 @@ These terms are canonical across all MFIP discussions, design docs, decisions lo
    - **Routine lookups** (colour values, sheet names, zone dimensions) — read local, no confirmation needed.
    - **Architectural reads** (constraints, agent contracts, decisions you'll encode in code) — read local, then ask the user: "`docs\README.md` last sync is `<date>`. Is Project Knowledge newer?"
    - If the user says Project Knowledge is newer, ask them to paste the relevant section. Do not proceed on potentially-stale guidance.
+4. Read `CONTEXT.md` for canonical pipeline/agent terminology before
+   writing any agent code or naming any variable that corresponds
+   to a pipeline concept.
 
 ## Division of responsibilities
 
