@@ -320,3 +320,36 @@ followed by `pip install -r requirements.lock.txt`. Consider a
 `decisions.md` 2026-05-14 "security_log schema extension". Design doc
 text needs manual update by Magnus in a non-code pass — not blocking,
 but worth tracking. Close when the docx file is updated.
+
+---
+
+## 2026-05-15 — `.env` missing despite Phase 0 marked complete
+
+**Status:** OPEN — partially closed by this PR; awaiting Magnus's manual
+`.env` creation before Session 15B's PR-B (`mfip_alerts.py`) can run
+SMTP delivery.
+
+**Discovered:** Pre-Session-15B credential setup revealed that
+`C:\MFIP\repo\.env` does not exist. A whole-tree `Get-ChildItem`
+search for `.env*` across `C:\MFIP\` returned no matches. Phase 0's
+completion checklist listed ".env created" as a deliverable; either
+it never existed or it was deleted at some point (possibly during the
+Session 14 venv recovery, though there's no direct evidence linking
+the two).
+
+**Resolved (in-PR portion):** Created `.env.example` as a tracked
+template (this PR). Magnus creates the real `.env` manually
+post-merge by copying the example and filling in SMTP credentials
+generated from his Google Account (Gmail app password, requires
+2FA-enabled account). Real `.env` is gitignored (`.gitignore` line 29)
+and stays untracked.
+
+**Lesson:** Phase completion checklists should be verified against
+filesystem state at close-out, not just trusted as self-reports. For
+future phase close-outs, add a "verify all listed deliverables exist
+on disk" step before flipping the phase status to ✅.
+
+**Closes when:** Magnus confirms `.env` is populated with real SMTP
+credentials and pytest still 37/37 green. Then this entry flips to
+`CLOSED-PHASE-0-RECONCILED` and the Phase 0 status line in `MEMORY.md`
+gets a footnote acknowledging the post-hoc fix.

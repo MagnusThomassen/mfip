@@ -40,6 +40,7 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 | Repo + venv | `C:\MFIP\repo\` | Python 3.12.10, `requirements.lock.txt` pinned. Venv not Git-tracked; recreate via `py -3.12 -m venv .venv` + `pip install -r requirements.lock.txt` if missing. See `worklog.md` 2026-05-14 entry. |
 | Folder structure | `C:\MFIP\` | 8 top-level dirs, bloomberg_archive per-company layout |
 | `.env` | `C:\MFIP\repo\.env` | Off Git; Magnus holds keys |
+| `.env.example` | `repo\.env.example` | Environment variable template; real `.env` is Magnus-side, gitignored, not in repo |
 | Bloomberg templates | `repo\templates\bloomberg\` | Git-versioned; FX, Indices, Master xlsx + 4 .py support files |
 | Bloomberg validator | `scripts/ingestion/validate_bloomberg_workbook.py` | PASS / ADVISORY / FAIL; encodes 07_BLOOMBERG_EXPORT_TEMPLATE.docx contract |
 | `CLAUDE.md` | `repo\CLAUDE.md` | Session-bootstrap file for Claude Code; rewritten 2026-05-09 |
@@ -202,4 +203,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-15 — Session 15A improvements merged (CONTEXT.md, debugging protocol, git guardrails hook).*
+*Last updated: 2026-05-15 — Session 15A complete; `.env.example` template added (real `.env` is Magnus-side manual step pre-15B).*
