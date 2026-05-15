@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-15 — Phase 1 close-out: Dashboard Shell complete, validation pattern proves prospective value](#2026-05-15--phase-1-close-out-dashboard-shell-complete-validation-pattern-proves-prospective-value) `process`
 - [2026-05-15 — Severity casing normalised to Title-case across logging models; `--migrate` flag added to `init_db.py`](#2026-05-15--severity-casing-normalised-to-title-case-across-logging-models---migrate-flag-added-to-init_dbpy) `convention` `infrastructure`
 - [2026-05-15 — `phase-validations/` pattern established](#2026-05-15--phase-validations-pattern-established) `process` `docs`
 - [2026-05-15 — MFIP alert delivery uses service-account separation: magiconus@gmail.com sends to magnus.thomass1@gmail.com](#2026-05-15--mfip-alert-delivery-uses-service-account-separation-magiconusgmailcom-sends-to-magnusthomass1gmailcom) `infrastructure` `security`
@@ -2798,3 +2799,90 @@ migration runner proves heavy for v1's needs (unlikely given how
 infrequent schema changes will be), simplify by removing
 preservation as the default — but only after one full migration
 cycle on real data has happened.
+
+---
+
+## 2026-05-15 — Phase 1 close-out: Dashboard Shell complete, validation pattern proves prospective value
+**Tags:** process
+
+**Decision:** Phase 1 (Dashboard Shell) is formally closed.
+Validation evidence is recorded in
+`phase-validations/PHASE_1_VALIDATION.md`, signed off 2026-05-15.
+Phase 1's deliverables checklist is complete with two by-design
+deferrals (Backtesting Panel placeholder + Security Alert overlay,
+both gated on later phases). Six walkthrough findings logged to
+`worklog.md` for follow-up; one substantive gap (Zone 2-4
+placeholder containers shipped invisibly) was fixed in-session via
+PR #50 before close-out.
+
+**Context.** Phase 1 carried `✅ Complete` status in `MEMORY.md`
+since Session 10. The status was based on the deliverables
+checklist, not on a walkthrough — the same self-report pattern that
+allowed `.env` (PR #41) and the production DB schema (PR #45) to be
+marked shipped while the artifacts were missing or broken. Item 0
+of this session established the `phase-validations/` pattern to
+break that self-report habit. Phase 0 received a retroactive
+validation document. Phase 1 — already marked complete — receives
+its validation document during this session as the first
+prospective use of the pattern.
+
+The walkthrough produced findings the checklist could not have:
+
+- **Substantive gap caught and fixed in-session.** The `/analysis`
+  route's Zone 2-4 placeholder containers existed as inert empty
+  `html.Div`s in the DOM but rendered to zero visible pixels — no
+  CSS targeted their IDs, no internal content. The checklist had
+  this as ✅; the browser had it as a vast empty canvas below
+  Zone 1. PR #50 (Item C-1) added CSS Grid layout, title and
+  caption children, and proper inert-chrome styling. Zone 2-4 now
+  render visibly per spec proportions (60/40 horizontal × 65/35
+  vertical, 8px gaps).
+
+- **Six smaller findings logged for future work.** Theme popover
+  and Custom date range picker both need outside-click dismissal
+  (F1 + F4a-dismiss → outside-click-dismissal cluster). The theme
+  cog and the `● Idle` indicator both need explanatory tooltips
+  (F2 + F4b-i → Zone 1 chrome tooltips cluster). Dash core
+  components (Dropdown, DatePickerRange) don't inherit theme tokens
+  and need a dedicated overrides CSS file (F7 + F8 →
+  architectural).
+
+- **Pre-existing concerns reconciled.** Focus ring visibility
+  across Zone 1 interactive elements — flagged as broken across
+  Session 7 Parts 2–3 — confirmed working as intended (F9). The
+  Session 7 worklog entry (originally IDEA-026, migrated to
+  worklog as CLOSED-PREMATURE) had already correctly archived its
+  reasoning ("re-evaluate when Zone 2 ships"); F9 is the natural
+  successor under "Working as intended."
+
+**What the pattern showed prospectively.** Item 0's retroactive
+PHASE_0 demonstrated the pattern works as an audit. Phase 1's
+validation demonstrates it works as a *prospective gate* — the
+walkthrough caught one substantive defect (Zone 2-4 invisibility),
+six smaller papercuts, and reconciled one stale concern, in a
+single sitting. The Zone 2-4 finding alone justifies the
+discipline: that gap would have shipped invisibly into Phase 2
+work and resurfaced as confusion in Phase 5 or later, with the
+diagnosis cost compounding the longer it stayed hidden.
+
+The pattern is now established for the remaining phases. Phase 2
+gets its skeleton document at Session 17 kickoff (PR-C ships, then
+the full Phase 2 walkthrough produces its own validation doc).
+
+**Affected docs.**
+
+- `phase-validations/PHASE_1_VALIDATION.md` — the validation
+  evidence; created and committed in Item C-2 (PR #51).
+- `MEMORY.md` — Phase 1 row stays `✅ Complete`; AG Grid entry
+  migrates from Active Decisions to Open Loops (recategorisation,
+  not status change); Last-updated line refreshes.
+- `worklog.md` — three new combined entries shipped in Item C-2
+  (outside-click dismissal cluster, Zone 1 chrome tooltips
+  cluster, Dash core component overrides architectural).
+- `decisions.md` — this entry.
+
+**Revisit trigger.** None — this is a close-out entry. The six
+walkthrough findings carry their own revisit triggers in their
+worklog entries (Zone 1 chrome cluster paired with Zone 2 build;
+F7 architectural scheduled before Zone 2's first component ships).
+The Phase 1 close-out itself is durable: Phase 1 is done.
