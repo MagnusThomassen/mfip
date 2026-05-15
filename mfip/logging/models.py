@@ -12,7 +12,7 @@ Schemas: decisions.md 2026-05-14 "decision_log schema" and
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Annotated, Literal, Union
 from uuid import UUID, uuid4
@@ -60,7 +60,7 @@ class DecisionLogEntry(BaseModel):
 
     id: UUID = Field(default_factory=uuid4)
     correlation_id: UUID
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     agent: str
     decision_type: str
     phase: Phase
@@ -95,7 +95,7 @@ class SecurityLogEntry(BaseModel):
 
     log_id: UUID = Field(default_factory=uuid4)
     correlation_id: UUID | None = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     severity: Severity
     issuing_agent: str
     flagging_officer: str | None = None

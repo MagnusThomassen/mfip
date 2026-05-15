@@ -325,9 +325,9 @@ but worth tracking. Close when the docx file is updated.
 
 ## 2026-05-15 — `.env` missing despite Phase 0 marked complete
 
-**Status:** OPEN — partially closed by this PR; awaiting Magnus's manual
-`.env` creation before Session 15B's PR-B (`mfip_alerts.py`) can run
-SMTP delivery.
+**Status:** CLOSED — `.env` created and verified 2026-05-15 (populated,
+gitignored, no BOM, 17 lines, pytest 37/37 green). Phase 0's `.env`
+deliverable is now reconciled in fact even if not in checklist text.
 
 **Discovered:** Pre-Session-15B credential setup revealed that
 `C:\MFIP\repo\.env` does not exist. A whole-tree `Get-ChildItem`
@@ -353,3 +353,11 @@ on disk" step before flipping the phase status to ✅.
 credentials and pytest still 37/37 green. Then this entry flips to
 `CLOSED-PHASE-0-RECONCILED` and the Phase 0 status line in `MEMORY.md`
 gets a footnote acknowledging the post-hoc fix.
+
+**Closed:** 2026-05-15. Magnus completed manual `.env` creation between
+Session 15A close-out (PR #41, commit 23085f0) and Session 15B kickoff.
+File verified: exists at `C:\MFIP\repo\.env`, gitignored via
+`.gitignore` line 29, contains all five `MFIP_SMTP_*` keys, UTF-8
+without BOM, 17 lines. SMTP delivery itself is exercised in PR-B
+(`mfip_alerts.py`) — if SMTP fails, that opens a new worklog entry,
+not a reopening of this one.
