@@ -93,7 +93,6 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 | `security_log` schema extension | Nullable `correlation_id` column added for symmetry with `decision_log`; supersedes `06_SECURITY_COUNCIL.docx` schema text | 2026-05-14 |
 | Severity casing | Title-case (`Critical`/`Warning`/`Advisory`) across both `Alert` and `SecurityLogEntry` models | 2026-05-15 |
 | Served-layout callback smoke test | Open for Phase 2 close-out (IDEA-023 in `ideas.md`) | — |
-| AG Grid dark↔light visual check | Cannot exercise yet — Zone 4 is placeholder card with no grid inside. Exercise at Zone 4 first-component build. | — |
 
 ---
 
@@ -112,6 +111,7 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 | Overlay chrome ownership (settings panel, alert feed, Security Alert Overlay) | Decide at Alert Feed Panel build |
 | Zone 1 chrome styling completeness (popover dismissal, tooltips on display-only indicators) | `worklog.md` — outside-click dismissal cluster + Zone 1 chrome tooltips cluster (Session 16 walkthrough); schedule with Zone 2 build |
 | Dash core component overrides (Dropdown, DatePickerRange) | `worklog.md` — architectural entry (Session 16 walkthrough); schedule before Zone 2 first component |
+| AG Grid dark↔light visual check | Exercise at Zone 4 first-component build; AG Grid renders only when Zone 4's Holdings Table ships |
 
 ---
 
@@ -208,4 +208,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-15 — Session 16 Item C-2: Phase 1 validation signed-off; six walkthrough findings logged to worklog; MEMORY open loops reconciled.*
+*Last updated: 2026-05-15 — Session 16 Item D: Phase 1 close-out logged; AG Grid entry migrated to Open Loops.*
