@@ -430,3 +430,17 @@ The README "First-time setup" section introduced in this PR is the operational c
 **Test coverage:** The script's three cases (empty, current, drift) were exercised manually in this PR using a temp DB with simulated drift (an unexpected extra column). Adding automated tests for the script itself is out of scope — it's a one-shot operational tool, not pipeline code. If schema drift becomes a frequent concern (it shouldn't until Phase 3+), revisit and add tests then.
 
 **Verify after this PR:** Live alert test from Session 15B can now complete end-to-end. SMTP + render + `security_log` write all succeed. Closing condition for the prior `worklog.md` entries (`.env missing` and the original Phase 2 PR-A claim of "schema created") is now genuinely met.
+
+---
+
+## 2026-05-15 — Outlook quarantine of MFIP alert mail (resolved by service-account redesign)
+
+**Status:** CLOSED — resolved by switching to Gmail-to-Gmail delivery via service-account separation. See `decisions.md` 2026-05-15 entry on service-account separation.
+
+**Discovered:** Session 15B's live alert test (PR-B validation) confirmed SMTP send succeeded and `security_log` row was written correctly, but the alert email did not arrive at `magnus.t@live.no` (Outlook). Manual emails between the same accounts initially also failed; mutual contact-add resolved some but not all delivery. Forwarding the email manually from Gmail in the same thread DID arrive at Outlook, proving the content was not being rejected — the sender-recipient pair was being filtered by Microsoft's anti-spam classifier.
+
+**Investigation summary:** Live runs of `live_alert_test.py` (correlation IDs `8b4c3eea-cc8c-4c52-950e-24329540e539`, `0e3dd879-4d8e-4481-ad9b-a6278f49e765`, `0809d4b7-f68e-475e-acc9-2ca37449bae0`) confirmed the SMTP and rendering paths work; the `security_log` write worked after PR #45 fixed the schema bootstrap. A CC-routing diagnostic (`live_alert_test_cc.py`, correlation ID `65843789-e0a3-4b8c-9e64-d74d332f0635`) routed primary delivery to a Gmail recipient with Outlook on CC; the Gmail leg succeeded but the Outlook leg outcome was inconclusive enough that continuing iteration would have been speculative.
+
+**Resolution (this PR):** MFIP alert delivery configuration switched per `decisions.md` 2026-05-15 service-account separation entry. Outlook is no longer in the alert path. The Outlook quarantine pattern itself remains documented as a parking-lot item in `ideas.md` (IDEA-029).
+
+**Closing note:** All MFIP alerts module behaviour (SMTP, render, `security_log` write, drain queue) is validated working end-to-end. The Outlook-delivery question turned out to be a recipient-platform problem, not an MFIP problem.

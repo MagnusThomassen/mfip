@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-15 — MFIP alert delivery uses service-account separation: magiconus@gmail.com sends to magnus.thomass1@gmail.com](#2026-05-15--mfip-alert-delivery-uses-service-account-separation-magiconusgmailcom-sends-to-magnusthomass1gmailcom) `infrastructure` `security`
 - [2026-05-15 — security_log self-event encoding: event_type as issue_description prefix, structured details as JSON in impact_assessment](#2026-05-15--security_log-self-event-encoding-event_type-as-issue_description-prefix-structured-details-as-json-in-impact_assessment) `convention` `infrastructure`
 - [2026-05-15 — mfip_alerts implementation choices: severity colors, 30-line stack truncation, Windows-safe queue filenames, SMTP 30s timeout, drain-on-every-send](#2026-05-15--mfip_alerts-implementation-choices-severity-colors-30-line-stack-truncation-windows-safe-queue-filenames-smtp-30s-timeout-drain-on-every-send) `implementation` `infrastructure`
 - [2026-05-15 — decisions.md split ordering: newest-first index, oldest-first body](#2026-05-15--decisionsmd-split-ordering-newest-first-index-oldest-first-body) `meta`
@@ -2538,3 +2539,36 @@ Encoding rationale:
 **Affected docs:** `mfip/alerts/sender.py` docstrings reference this entry. Future self-event-writing modules should reference this entry in their own docs.
 
 **Revisit trigger:** If three or more modules write self-events with the same `event_type`, consider introducing a typed wrapper function (e.g. `append_self_event(event_type, description, details, severity, ...)`) that encodes the convention. If the convention drifts across modules, escalate to a code-level enforcement.
+
+---
+
+## 2026-05-15 — MFIP alert delivery uses service-account separation: magiconus@gmail.com sends to magnus.thomass1@gmail.com
+
+**Tags:** infrastructure, security
+
+**Decision:** MFIP's `mfip_alerts` module authenticates as `magiconus@gmail.com` (a dedicated service account) and delivers alerts to `magnus.thomass1@gmail.com` (Magnus's primary Gmail). Outlook (`magnus.t@live.no`) is removed from the alert delivery path. Credentials live in `.env`; no code change required since sender and recipient identities are env-driven.
+
+**Reasoning:** Two independent reasons converged on this configuration:
+
+1. **Service-account separation as a security pattern.** Granting SMTP app-password access to a dedicated service account rather than a personal primary account reduces blast radius if credentials leak. The MFIP `.env` file is gitignored and on a single trusted machine, so the realistic threat is low — but the architecture story ("MFIP uses a service account, not my personal credentials") reads better and is more defensible if MFIP is ever shown professionally. The marginal cost of running a second Gmail account is small; the marginal benefit is real if small. Adopted as a deliberate design choice, not a workaround.
+
+2. **Outlook delivery is operationally unreliable from automated Gmail senders.** Microsoft's anti-spam infrastructure quarantines mail from new automated senders, even after intermediate trust signals like mutual contact adds and same-thread replies. Two live test runs in Session 15B confirmed:
+   - SMTP send succeeds at the Gmail layer (Sent folder confirms).
+   - Mail is accepted by Microsoft's gateway.
+   - Mail does NOT reach `magnus.t@live.no`'s inbox or Junk folder reliably.
+   - Mail DOES arrive when manually forwarded from Gmail to Outlook in the same thread, which proves the content itself isn't being rejected — only the sender-recipient pair is being filtered.
+
+   A CC-routing diagnostic (Gmail primary recipient, Outlook on CC) was tested as a workaround. The Gmail leg worked; the Outlook leg's status was insufficiently validated for production use. Rather than continue iterating against an opaque Microsoft classifier with no public rules, the cleaner path is to route alerts to a reliable inbox (Gmail) and accept that Outlook is out of scope.
+
+**Implication:**
+
+- `.env` keys changed: `MFIP_SMTP_USER` → `magiconus@gmail.com`; `MFIP_SMTP_APP_PASSWORD` → new app password generated for `magiconus@gmail.com`; `MFIP_ALERT_RECIPIENT` → `magnus.thomass1@gmail.com`. Host and port unchanged.
+- `magiconus@gmail.com` requires 2FA enabled and an app password generated. Recovery info and backup codes should be saved offline.
+- Future MFIP integrations needing Google service access (Calendar, Drive, etc.) attach to `magiconus@gmail.com`, not Magnus's primary account. Service-account-by-default becomes the architecture pattern.
+- The `magnus.t@live.no` recipient pattern is parked. If MFIP later needs phone-accessible alerts via Outlook (or any non-Gmail account), revisit via the `ideas.md` entry tracking the Outlook investigation.
+- Test scripts (`live_alert_test.py`, etc.) need no code changes — they read `MFIP_ALERT_RECIPIENT` from env. After this PR, re-running the live alert test validates the new configuration.
+- The Outlook-delivery investigation effort spent in Session 15B is **not wasted** — it produced the diagnostic that confirmed the quarantine, which produced this design decision. Future sessions don't need to re-discover the issue.
+
+**Affected docs:** `.env.example` placeholder values are generic and need no change. `worklog.md` and `ideas.md` updated in this PR.
+
+**Revisit trigger:** If `magiconus@gmail.com` gets flagged by Google (rare but possible for accounts that send only programmatic mail), or if MFIP grows to need delivery to a recipient that can't be Gmail-hosted (e.g. corporate inbox during a job placement), revisit the delivery architecture. Candidate replacements at that point: dedicated transactional email service (SendGrid, Postmark, Resend), or a self-hosted SMTP relay.

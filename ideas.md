@@ -1563,3 +1563,26 @@ principle the article recommends. No new work needed on that front.
 
 **Decision gate:** Claude Code adoption (IDEA-016 approval, Phase 3).
 Read this entry alongside IDEA-016 at that point.
+
+---
+
+## IDEA-029 — Investigate Outlook/`live.no`/`outlook.com` delivery patterns for MFIP alerts
+
+**Status:** Parked — not blocking current MFIP work. May become relevant in Phase 6+ if MFIP needs delivery to non-Gmail recipients.
+
+**Context:** Session 15B's live alert test surfaced that automated mail from `magnus.thomass1@gmail.com` to `magnus.t@live.no` is silently quarantined by Microsoft, even after mutual contact-add and same-thread reply. The quarantine is opaque (no bounce, no Junk folder placement) and recovered only via manual forwarding in the same thread.
+
+The investigation closed for now with a service-account redesign that removed Outlook from the alert path (see `decisions.md` 2026-05-15 service-account separation entry).
+
+**Why this stays parked:** MFIP currently has no operational need for Outlook delivery. The service-account-to-Gmail architecture is sufficient. Spending engineering time on Microsoft's classifier behaviour now would be speculative work with no near-term payoff.
+
+**When to revisit:** If MFIP later needs to deliver to any recipient outside Magnus's Gmail accounts — particularly a corporate inbox during a job placement, a phone-accessible Outlook account, or a recipient on a Microsoft-hosted domain. At that point, investigate one or more of:
+
+- **Sender-side fixes:** richer `From` headers with display names, more conversational subject lines, DKIM/SPF/DMARC alignment verification, sender reputation warm-up via consistent low-volume sends.
+- **Routing fixes:** transactional email service as the SMTP gateway (SendGrid, Postmark, Resend, or AWS SES) — these have established reputation with Microsoft and bypass new-sender quarantine entirely. ~$0–10/month at MFIP volume.
+- **Recipient-side fixes:** Outlook account-level rules to whitelist the MFIP sender; safe-senders list addition; admin-side allow-listing if the recipient is on a corporate Microsoft 365 tenant.
+- **Architecture pivot:** abandon email for alerts entirely; use Slack, Telegram, push notifications, or a self-hosted dashboard widget instead.
+
+**Recorded artifacts from Session 15B investigation:** correlation IDs of the live test runs (`8b4c3eea-cc8c-4c52-950e-24329540e539`, `0e3dd879-4d8e-4481-ad9b-a6278f49e765`, `0809d4b7-f68e-475e-acc9-2ca37449bae0`, `65843789-e0a3-4b8c-9e64-d74d332f0635`) are searchable in `security_log` for the success cases; failures left no log trail because Microsoft silently dropped.
+
+**Estimated investigation cost when revisited:** 2–4 hours for a quick-fix attempt (header improvements, sender reputation tuning); 1–2 days for a transactional email service integration.
