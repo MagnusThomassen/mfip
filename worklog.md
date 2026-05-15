@@ -588,3 +588,139 @@ deferred per existing `ideas.md` decision gates:
 The placeholder containers ship here as visible cards with labels;
 each gets internal content (cards, charts, tables) at the
 respective zone's design-pass moment.
+
+---
+
+## 2026-05-15 — Zone 1 popovers don't close on outside-click (theme cog popover + Custom date range picker)
+
+**Status:** OPEN
+
+**Source:** Session 16 Phase 1 validation walkthrough (Item C).
+
+**Two findings same family:**
+- **F1** — The theme cog popover (Dark/Light/System radios) doesn't
+  close when clicking outside it. The only way to dismiss is to
+  click the cog again to toggle it off.
+- **F4a-dismiss** — The Custom date range picker doesn't close on
+  outside-click either, **but** it does close when any preset
+  button (1Y/3Y/5Y/MAX) is clicked. So a recovery path exists, but
+  it isn't intuitive — a user would naturally try clicking outside
+  before discovering the preset-selection dismissal.
+
+**Pattern:** Both are Zone 1 popovers. Both need the standard
+outside-click-to-close behaviour. The fix shape is one
+`clientside_callback` that listens for document-level clicks and
+checks whether the click target falls inside either popover's
+container; if not, dismiss. ~15-25 lines, applied to both
+popovers in the same PR.
+
+**Severity:** UX papercut, not blocker. Custom date picker has a
+recovery path (preset selection); theme popover has a recovery
+path (clicking the cog again).
+
+**Closes when:** Both popovers dismiss on outside-click.
+
+**Schedule:** Zone 1 chrome cluster work, paired with Zone 2 build
+session so Zone 1 chrome is finalised as that zone ships.
+
+---
+
+## 2026-05-15 — Zone 1 chrome elements lack tooltips for display-only indicators (theme cog + Idle indicator)
+
+**Status:** OPEN
+
+**Source:** Session 16 Phase 1 validation walkthrough (Item C).
+
+**Two findings same family:**
+- **F2** — The theme cog has no label or tooltip indicating that
+  it specifically opens the theme selector. Generic gear icon reads
+  as "settings" not "theme." A `title` attribute or hover tooltip
+  saying "Theme settings" (or showing the current mode, e.g.
+  "Theme: Light") would resolve.
+- **F4b-i** — The `● Idle` pipeline status indicator is display-only
+  per spec (correctly non-clickable), but provides no tooltip
+  explaining its four possible states (Normal pulse, Warnings amber,
+  Critical red, Idle muted). User has no way to know what the
+  indicator is communicating.
+
+**Pattern:** Both are Zone 1 display elements that need a small
+explanatory tooltip on hover. Could use Dash's `dcc.Tooltip` or
+the native HTML `title` attribute — `title` is cheaper and probably
+sufficient for these.
+
+**Severity:** UX clarity, not blocker. The current state isn't
+broken; it just doesn't tell the user what the element means.
+
+**Closes when:** Both elements have hover tooltips explaining their
+purpose.
+
+**Schedule:** Zone 1 chrome cluster work, paired with Zone 2 build.
+
+---
+
+## 2026-05-15 — Dash core components don't inherit theme tokens (architectural — needs dedicated overrides CSS)
+
+**Status:** OPEN
+
+**Source:** Session 16 Phase 1 validation walkthrough (Item C).
+
+**Finding:** Dash-bundled `dcc.*` components (Dropdown,
+DatePickerRange, and any others used later) render with their own
+bundled stylesheets that don't reference the dashboard's CSS
+variables (`--bg-canvas`, `--bg-surface`, `--text-primary`,
+`--text-secondary`, `--text-muted`, `--border-subtle`,
+`--border-strong`). Result: these components don't inherit the
+theme tokens and look out of place — sometimes mildly
+(inconsistent chrome), sometimes severely (unreadable text).
+
+**Two observed instances:**
+- **F3 (subsumed)** — Company selector dropdown. In Dark and System
+  modes, the dropdown's open-state text is effectively transparent
+  against the dark canvas (near-unreadable). In Light mode, the
+  dropdown shows white background with black text (readable but
+  inconsistent with the dark Zone 1 bar).
+- **F4a-style (subsumed)** — Custom date range picker. Same root
+  cause: white input fields over dark canvas in Dark mode, no
+  theme adaptation.
+
+**F8 (sub-finding)** — At narrow viewport widths, the Custom date
+picker's open popover falls back to a vertical stack rather than
+horizontal layout. Magnus's preference: dates should stay inline
+horizontal with smaller text. This is the layout dimension of the
+same architectural gap — Dash core components need both **theme**
+and **responsive-layout** overrides for the dashboard's design
+system.
+
+**Pattern:** Mirrors the existing `mfip/dashboard/assets/ag-grid-overrides.css`
+file (which solves the same class of problem for AG Grid). Fix
+shape:
+
+- New file `mfip/dashboard/assets/dash-component-overrides.css`
+  (sibling to `ag-grid-overrides.css`).
+- Targets the rendered class names of Dash core components: e.g.
+  `.Select-control`, `.Select-menu`, `.Select-value-label`,
+  `.DateInput`, `.DateRangePickerInput`, `.DateRangePicker_picker`
+  for the two known cases. Other Dash core components (RadioItems,
+  Checklist, RangeSlider, etc.) get coverage as they're added to
+  the dashboard.
+- Each rule reads CSS variables from `theme.css` so Dark/Light/System
+  modes propagate naturally.
+- F8's narrow-width layout fix: override the
+  `DateRangePickerInput`'s breakpoint behaviour so the date pair
+  stays horizontal with reduced font size rather than stacking
+  vertically.
+
+**Severity:** Architectural — affects everywhere Dash core
+components appear. F3 specifically is a Dark-mode usability failure
+(near-invisible dropdown text); F4a-style and F8 are styling
+inconsistencies, less severe.
+
+**Closes when:** `dash-component-overrides.css` exists and applies
+to all currently-used Dash core components in the dashboard.
+Future Dash core component additions (e.g. when Zone 2-4 components
+ship) extend the file with their own selectors.
+
+**Schedule:** Phase 1 follow-up — schedule before Zone 2 ships its
+first component, since that work will introduce more Dash core
+components and the override file should be in place first to avoid
+retrofitting.
