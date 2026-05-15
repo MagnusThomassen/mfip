@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-15 — PR-C nightly log export contract](#2026-05-15--pr-c-nightly-log-export-contract) `infrastructure` `convention`
 - [2026-05-15 — Add row_seq IDENTITY column to log tables for monotonic cursor](#2026-05-15--add-row_seq-identity-column-to-log-tables-for-monotonic-cursor) `data-contract` `infrastructure`
 - [2026-05-15 — Migrations module refactor: discoverable package, no schema version tracking in v1](#2026-05-15--migrations-module-refactor-discoverable-package-no-schema-version-tracking-in-v1) `infrastructure` `convention`
 - [2026-05-15 — Phase 1 close-out: Dashboard Shell complete, validation pattern proves prospective value](#2026-05-15--phase-1-close-out-dashboard-shell-complete-validation-pattern-proves-prospective-value) `process`
@@ -3099,3 +3100,118 @@ dump-ordering convention then. Unlikely in v1.
   `test_row_seq_monotonic_via_writer_surface`
 - `MEMORY.md` — `What Is Built` rows updated
 - `decisions.md` — this entry
+
+---
+
+## 2026-05-15 — PR-C nightly log export contract
+
+**Tags:** infrastructure, convention
+
+**Decision:** The nightly log export pipeline is built and
+operational. Windows Task Scheduler triggers
+`scripts/scheduled_tasks/nightly_log_export.py` at 02:00 local
+time. The script exports new `decision_log` and `security_log`
+rows (those with `row_seq` greater than the per-table cursor)
+to a JSON file in a separate `git worktree` checked out at
+`logs-archive`, commits the file, and pushes. Cursor state
+lives at `C:\MFIP\runtime\export_state.json` and advances on
+JSON write success.
+
+**Why a separate worktree.** The main checkout at
+`C:\MFIP\repo\` stays on whatever branch the operator is
+working on; the export script never switches branches in the
+primary tree. A worktree at `C:\MFIP\repo-logs-archive\`
+checked out to `logs-archive` gives the script its own
+isolated working tree pointing at the same `.git` directory.
+One-time operator setup:
+
+```
+cd C:\MFIP\repo
+git worktree add C:\MFIP\repo-logs-archive logs-archive
+```
+
+**Why cursor advances on write, not on commit.** Per Q3 of
+Session 17's design discussion: if JSON write succeeded but
+commit failed, the data is safely on disk; the cursor
+reflects that. The next successful run includes the
+uncommitted file naturally via `git add exports/*.json`. The
+commit failure is a transport problem, not a data problem.
+This makes the export pipeline self-healing on transient
+network/Git issues.
+
+**Why row_seq as the cursor.** Per Item 2a (`decisions.md`
+2026-05-15 "Add row_seq IDENTITY column to log tables for
+monotonic cursor"). The cursor is a single integer per table,
+JSON round-trips losslessly, clock-skew-immune.
+
+**Why local-date filenames.** Operators scan
+`exports\<YYYY-MM-DD>.json` and expect filenames to match the
+calendar day they remember. The export's UTC timestamp is
+preserved inside the JSON's `export_metadata.exported_at_utc`
+field for forensic precision. Same-date overwrite is
+acceptable for v1 (manual triggers during dev/testing happen
+on dates that don't have a scheduled run yet, or are
+exploratory); revisit with `<YYYY-MM-DD>_<HH-MM-SS>.json` if
+that becomes a real operational concern.
+
+**Self-event encoding.** All export events write
+`security_log` rows per the convention in `decisions.md`
+2026-05-15 (event_type as `issue_description` prefix,
+structured details JSON in `impact_assessment`). Four event
+types: `nightly_log_export_succeeded` (Advisory),
+`nightly_log_export_skipped_no_new_rows` (Advisory),
+`nightly_log_export_commit_failed` (Warning),
+`nightly_log_export_failed` (Warning). All with
+`correlation_id = None` (system-level events). The
+self-event row written by today's run gets captured in
+tomorrow's export — audit trail preserved.
+
+**Implication:**
+
+- The `logs-archive` branch becomes the canonical audit
+  archive for log data. Pushed commits accumulate JSON files
+  one per export run.
+- The cursor state file is small but operationally critical;
+  it lives at `C:\MFIP\runtime\export_state.json`, outside
+  the repo (the entire `C:\MFIP\runtime\` tree is operator
+  state, not source).
+- Operator manual triggers during dev/testing use
+  `Start-ScheduledTask -TaskName MFIP-NightlyLogExport` or
+  invoke the Python script directly.
+- A future `Task-WeeklyDigest` job (per
+  `01_ARCHITECTURE.docx` PYTHON LOGISTICS LAYER) will follow
+  the same patterns: task XML in `scripts/scheduled_tasks/`,
+  registered via `register_tasks.ps1`, writes self-event rows
+  for delivery status.
+- Path asymmetry: the three backup tasks live under
+  `scripts/backup/` (legacy from the 2026-05-10 backup
+  infrastructure decision); the nightly export task lives
+  under `scripts/scheduled_tasks/`. `register_tasks.ps1`
+  references both locations. Future consolidation would move
+  all task XML under `scripts/scheduled_tasks/`; tracked via
+  worklog.
+
+**Affected files:**
+
+- `scripts/scheduled_tasks/nightly_log_export.py` (new)
+- `scripts/scheduled_tasks/Task-NightlyLogExport.xml` (new)
+- `scripts/scheduled_tasks/register_tasks.ps1` (new)
+- `tests/scheduled_tasks/test_nightly_log_export.py` (new)
+- `MEMORY.md` — `What Is Built` rows updated
+- `worklog.md` — note added to existing
+  `06_SECURITY_COUNCIL.docx` schema-text entry; new entry
+  for scheduled-task path consolidation
+- `decisions.md` — this entry
+
+**Revisit trigger:**
+
+- If `logs-archive` branch protection causes commit failures
+  to recur (the catch-up logic handles single failures
+  cleanly, but pathological cases — repeated rejections —
+  would surface).
+- If the JSON files become large enough to slow Git
+  operations on `logs-archive` (current expected scale: a
+  few KB per night; revisit if export sizes routinely
+  exceed 1 MB).
+- If operators on a future multi-machine setup need to
+  coordinate exports (current model assumes single writer).
