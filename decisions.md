@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-14 — Claude Code worktree isolation: parallel Layer 4 agents use --worktree flag per build session](#2026-05-14--claude-code-worktree-isolation-parallel-layer-4-agents-use---worktree-flag-per-build-session) `infrastructure`
 - [2026-05-14 — security_log schema extension: nullable correlation_id for symmetry with decision_log](#2026-05-14--security_log-schema-extension-nullable-correlation_id-for-symmetry-with-decision_log) `data-contract`
 - [2026-05-14 — decision_log schema: medium structure (thin core + two typed columns + JSON payload)](#2026-05-14--decision_log-schema-medium-structure-thin-core--two-typed-columns--json-payload) `data-contract`
 - [2026-05-14 — Branch cleanup convention: local prune + fetch.prune=true, remote auto-deletes](#2026-05-14--branch-cleanup-convention-local-prune--fetchprunetrue-remote-auto-deletes) `process`
@@ -2384,3 +2385,37 @@ SELECT COUNT(*) FROM security_log WHERE correlation_id IS NULL;
 ```
 
 periodically and confirming the count tracks expected system-event volume.
+
+---
+
+## 2026-05-14 — Claude Code worktree isolation: parallel Layer 4 agents use --worktree flag per build session
+
+**Tags:** infrastructure
+
+**Decision:** When building MFIP's parallel modelling agents in Claude Code (Phase 6 onwards), each agent gets its own worktree via the `--worktree` flag. Every agent that writes output files to `C:\MFIP\data\` or any shared directory during build runs in an isolated working directory on its own branch. The pattern applies to all seven Layer 4 agents: FSA, DCF, RE Valuation, DDM, Comps, Shock, Earnings Quality.
+
+**Reasoning:** Claude Code's `--worktree` feature (shipped v2.1.49, Feb 2026) creates a fully isolated working directory at `.claude/worktrees/<name>/` on a branch named `worktree-<name>`. Without isolation, parallel build sessions on the same repo can silently overwrite each other's edits — exactly the failure mode for Layer 4, where seven modelling agents are built in parallel and all write results to shared directories. Worktrees make that collision impossible by construction: same repo history and remote, physically separate working trees.
+
+**Implication:**
+
+- Phase 6 build pattern: open one `claude -w mfip-<agent-name>` session per modelling agent. Example:
+
+  ```
+  claude -w mfip-fsa-agent
+  claude -w mfip-dcf-agent
+  claude -w mfip-re-agent
+  claude -w mfip-ddm-agent
+  claude -w mfip-comps-agent
+  claude -w mfip-shock-agent
+  claude -w mfip-earnings-quality-agent
+  ```
+- Merge workflow per agent: `git diff main..worktree-mfip-<name>` → review → `git merge --no-ff` → `git worktree remove .claude/worktrees/<name>` → `git branch -d worktree-mfip-<name>`.
+- Agent `.md` definition files for any agent that writes results files should include `isolation: worktree` in frontmatter. Orchestrator and pure-routing agents (which never write data files) do not need it.
+- `.worktreeinclude` should copy `.env` into each new worktree automatically — the `.env` file contains API keys needed for agent integration tests.
+- Add `.claude/worktrees/` to `.gitignore` before Phase 6 starts. Worktrees are runtime directories, not project files, and must never be committed.
+- This is a **build-time** isolation pattern, not a runtime one. At runtime, MFIP's agents are coordinated by the Orchestrator per the pipeline architecture; worktrees are how Claude Code builds them without cross-contamination.
+- Agents built in separate worktrees still need integration tests run from `main` after merge to confirm the full pipeline handoff chain works end-to-end (FSA → RE dependency is the highest-risk seam).
+
+**Affected docs:** `04_BUILD_SEQUENCE.docx` — add worktree setup step to Phase 6 pre-build checklist at next doc refresh. `CLAUDE.md` — no change needed; this is a build-pattern note, not a standing session rule.
+
+**Revisit trigger:** If Claude Code's worktree implementation changes materially in a future version, or if the Phase 6 build reveals that worktree-per-agent creates merge overhead that outweighs the isolation benefit (unlikely given the agents are loosely coupled at the file level).
