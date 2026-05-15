@@ -49,7 +49,7 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 | AG Grid overrides | `assets/ag-grid-overrides.css` | CSS vars from same token set as theme.py; sync enforced by unit test |
 | `app.py` | `mfip/dashboard/app.py` | Dash Pages app; imports `pages/home` + `pages/analysis`; `dcc.Location` + theme stores; clientside callback for OS theme detection (inline string form) |
 | `pages/home.py` | `mfip/dashboard/pages/home.py` | Home stub at `/`; placeholder content + link to `/analysis` |
-| `pages/analysis.py` | `mfip/dashboard/pages/analysis.py` | Analysis page at `/analysis`; composes Zone 1 + Zone 2-4 placeholder containers (CSS Grid layout, 60/40 × 65/35 proportions per spec) |
+| `pages/analysis.py` | `mfip/dashboard/pages/analysis.py` | Analysis page at `/analysis`; composes Zone 1 + three visible Zone 2-4 placeholder cards (CSS Grid layout 60/40 × 65/35 per spec, with `--border-subtle` chrome and title + "Phase 1 placeholder" caption per card) |
 | Analysis layout CSS | `mfip/dashboard/assets/analysis-layout.css` | CSS Grid for Zone 2-4 placeholder layout; replaces nothing (new) |
 | `zone1.py` | `mfip/dashboard/zones/zone1.py` | Zone 1 Command Centre; exports `layout` as module-level constant; composed into `pages/analysis.py` (not a page itself) |
 | Theme tests | `tests/test_theme.py` | 8 passing |
@@ -57,6 +57,7 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 | Zone 1 tests | `tests/test_zone1.py` | 9 passing; 24 total green on branch `phase1/routing-restructure` |
 | `MEMORY.md` | `repo\MEMORY.md` | This file; added Session 7 |
 | `phase-validations/` | `repo\phase-validations\` | Per-phase validation pattern — `_template.md` canonical structure; one `PHASE_N_VALIDATION.md` per phase; PHASE_0 retroactive (2026-05-15) |
+| `PHASE_1_VALIDATION.md` | `repo\phase-validations\PHASE_1_VALIDATION.md` | Phase 1 walkthrough validation, signed-off 2026-05-15 (Session 16 Item C); first instance of `phase-validations/_template.md` pattern in active use after the retroactive PHASE_0 |
 | `decision_log` + `security_log` DuckDB tables | `C:\MFIP\runtime\mfip.duckdb` | Schema per `decisions.md` 2026-05-14 entries + 2026-05-15 severity Title-case; init via `python scripts/init_db.py`; migrate via `python scripts/init_db.py --migrate` |
 | Pydantic log entry models | `mfip/logging/models.py` | `DecisionLogEntry`, `SecurityLogEntry`, `PlaceholderPayload` + `DecisionPayload` discriminated-union scaffold |
 | Log writer functions | `mfip/logging/writers.py` | `write_decision`, `append_security_log`; append-only enforced by absence of update/delete functions in module API |
@@ -92,7 +93,7 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 | `security_log` schema extension | Nullable `correlation_id` column added for symmetry with `decision_log`; supersedes `06_SECURITY_COUNCIL.docx` schema text | 2026-05-14 |
 | Severity casing | Title-case (`Critical`/`Warning`/`Advisory`) across both `Alert` and `SecurityLogEntry` models | 2026-05-15 |
 | Served-layout callback smoke test | Open for Phase 2 close-out (IDEA-023 in `ideas.md`) | — |
-| AG Grid dark↔light visual check | Open; 5-minute manual at next app launch | — |
+| AG Grid dark↔light visual check | Cannot exercise yet — Zone 4 is placeholder card with no grid inside. Exercise at Zone 4 first-component build. | — |
 
 ---
 
@@ -109,9 +110,8 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 | Chief Analyst default weighting (35/35/20/10) | Revisit after 30 recommendations in v2 |
 | MAX date preset (Zone 1) | `ideas.md` IDEA-021 PROPOSED; wire at Phase 2+ when data loading is real |
 | Overlay chrome ownership (settings panel, alert feed, Security Alert Overlay) | Decide at Alert Feed Panel build |
-| Served-layout callback smoke test | `ideas.md` IDEA-023 APPROVED; Phase 1 close-out deliverable |
-| Zone 1 chrome styling completeness (focus rings, badge styling, theme application) | `worklog.md` — multiple OPEN entries; re-evaluate when Zone 2 ships |
-| Phase 1 close-out tidy-up | `worklog.md` — all four items CLOSED (CLAUDE.md repo path, `__main__.py` confirmation, line-endings normalisation, theme visual application) |
+| Zone 1 chrome styling completeness (popover dismissal, tooltips on display-only indicators) | `worklog.md` — outside-click dismissal cluster + Zone 1 chrome tooltips cluster (Session 16 walkthrough); schedule with Zone 2 build |
+| Dash core component overrides (Dropdown, DatePickerRange) | `worklog.md` — architectural entry (Session 16 walkthrough); schedule before Zone 2 first component |
 
 ---
 
@@ -208,4 +208,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-15 — Session 16 Item C-1: Zone 2-4 placeholder containers shipped (Phase 1 deliverable gap close).*
+*Last updated: 2026-05-15 — Session 16 Item C-2: Phase 1 validation signed-off; six walkthrough findings logged to worklog; MEMORY open loops reconciled.*
