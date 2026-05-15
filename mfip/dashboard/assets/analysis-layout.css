@@ -1,0 +1,59 @@
+/* Analysis page layout — Zone 2-4 grid composition.
+ * Zone 1 lives in its own component and is not styled here.
+ * Spec: 05_DASHBOARD_SPEC.docx LAYOUT STRUCTURE.
+ */
+
+#analysis-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#analysis-body {
+  flex: 1;
+  min-height: 0;  /* allow grid children to shrink within flex parent */
+  padding: 8px;
+  background: var(--bg-canvas);
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: 60fr 40fr;
+  grid-template-rows: 65fr 35fr;
+  grid-template-areas:
+    "zone2 zone3"
+    "zone4 zone4";
+  gap: 8px;
+  height: 100%;
+}
+
+#zone-2 { grid-area: zone2; }
+#zone-3 { grid-area: zone3; }
+#zone-4 { grid-area: zone4; }
+
+.zone-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.zone-placeholder-title {
+  font-family: var(--font-sans, 'Inter', sans-serif);
+  font-size: var(--type-h2-size, 20px);
+  font-weight: var(--type-h2-weight, 600);
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.zone-placeholder-caption {
+  font-family: var(--font-sans, 'Inter', sans-serif);
+  font-size: var(--type-caption-size, 12px);
+  color: var(--text-muted);
+  text-align: center;
+}
