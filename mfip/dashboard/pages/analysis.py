@@ -19,12 +19,31 @@ from dash import html
 
 from mfip.dashboard.zones import zone1
 
+
+def _zone_placeholder(zone_id: str, title: str) -> html.Div:
+    return html.Div(
+        [
+            html.Div(title, className="zone-placeholder-title"),
+            html.Div("Phase 1 placeholder",
+                     className="zone-placeholder-caption"),
+        ],
+        id=zone_id,
+        className="zone-placeholder",
+    )
+
+
 layout = html.Div(
     [
         zone1.layout,
-        html.Div(id="zone-2", className="zone-placeholder"),
-        html.Div(id="zone-3", className="zone-placeholder"),
-        html.Div(id="zone-4", className="zone-placeholder"),
+        html.Div(
+            [
+                _zone_placeholder("zone-2", "Zone 2 — Company Deep Dive"),
+                _zone_placeholder("zone-3", "Zone 3 — Intelligence Feed"),
+                _zone_placeholder("zone-4", "Zone 4 — Portfolio View"),
+            ],
+            id="analysis-body",
+            className="analysis-grid",
+        ),
     ],
     id="analysis-page",
 )
