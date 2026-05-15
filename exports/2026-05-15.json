@@ -1,0 +1,65 @@
+{
+  "decision_log": [],
+  "export_metadata": {
+    "cursor_after": {
+      "decision_log": 0,
+      "security_log": 3
+    },
+    "cursor_before": {
+      "decision_log": 0,
+      "security_log": 0
+    },
+    "exported_at_utc": "2026-05-15T19:57:09.396380+00:00",
+    "row_counts": {
+      "decision_log": 0,
+      "security_log": 3
+    }
+  },
+  "security_log": [
+    {
+      "correlation_id": "0e3dd879-4d8e-4481-ad9b-a6278f49e765",
+      "flagging_officer": null,
+      "impact_assessment": "{\"recipient\": \"magnus.t@live.no\", \"title\": \"Session 15B live end-to-end alert test\"}",
+      "issue_description": "alert_delivered: Session 15B live end-to-end alert test",
+      "issuing_agent": "mfip_alerts",
+      "log_id": "9cfbfdf8-e852-4f03-995b-040639a99ad0",
+      "pipeline_status": null,
+      "recommended_action": null,
+      "resolution_note": null,
+      "resolved_at": null,
+      "row_seq": 1,
+      "severity": "Advisory",
+      "timestamp": "2026-05-15 12:57:28.899208"
+    },
+    {
+      "correlation_id": "0809d4b7-f68e-475e-acc9-2ca37449bae0",
+      "flagging_officer": null,
+      "impact_assessment": "{\"recipient\": \"magnus.t@live.no\", \"title\": \"Session 15B live end-to-end alert test\"}",
+      "issue_description": "alert_delivered: Session 15B live end-to-end alert test",
+      "issuing_agent": "mfip_alerts",
+      "log_id": "5d456c67-408a-4232-a1f0-bb57d58c9014",
+      "pipeline_status": null,
+      "recommended_action": null,
+      "resolution_note": null,
+      "resolved_at": null,
+      "row_seq": 2,
+      "severity": "Advisory",
+      "timestamp": "2026-05-15 13:07:15.513679"
+    },
+    {
+      "correlation_id": "604f793c-0379-4cd1-8b86-5ff0fc9b224b",
+      "flagging_officer": null,
+      "impact_assessment": "{\"recipient\": \"magnus.thomass1@gmail.com\", \"title\": \"Session 15B live end-to-end alert test\"}",
+      "issue_description": "alert_delivered: Session 15B live end-to-end alert test",
+      "issuing_agent": "mfip_alerts",
+      "log_id": "89d7ccbd-36cd-406b-b876-b3f2295b74fc",
+      "pipeline_status": null,
+      "recommended_action": null,
+      "resolution_note": null,
+      "resolved_at": null,
+      "row_seq": 3,
+      "severity": "Advisory",
+      "timestamp": "2026-05-15 13:49:35.595553"
+    }
+  ]
+}
