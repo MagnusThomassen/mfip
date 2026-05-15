@@ -3,63 +3,48 @@
   "export_metadata": {
     "cursor_after": {
       "decision_log": 0,
-      "security_log": 3
+      "security_log": 5
     },
     "cursor_before": {
       "decision_log": 0,
-      "security_log": 0
+      "security_log": 3
     },
-    "exported_at_utc": "2026-05-15T19:57:09.396380+00:00",
+    "exported_at_utc": "2026-05-15T20:32:04.926571+00:00",
     "row_counts": {
       "decision_log": 0,
-      "security_log": 3
+      "security_log": 2
     }
   },
   "security_log": [
     {
-      "correlation_id": "0e3dd879-4d8e-4481-ad9b-a6278f49e765",
+      "correlation_id": null,
       "flagging_officer": null,
-      "impact_assessment": "{\"recipient\": \"magnus.t@live.no\", \"title\": \"Session 15B live end-to-end alert test\"}",
-      "issue_description": "alert_delivered: Session 15B live end-to-end alert test",
-      "issuing_agent": "mfip_alerts",
-      "log_id": "9cfbfdf8-e852-4f03-995b-040639a99ad0",
+      "impact_assessment": "{\"cursor_after\": {\"decision_log\": 0, \"security_log\": 3}, \"cursor_before\": {\"decision_log\": 0, \"security_log\": 0}, \"files_committed\": 1, \"json_file\": \"C:\\\\MFIP\\\\repo-logs-archive\\\\exports\\\\2026-05-15.json\", \"last_export_completed_utc\": \"2026-05-15T19:57:12.771873+00:00\", \"last_export_started_utc\": \"2026-05-15T19:57:09.396380+00:00\", \"row_counts\": {\"decision_log\": 0, \"security_log\": 3}}",
+      "issue_description": "nightly_log_export_succeeded: exported 3 row(s)",
+      "issuing_agent": "nightly_log_export",
+      "log_id": "f34288af-a178-4940-8477-3600bbdd1796",
       "pipeline_status": null,
       "recommended_action": null,
       "resolution_note": null,
       "resolved_at": null,
-      "row_seq": 1,
+      "row_seq": 4,
       "severity": "Advisory",
-      "timestamp": "2026-05-15 12:57:28.899208"
+      "timestamp": "2026-05-15 21:57:12.771873"
     },
     {
-      "correlation_id": "0809d4b7-f68e-475e-acc9-2ca37449bae0",
+      "correlation_id": "46b75b9e-2807-4ab3-bcd6-505fb3619f27",
       "flagging_officer": null,
-      "impact_assessment": "{\"recipient\": \"magnus.t@live.no\", \"title\": \"Session 15B live end-to-end alert test\"}",
-      "issue_description": "alert_delivered: Session 15B live end-to-end alert test",
+      "impact_assessment": "{\"recipient\": \"magnus.thomass1@gmail.com\", \"title\": \"Phase 2 validation walkthrough \\u2014 test alert\"}",
+      "issue_description": "alert_delivered: Phase 2 validation walkthrough \u2014 test alert",
       "issuing_agent": "mfip_alerts",
-      "log_id": "5d456c67-408a-4232-a1f0-bb57d58c9014",
+      "log_id": "deab839f-8e61-4cac-ad40-18b333d1afd9",
       "pipeline_status": null,
       "recommended_action": null,
       "resolution_note": null,
       "resolved_at": null,
-      "row_seq": 2,
+      "row_seq": 5,
       "severity": "Advisory",
-      "timestamp": "2026-05-15 13:07:15.513679"
-    },
-    {
-      "correlation_id": "604f793c-0379-4cd1-8b86-5ff0fc9b224b",
-      "flagging_officer": null,
-      "impact_assessment": "{\"recipient\": \"magnus.thomass1@gmail.com\", \"title\": \"Session 15B live end-to-end alert test\"}",
-      "issue_description": "alert_delivered: Session 15B live end-to-end alert test",
-      "issuing_agent": "mfip_alerts",
-      "log_id": "89d7ccbd-36cd-406b-b876-b3f2295b74fc",
-      "pipeline_status": null,
-      "recommended_action": null,
-      "resolution_note": null,
-      "resolved_at": null,
-      "row_seq": 3,
-      "severity": "Advisory",
-      "timestamp": "2026-05-15 13:49:35.595553"
+      "timestamp": "2026-05-15 22:28:36.050739"
     }
   ]
 }
