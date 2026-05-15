@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-15 — `phase-validations/` pattern established](#2026-05-15--phase-validations-pattern-established) `process` `docs`
 - [2026-05-15 — MFIP alert delivery uses service-account separation: magiconus@gmail.com sends to magnus.thomass1@gmail.com](#2026-05-15--mfip-alert-delivery-uses-service-account-separation-magiconusgmailcom-sends-to-magnusthomass1gmailcom) `infrastructure` `security`
 - [2026-05-15 — security_log self-event encoding: event_type as issue_description prefix, structured details as JSON in impact_assessment](#2026-05-15--security_log-self-event-encoding-event_type-as-issue_description-prefix-structured-details-as-json-in-impact_assessment) `convention` `infrastructure`
 - [2026-05-15 — mfip_alerts implementation choices: severity colors, 30-line stack truncation, Windows-safe queue filenames, SMTP 30s timeout, drain-on-every-send](#2026-05-15--mfip_alerts-implementation-choices-severity-colors-30-line-stack-truncation-windows-safe-queue-filenames-smtp-30s-timeout-drain-on-every-send) `implementation` `infrastructure`
@@ -2572,3 +2573,103 @@ Encoding rationale:
 **Affected docs:** `.env.example` placeholder values are generic and need no change. `worklog.md` and `ideas.md` updated in this PR.
 
 **Revisit trigger:** If `magiconus@gmail.com` gets flagged by Google (rare but possible for accounts that send only programmatic mail), or if MFIP grows to need delivery to a recipient that can't be Gmail-hosted (e.g. corporate inbox during a job placement), revisit the delivery architecture. Candidate replacements at that point: dedicated transactional email service (SendGrid, Postmark, Resend), or a self-hosted SMTP relay.
+
+---
+
+## 2026-05-15 — `phase-validations/` pattern established
+**Tags:** process, docs
+
+**Decision:** Every MFIP build phase produces a
+`phase-validations/PHASE_N_VALIDATION.md` document at close-out (and
+optionally a skeleton at kickoff for in-progress phases). The
+document confirms each deliverable from
+`04_BUILD_SEQUENCE.docx` exists on disk, each runtime artifact
+behaves correctly, and Magnus has personally walked through both.
+The canonical structure lives at `phase-validations/_template.md`
+and is the starting point for every new phase document.
+
+**Context.** Session 15B surfaced the same failure pattern twice in
+one session. The first instance was `.env` missing from
+`C:\MFIP\repo\` despite Phase 0 listing ".env created" as a
+completed checklist item — discovered only when Phase 2 PR-B needed
+SMTP credentials and `Get-ChildItem` returned zero matches across
+the whole tree. The second was the production DuckDB carrying no
+application tables despite Phase 2 PR-A shipping the logging
+substrate — discovered only when the first live alert test was run
+and writes failed because the tables did not exist. In both cases
+the *code* to produce the artifact had shipped and the *checklist*
+read green, but the artifact itself had never been verified to
+exist or behave correctly. The lesson, logged in PR #45's
+`worklog.md` entry, is that self-reports against checklists are
+insufficient to close a phase — a walkthrough against the
+filesystem is required.
+
+**Why a separate folder rather than appending to `MEMORY.md` or
+`decisions.md`.** Per-phase validation documents are durable
+artifacts with their own lifecycle: they accumulate evidence
+through a phase's build sessions, get signed off at close-out, and
+remain as the immutable record of how that phase was verified. They
+need their own filenames so they can be linked from PR descriptions,
+worklog entries, and the design docs themselves. Putting them
+inside `decisions.md` would conflate the architectural-record
+function with the per-phase verification function; putting them in
+`MEMORY.md` would inflate the "live current state" file beyond its
+300-line target. A dedicated folder also makes it visually obvious
+at the repo root that this discipline exists.
+
+**Canonical structure** (lives at `phase-validations/_template.md`,
+copy-and-fill for each new phase):
+
+- **Phase deliverables checklist.** Every item from the phase's
+  entry in `04_BUILD_SEQUENCE.docx`, each with a checkbox and an
+  `evidence:` sub-line linking to PR, commit, or artifact.
+- **Runtime artifacts verified on disk.** Every runtime artifact
+  the phase was supposed to produce — `.env`, DB tables, output
+  directories, scheduled tasks. Each artifact gets two checkboxes:
+  `verified existing` and `verified behaving correctly`, plus a
+  notes line for how verification was done.
+- **Live exercise log.** What was actually clicked / run during
+  validation, with observed outputs. The audit trail proving the
+  phase was exercised, not just self-reported.
+- **Findings.** Working-as-intended items, issues fixed in the
+  validation session, issues fixed in later sessions, issues
+  deferred (each with links to `worklog.md` or `ideas.md`).
+- **Sign-off.** Single checkbox stating Magnus has personally
+  walked through every deliverable and runtime artifact. Signed
+  with name and date.
+
+**Lifecycle.** New phases get a skeleton document at kickoff with
+deliverables checkboxes ready to be filled in as PRs ship through
+the phase. At close-out, runtime artifacts are walked through,
+findings are populated, and the sign-off line is checked. Phase 0
+gets a retroactive document as the first instance of the pattern
+(shipped alongside this decisions entry in the same PR). Phase 1
+gets one filled in during Session 16 Item C. Phase 2 will be
+seeded at the start of Session 17 with PR-A, PR-B, and the bundle
+backfilled, and PR-C added as the final checkbox slot.
+
+**Failure mode this prevents.** "Checklist complete but artifact
+missing" — the pattern observed twice in Session 15B. The validation
+doc forces a walkthrough against the filesystem before a phase can
+be marked complete, which means an artifact that never existed
+cannot survive close-out unchallenged.
+
+**Affected docs:**
+
+- `phase-validations/_template.md` — canonical structure, new.
+- `phase-validations/PHASE_0_VALIDATION.md` — retroactive validation
+  of Phase 0, new. Documents the two known historical failures
+  (`.env`, DB schema) in the "Issues discovered (fixed in later
+  sessions)" section.
+- `MEMORY.md` — `What Is Built` table gains a `phase-validations/`
+  row.
+- `CLAUDE.md` — short reference under session-start guidance to
+  ensure future sessions know to check / update the validation
+  document at phase kickoff and close-out.
+
+**Revisit trigger:** Phase 3 kickoff or close-out. If the pattern
+proves heavy in practice (e.g. Phase 3's validation doc takes more
+than 30 minutes to fill in beyond the live exercise itself),
+consider trimming the template. Initial expectation is that the
+template is sized correctly; the bulk of the time should be the
+live exercise, not the documentation of it.
