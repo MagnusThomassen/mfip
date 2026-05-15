@@ -102,6 +102,18 @@ C:\MFIP\
     └── design\                           ← JSX prototype, visual reference only (not a deliverable)
 ```
 
+## Local tooling
+
+- **Git guardrails hook:** `.claude/hooks/git-guardrails.py`
+  blocks `git push --force` (any variant), `git reset --hard`, and
+  destructive `git clean` flags (`-f`, `-fd`, `-fx`, `-fX`).
+  Installed Session 15 after Session 13's pre-flight incident. The
+  hook is wired up via `PreToolUse` in `.claude/settings.json` and
+  ships with the repo, so any future clone inherits the protection.
+  If you need to force-push or hard-reset for a legitimate reason,
+  disable the hook entry in `.claude/settings.json` for that one
+  command — do not delete the hook.
+
 ## Coverage universe (v1)
 
 Six companies: EQNR (primary test company), DNB, TEL, NOVO B, MSFT, CKN.
