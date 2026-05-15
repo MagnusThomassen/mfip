@@ -54,10 +54,18 @@ DecisionPayload = Annotated[
 
 
 class DecisionLogEntry(BaseModel):
-    """One row in `decision_log`. Frozen — never mutate after construction."""
+    """One row in `decision_log`. Frozen — never mutate after construction.
+
+    `row_seq` is the schema's IDENTITY-style monotonic sequence column
+    (DuckDB-native sequence + DEFAULT nextval). It is auto-assigned on
+    INSERT by the database; writers never supply it. Populated on read
+    from the DB. See `decisions.md` 2026-05-15 entry on the row_seq
+    cursor column.
+    """
 
     model_config = ConfigDict(frozen=True)
 
+    row_seq: int | None = None
     id: UUID = Field(default_factory=uuid4)
     correlation_id: UUID
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
@@ -89,10 +97,13 @@ class DecisionLogEntry(BaseModel):
 class SecurityLogEntry(BaseModel):
     """One row in `security_log`. Frozen. `correlation_id` nullable for
     system-level events (startup, maintenance, manual operator actions)
-    that occur outside any pipeline run."""
+    that occur outside any pipeline run. `row_seq` is the schema's
+    IDENTITY-style monotonic sequence column; auto-assigned on INSERT,
+    populated on read."""
 
     model_config = ConfigDict(frozen=True)
 
+    row_seq: int | None = None
     log_id: UUID = Field(default_factory=uuid4)
     correlation_id: UUID | None = None
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))

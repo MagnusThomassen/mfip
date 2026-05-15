@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-15 — Add row_seq IDENTITY column to log tables for monotonic cursor](#2026-05-15--add-row_seq-identity-column-to-log-tables-for-monotonic-cursor) `data-contract` `infrastructure`
 - [2026-05-15 — Migrations module refactor: discoverable package, no schema version tracking in v1](#2026-05-15--migrations-module-refactor-discoverable-package-no-schema-version-tracking-in-v1) `infrastructure` `convention`
 - [2026-05-15 — Phase 1 close-out: Dashboard Shell complete, validation pattern proves prospective value](#2026-05-15--phase-1-close-out-dashboard-shell-complete-validation-pattern-proves-prospective-value) `process`
 - [2026-05-15 — Severity casing normalised to Title-case across logging models; `--migrate` flag added to `init_db.py`](#2026-05-15--severity-casing-normalised-to-title-case-across-logging-models---migrate-flag-added-to-init_dbpy) `convention` `infrastructure`
@@ -2972,3 +2973,129 @@ needs to depend on something other than the integer prefix (e.g.
 hot-fix migration that must apply before a number-larger
 migration that already ran), the file-renaming workaround is
 the v1 answer; a real dependency-graph runner is the v2 answer.
+
+---
+
+## 2026-05-15 — Add row_seq IDENTITY column to log tables for monotonic cursor
+
+**Tags:** data-contract, infrastructure
+
+**Decision:** Both `decision_log` and `security_log` gain
+`row_seq BIGINT NOT NULL DEFAULT nextval(...)` as the first
+column. Pre-existing rows are reinserted in `(timestamp, id)`
+or `(timestamp, log_id)` order via the migration runner;
+historical row_seq values reflect insertion-time order.
+
+**Context.** PR-C (nightly log export, Item 2b) needs a
+monotonic cursor to track "rows newer than last export."
+Timestamp-based cursors are vulnerable to clock skew and
+sub-second collision; UUID-based cursors aren't monotonic at
+all. An IDENTITY-style column gives a clean monotonic integer
+with no clock dependency. Chat-Claude's Session 17 design
+discussion (Q1) chose IDENTITY-style over the timestamp+id
+compound cursor on grounds that future Phase 3+ has multiple
+concurrent writers and the cursor's complexity should not grow
+with writer count.
+
+**Why two surrogate keys.** `row_seq` and the existing UUID
+PK serve different purposes:
+- The UUID PK (`id` on `decision_log`, `log_id` on
+  `security_log`) — stable cross-system reference; doesn't
+  change if rows are dumped and re-inserted via a future
+  migration.
+- `row_seq` (BIGINT, sequence-backed) — monotonic ordering for
+  export cursors, debugging sequence, and natural-order
+  queries.
+
+These are not redundant. UUID v4 (which writers generate) is
+not monotonic; ordering by UUID is meaningless. Ordering by
+`row_seq` is precisely insertion order.
+
+**Why ORDER BY in the dump.** Migration #2 is the first
+migration that cares about row ordering on reinsert. The
+ordering logic landed at the dump-step layer (in
+`scripts/init_db.py`'s migration runner) rather than inside
+migration 002's transform, because:
+- The transform sees rows one at a time; ordering must happen
+  earlier.
+- All future migrations benefit from deterministic dump order,
+  not just #2.
+- A migration that introduces an IDENTITY-style column is the
+  canonical case where dump ordering matters; making it
+  intrinsic to the runner means future similar migrations
+  don't have to re-establish the convention.
+
+The runner uses a per-table column probe
+(`_build_dump_order_by`) — `timestamp ASC` if present, then
+the first of (`id`, `log_id`) that exists. Future tables with
+their own PK naming work without runner changes.
+
+**Why sequence + nextval, not GENERATED ALWAYS AS IDENTITY.**
+DuckDB 1.5.2 does not support `GENERATED ALWAYS AS IDENTITY`
+(`NotImplementedException: Constraint not implemented!`).
+The canonical DuckDB idiom for monotonic auto-assigned integer
+columns is `CREATE SEQUENCE` + `BIGINT NOT NULL DEFAULT
+nextval('seq_name')`. End-state semantics match what an
+IDENTITY column would provide (monotonic, NOT NULL,
+auto-assigned on INSERT in insertion order). One behavioural
+difference: `DEFAULT nextval` is overrideable; an explicit
+`INSERT ... (row_seq, ...) VALUES (5, ...)` would write 5
+rather than the next sequence value. This weakness is
+acceptable because (a) writers don't write `row_seq` — the
+column is not in any explicit column list, (b) the migration
+transform's `row.pop("row_seq", None)` is now load-bearing to
+prevent old values being carried forward on reinsert.
+Sequence naming convention: `seq_<table>_<column>` →
+`seq_decision_log_row_seq`, `seq_security_log_row_seq`.
+
+**One-shot property of sequence-based migrations.** After
+migration #2 has landed, re-running `--migrate` will dump rows
+that include `row_seq` in their column list; the transform
+pops the value from each row dict, but the INSERT column list
+— built from the dump's column list — still includes
+`row_seq`; the result is NULL into a NOT NULL column for every
+row, exit 2 with all rows skipped, JSONL dump preserved. This
+is loud failure, not silent corruption. Sequence-based
+migrations are one-shot by design under the current runner;
+intentional re-runs require dropping the sequences and tables
+manually first. A column-detection mechanism in the runner
+could repair this, but would contradict the "trust the
+operator" model locked in Item 2a-prereq and obscure the
+loud-failure signal. Revisit if sequence-based migrations
+accumulate past 2 entries or the operator re-run pattern
+becomes common enough to justify machinery.
+
+**Implication.**
+- `mfip/logging/schema.sql` — both tables prepend `row_seq` as
+  first column; two `CREATE SEQUENCE IF NOT EXISTS` statements
+  added.
+- `EXPECTED_SCHEMA` in `scripts/init_db.py` — entries for
+  `row_seq` added (`("BIGINT", False)`); verifier continues to
+  detect drift. Sequences themselves are invisible to the
+  application-table lister and don't need verification.
+- `mfip/logging/models.py` — both models gain
+  `row_seq: int | None = None`. Writers continue to use
+  explicit column lists; `row_seq` is auto-assigned by the
+  sequence default and populated on read.
+- `_read_table_rows` in the runner uses a per-table
+  `_build_dump_order_by(con, table_name)` helper with graceful
+  fallback for tables lacking either `timestamp` or a
+  recognised PK column.
+- PR-C (Item 2b, next) uses `row_seq` as the export cursor.
+  State file at `C:\MFIP\runtime\export_state.json` stores
+  the last-exported `row_seq` per table.
+
+**Revisit trigger:** If a future table needs to participate in
+log-export but lacks a natural insertion-time order column
+(neither `timestamp` nor `id`/`log_id` style key), revisit the
+dump-ordering convention then. Unlikely in v1.
+
+**Affected files:**
+- `mfip/logging/schema.sql`
+- `mfip/logging/migrations/002_add_row_seq.py` (new)
+- `mfip/logging/models.py`
+- `scripts/init_db.py` — `EXPECTED_SCHEMA` + `_build_dump_order_by`
+- `tests/logging/test_writers.py` — new
+  `test_row_seq_monotonic_via_writer_surface`
+- `MEMORY.md` — `What Is Built` rows updated
+- `decisions.md` — this entry

@@ -1,10 +1,20 @@
 -- MFIP logging schema. Idempotent — every statement uses IF NOT EXISTS.
 -- Schemas: decisions.md 2026-05-14 "decision_log schema: medium structure"
 --          decisions.md 2026-05-14 "security_log schema extension"
+--          decisions.md 2026-05-15 "Add row_seq IDENTITY column to log tables
+--          for monotonic cursor"
 -- Append-only enforcement for security_log lives in the Python writer
 -- (mfip/logging/writers.py); see CLAUDE.md rule 3.
+--
+-- row_seq uses CREATE SEQUENCE + DEFAULT nextval(...) because DuckDB 1.5.2
+-- does not support GENERATED ALWAYS AS IDENTITY. End-state semantics
+-- (monotonic, NOT NULL, auto-assigned) match what IDENTITY would provide.
+
+CREATE SEQUENCE IF NOT EXISTS seq_decision_log_row_seq;
+CREATE SEQUENCE IF NOT EXISTS seq_security_log_row_seq;
 
 CREATE TABLE IF NOT EXISTS decision_log (
+    row_seq           BIGINT NOT NULL DEFAULT nextval('seq_decision_log_row_seq'),
     id                UUID PRIMARY KEY,
     correlation_id    UUID NOT NULL,
     timestamp         TIMESTAMP NOT NULL DEFAULT current_timestamp,
@@ -24,6 +34,7 @@ CREATE INDEX IF NOT EXISTS idx_decision_log_phase_ts
     ON decision_log (phase, timestamp DESC);
 
 CREATE TABLE IF NOT EXISTS security_log (
+    row_seq            BIGINT NOT NULL DEFAULT nextval('seq_security_log_row_seq'),
     log_id             UUID PRIMARY KEY,
     correlation_id     UUID,  -- nullable: system-level events outside pipeline runs
     timestamp          TIMESTAMP NOT NULL DEFAULT current_timestamp,

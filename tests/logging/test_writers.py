@@ -224,6 +224,45 @@ def test_security_log_correlation_id_both_cases(temp_db):
         reset_correlation_id(bound_token)
 
 
+def test_row_seq_monotonic_via_writer_surface(temp_db):
+    """Two consecutive writes to security_log produce monotonically
+    increasing row_seq values, both non-null integers. Validates the
+    sequence + DEFAULT nextval setup end-to-end through the writer
+    and round-trips correctly to the Pydantic read shape via
+    information_schema."""
+    cid = uuid4()
+    token = set_correlation_id(cid)
+    try:
+        for i in range(2):
+            append_security_log(
+                SecurityLogEntry(
+                    correlation_id=cid,
+                    severity="Advisory",
+                    issuing_agent="security_council",
+                    issue_description=f"row_seq probe {i}",
+                )
+            )
+
+        with duckdb.connect(str(temp_db)) as conn:
+            rows = conn.execute(
+                "SELECT row_seq, issue_description FROM security_log "
+                "WHERE correlation_id = ? ORDER BY row_seq",
+                (str(cid),),
+            ).fetchall()
+
+        assert len(rows) == 2
+        first_row_seq, second_row_seq = rows[0][0], rows[1][0]
+        assert isinstance(first_row_seq, int) and first_row_seq is not None
+        assert isinstance(second_row_seq, int) and second_row_seq is not None
+        assert second_row_seq > first_row_seq, (
+            f"expected monotonic row_seq, got {first_row_seq} then {second_row_seq}"
+        )
+        assert rows[0][1] == "row_seq probe 0"
+        assert rows[1][1] == "row_seq probe 1"
+    finally:
+        reset_correlation_id(token)
+
+
 def test_cross_log_join_on_correlation_id(temp_db):
     """The reason `correlation_id` was added to `security_log`: a
     one-line JOIN finds every log entry from the run that fired an

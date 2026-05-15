@@ -53,6 +53,7 @@ DBSchema = dict[str, TableSchema]
 # VARCHAR(N), and untyped VARCHAR all collapse to VARCHAR).
 EXPECTED_SCHEMA: DBSchema = {
     "decision_log": {
+        "row_seq": ("BIGINT", False),
         "id": ("UUID", False),
         "correlation_id": ("UUID", False),
         "timestamp": ("TIMESTAMP", False),
@@ -64,6 +65,7 @@ EXPECTED_SCHEMA: DBSchema = {
         "payload": ("JSON", False),
     },
     "security_log": {
+        "row_seq": ("BIGINT", False),
         "log_id": ("UUID", False),
         "correlation_id": ("UUID", True),
         "timestamp": ("TIMESTAMP", False),
@@ -225,14 +227,55 @@ def _discover_migrations() -> list[tuple[str, ModuleType]]:
     return discovered
 
 
+def _build_dump_order_by(
+    conn: duckdb.DuckDBPyConnection, table_name: str
+) -> str:
+    """Build the ORDER BY clause for the migration dump of one table.
+
+    Prefers stable insertion-time ordering:
+    - ``timestamp ASC`` if the column exists
+    - then the first of (``id``, ``log_id``) that exists
+
+    Returns an empty string if no orderable column is found. The
+    `id`/`log_id` probe lets future tables with their own PK naming
+    work without runner changes; it also handles security_log's
+    `log_id` PK transparently. Convention rationale: see
+    decisions.md 2026-05-15 "Add row_seq IDENTITY column to log
+    tables for monotonic cursor".
+    """
+    cols = {
+        row[0]
+        for row in conn.execute(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = ?",
+            [table_name],
+        ).fetchall()
+    }
+    parts: list[str] = []
+    if "timestamp" in cols:
+        parts.append("timestamp ASC")
+    for pk_candidate in ("id", "log_id"):
+        if pk_candidate in cols:
+            parts.append(f"{pk_candidate} ASC")
+            break
+    return f"ORDER BY {', '.join(parts)}" if parts else ""
+
+
 def _read_table_rows(
     conn: duckdb.DuckDBPyConnection, table: str
 ) -> tuple[list[str], list[dict]]:
     """Fetch all rows from `table` as a list of column-keyed dicts.
 
-    Returns (column_names_in_order, rows). Empty list when table is empty.
+    Rows are ordered via :func:`_build_dump_order_by` so that
+    migration replay sees rows in insertion-time order — load-bearing
+    for sequence-based columns like row_seq. Returns
+    ``(column_names_in_order, rows)``. Empty list when table is empty.
     """
-    cursor = conn.execute(f"SELECT * FROM {table}")
+    order_by = _build_dump_order_by(conn, table)
+    select_sql = f"SELECT * FROM {table}"
+    if order_by:
+        select_sql += f" {order_by}"
+    cursor = conn.execute(select_sql)
     columns = [desc[0] for desc in cursor.description]
     raw = cursor.fetchall()
     rows = [dict(zip(columns, tup)) for tup in raw]
