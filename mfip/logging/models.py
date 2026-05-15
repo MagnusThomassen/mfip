@@ -19,7 +19,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
-Severity = Literal["ADVISORY", "WARNING", "CRITICAL"]
+Severity = Literal["Advisory", "Warning", "Critical"]
 Phase = Literal[
     "extraction",
     "validation",

@@ -87,7 +87,7 @@ def test_successful_send_writes_advisory_alert_delivered_row(
     _, kwargs = smtp_cls.call_args
     assert kwargs.get("timeout") == sender_module.SMTP_TIMEOUT_SECONDS
 
-    rows = read_security_log_by_severity("ADVISORY")
+    rows = read_security_log_by_severity("Advisory")
     delivered = [
         r for r in rows
         if r["issuing_agent"] == "mfip_alerts"
@@ -123,7 +123,7 @@ def test_smtp_failure_queues_json_and_writes_warning_row(
     assert ":" not in queued[0].name
 
     # Warning row in security_log.
-    rows = read_security_log_by_severity("WARNING")
+    rows = read_security_log_by_severity("Warning")
     failures = [
         r for r in rows
         if r["issuing_agent"] == "mfip_alerts"
@@ -210,7 +210,7 @@ def test_malformed_correlation_id_writes_warning_and_proceeds(
     assert result is True, "alert delivery must not be blocked by malformed cid"
 
     # Delivery-status row: Advisory, alert_delivered, correlation_id=None.
-    advisories = read_security_log_by_severity("ADVISORY")
+    advisories = read_security_log_by_severity("Advisory")
     delivered = [
         r for r in advisories
         if r["issuing_agent"] == "mfip_alerts"
@@ -222,7 +222,7 @@ def test_malformed_correlation_id_writes_warning_and_proceeds(
 
     # Warning row: malformed_correlation_id, correlation_id=None,
     # impact_assessment JSON contains the raw input.
-    warnings_ = read_security_log_by_severity("WARNING")
+    warnings_ = read_security_log_by_severity("Warning")
     malformed = [
         r for r in warnings_
         if r["issuing_agent"] == "mfip_alerts"

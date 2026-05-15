@@ -28,9 +28,12 @@ against the canonical form is more reliable than parsing the source.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Callable
 
 import duckdb
 
@@ -185,6 +188,206 @@ def init_db(db_path: Path | None = None) -> Path:
     return db_path
 
 
+RowTransform = Callable[[dict, str], dict]
+
+
+def _transform_row_severity_to_title_case(row: dict, table_name: str) -> dict:
+    """Row transform for the 2026-05-15 severity-casing migration.
+
+    Maps UPPER-case severity values to Title-case on `security_log` rows.
+    Returns the row unchanged for any other table.
+    """
+    if table_name != "security_log":
+        return row
+    severity_map = {
+        "ADVISORY": "Advisory",
+        "WARNING": "Warning",
+        "CRITICAL": "Critical",
+    }
+    if "severity" in row and row["severity"] in severity_map:
+        row = dict(row)
+        row["severity"] = severity_map[row["severity"]]
+    return row
+
+
+# Registered as the current migration's transform. When migration #2 lands,
+# refactor to a dedicated `mfip/logging/migrations/` module per
+# `worklog.md` 2026-05-15 "Migrations module refactor trigger flagged".
+ROW_TRANSFORM: RowTransform = _transform_row_severity_to_title_case
+
+
+def _read_table_rows(
+    conn: duckdb.DuckDBPyConnection, table: str
+) -> tuple[list[str], list[dict]]:
+    """Fetch all rows from `table` as a list of column-keyed dicts.
+
+    Returns (column_names_in_order, rows). Empty list when table is empty.
+    """
+    cursor = conn.execute(f"SELECT * FROM {table}")
+    columns = [desc[0] for desc in cursor.description]
+    raw = cursor.fetchall()
+    rows = [dict(zip(columns, tup)) for tup in raw]
+    return columns, rows
+
+
+def _migration_dump_path(db_path: Path) -> Path:
+    """Resolve the pre-migration dump path. Co-located with the DB file's
+    parent directory under a `migrations/` subdirectory."""
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    return db_path.parent / "migrations" / f"pre-migration-{stamp}.jsonl"
+
+
+def _dump_rows_to_jsonl(
+    conn: duckdb.DuckDBPyConnection,
+    tables: list[str],
+    dump_path: Path,
+) -> dict[str, int]:
+    """Write every row from every table to a JSONL audit file.
+
+    One row per line, including a `_table` discriminator. Non-JSON-native
+    types (UUID, datetime, Decimal) are stringified via `default=str`.
+    Returns a per-table row count.
+    """
+    dump_path.parent.mkdir(parents=True, exist_ok=True)
+    per_table: dict[str, int] = {}
+    with dump_path.open("w", encoding="utf-8") as fh:
+        for table in tables:
+            _, rows = _read_table_rows(conn, table)
+            per_table[table] = len(rows)
+            for row in rows:
+                record = {"_table": table, **row}
+                fh.write(json.dumps(record, default=str) + "\n")
+    return per_table
+
+
+def _replay_rows(
+    conn: duckdb.DuckDBPyConnection,
+    rows_by_table: dict[str, tuple[list[str], list[dict]]],
+    transform: RowTransform | None,
+) -> tuple[dict[str, int], dict[str, int]]:
+    """Re-insert rows into the freshly-created tables.
+
+    Each row is transformed via `transform` (if provided) before INSERT.
+    Rows that violate the new schema (e.g. CHECK constraint failures) are
+    caught per-row and counted as skipped. Returns
+    (preserved_per_table, skipped_per_table) keyed by table name.
+    """
+    preserved: dict[str, int] = {}
+    skipped: dict[str, int] = {}
+    for table, (columns, rows) in rows_by_table.items():
+        preserved[table] = 0
+        skipped[table] = 0
+        if not rows:
+            continue
+        placeholders = ", ".join(["?"] * len(columns))
+        col_list = ", ".join(columns)
+        insert_sql = (
+            f"INSERT INTO {table} ({col_list}) VALUES ({placeholders})"
+        )
+        for row in rows:
+            transformed = transform(row, table) if transform else row
+            values = tuple(transformed.get(col) for col in columns)
+            try:
+                conn.execute(insert_sql, values)
+            except duckdb.Error as exc:
+                skipped[table] += 1
+                print(
+                    f"  skipped row in {table}: {type(exc).__name__}",
+                    file=sys.stderr,
+                )
+                continue
+            preserved[table] += 1
+    return preserved, skipped
+
+
+def _migrate_with_preservation(
+    conn: duckdb.DuckDBPyConnection,
+    db_path: Path,
+    transform: RowTransform | None,
+    yes: bool,
+) -> int:
+    """Dump → drop → recreate → re-insert with optional transform."""
+    existing = sorted(_list_application_tables(conn))
+    if not existing:
+        print("No existing application tables; applying fresh schema.")
+        created = _apply_schema_transactional(conn)
+        print(f"Schema applied. Created {created} tables.")
+        return 0
+
+    # Read every row into memory before touching the schema.
+    rows_by_table: dict[str, tuple[list[str], list[dict]]] = {}
+    for table in existing:
+        rows_by_table[table] = _read_table_rows(conn, table)
+    total_rows = sum(len(rows) for _, rows in rows_by_table.values())
+
+    dump_path = _migration_dump_path(db_path)
+    _dump_rows_to_jsonl(conn, existing, dump_path)
+    print(f"Pre-migration dump: {dump_path}")
+
+    if not yes:
+        ans = input(
+            f"Migrate {total_rows} row(s) across "
+            f"{len(existing)} table(s)? [y/N] "
+        )
+        if ans.strip().lower() != "y":
+            print("Aborted.")
+            return 1
+
+    # Drop and recreate.
+    conn.execute("BEGIN TRANSACTION")
+    try:
+        for table in existing:
+            conn.execute(f"DROP TABLE {table}")
+        schema_sql = SCHEMA_PATH.read_text(encoding="utf-8")
+        conn.execute(schema_sql)
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise
+
+    preserved, skipped = _replay_rows(conn, rows_by_table, transform)
+
+    total_preserved = sum(preserved.values())
+    total_skipped = sum(skipped.values())
+    print(f"Preserved: {total_preserved} row(s)")
+    for table, count in preserved.items():
+        print(f"  {table}: {count}")
+    if total_skipped:
+        print(f"Skipped: {total_skipped} row(s) — review dump")
+        for table, count in skipped.items():
+            if count:
+                print(f"  {table}: {count}")
+        return 2
+    return 0
+
+
+def _migrate_no_preserve(
+    conn: duckdb.DuckDBPyConnection, yes: bool
+) -> int:
+    """Drop all application tables and re-apply the schema. Destructive."""
+    existing = sorted(_list_application_tables(conn))
+    if existing and not yes:
+        ans = input(
+            f"DROP {len(existing)} table(s) with all data? [y/N] "
+        )
+        if ans.strip().lower() != "y":
+            print("Aborted.")
+            return 1
+
+    conn.execute("BEGIN TRANSACTION")
+    try:
+        for table in existing:
+            conn.execute(f"DROP TABLE {table}")
+        schema_sql = SCHEMA_PATH.read_text(encoding="utf-8")
+        conn.execute(schema_sql)
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise
+    print(f"Schema re-applied; {len(existing)} table(s) dropped first.")
+    return 0
+
+
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -198,6 +401,22 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="Print per-column drift detail on Case C.",
     )
+    parser.add_argument(
+        "--migrate",
+        action="store_true",
+        help="Migrate schema. Preserves rows by default; combine with "
+             "--no-preserve for a destructive recreate.",
+    )
+    parser.add_argument(
+        "--no-preserve",
+        action="store_true",
+        help="With --migrate: drop and recreate without preserving rows.",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Skip confirmation prompts (for unattended runs).",
+    )
     return parser.parse_args(argv)
 
 
@@ -210,6 +429,14 @@ def main(argv: list[str] | None = None) -> int:
     expected_tables = set(EXPECTED_SCHEMA)
 
     with duckdb.connect(str(db_path)) as conn:
+        # Migration paths short-circuit the verify-only flow.
+        if args.migrate:
+            if args.no_preserve:
+                return _migrate_no_preserve(conn, yes=args.yes)
+            return _migrate_with_preservation(
+                conn, db_path, ROW_TRANSFORM, yes=args.yes
+            )
+
         present = _list_application_tables(conn)
 
         # Case A: no application tables present.

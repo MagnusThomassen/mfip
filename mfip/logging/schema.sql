@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS security_log (
     correlation_id     UUID,  -- nullable: system-level events outside pipeline runs
     timestamp          TIMESTAMP NOT NULL DEFAULT current_timestamp,
     severity           VARCHAR NOT NULL
-                       CHECK (severity IN ('ADVISORY', 'WARNING', 'CRITICAL')),
+                       CHECK (severity IN ('Advisory', 'Warning', 'Critical')),
     issuing_agent      VARCHAR NOT NULL,
     flagging_officer   VARCHAR,
     issue_description  TEXT NOT NULL,
