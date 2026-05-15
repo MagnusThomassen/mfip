@@ -59,6 +59,7 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 | `phase-validations/` | `repo\phase-validations\` | Per-phase validation pattern — `_template.md` canonical structure; one `PHASE_N_VALIDATION.md` per phase; PHASE_0 retroactive (2026-05-15) |
 | `PHASE_1_VALIDATION.md` | `repo\phase-validations\PHASE_1_VALIDATION.md` | Phase 1 walkthrough validation, signed-off 2026-05-15 (Session 16 Item C); first instance of `phase-validations/_template.md` pattern in active use after the retroactive PHASE_0 |
 | `decision_log` + `security_log` DuckDB tables | `C:\MFIP\runtime\mfip.duckdb` | Schema per `decisions.md` 2026-05-14 entries + 2026-05-15 severity Title-case; init via `python scripts/init_db.py`; migrate via `python scripts/init_db.py --migrate` |
+| Migrations package | `mfip/logging/migrations/` | One file per migration, numbered prefix; discovered by `scripts/init_db.py --migrate` in numeric order; refactor trigger fired at migration #2 per `decisions.md` 2026-05-15 |
 | Pydantic log entry models | `mfip/logging/models.py` | `DecisionLogEntry`, `SecurityLogEntry`, `PlaceholderPayload` + `DecisionPayload` discriminated-union scaffold |
 | Log writer functions | `mfip/logging/writers.py` | `write_decision`, `append_security_log`; append-only enforced by absence of update/delete functions in module API |
 | Pipeline context module | `mfip/pipeline/context.py` | `contextvars.ContextVar` for `correlation_id`; `new_/get_/set_/reset_` API |

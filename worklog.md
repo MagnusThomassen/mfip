@@ -502,7 +502,27 @@ commit-order-earlier) keeps `IDEA-028`.
 
 ## 2026-05-15 — Migrations module refactor trigger flagged
 
-**Status:** OPEN
+**Status:** CLOSED — fixed in this PR (Session 17 Item 2a-prereq).
+
+**Closing context:** Refactor landed ahead of migration #2 rather
+than alongside it. Session 17 split the work into Item 2a-prereq
+(this refactor, behaviour-preserving) and Item 2a (the actual
+migration #2 — `row_seq` IDENTITY column on both log tables).
+Migration #2 lands as `mfip/logging/migrations/002_add_row_seq.py`
+in Item 2a, on the package shape established here.
+
+**Resolution:** `scripts/init_db.py`'s `ROW_TRANSFORM` constant
+and local `_transform_row_severity_to_title_case` function were
+removed. The transform body moved verbatim into
+`mfip/logging/migrations/001_severity_title_case.py`. The runner
+now discovers migrations via `_discover_migrations()` (glob
+`[0-9][0-9][0-9]_*.py`, sort by integer prefix) and applies each
+migration's `transform(row, table_name) -> dict | None`
+sequentially per row. Production DB exercised post-refactor: 3
+`Advisory` rows preserved unchanged, zero transform-layer skips,
+zero INSERT-layer skips, exit 0. See `decisions.md` 2026-05-15
+"Migrations module refactor: discoverable package, no schema
+version tracking in v1" for the full design rationale.
 
 Session 16 Item B added `--migrate` to `scripts/init_db.py` with the
 row transform for the severity-casing migration encoded as a single
