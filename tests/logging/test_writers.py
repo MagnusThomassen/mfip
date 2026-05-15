@@ -99,7 +99,7 @@ def test_decision_log_round_trip(temp_db):
 
 
 def test_security_log_round_trip_all_severities(temp_db):
-    for severity in ("ADVISORY", "WARNING", "CRITICAL"):
+    for severity in ("Advisory", "Warning", "Critical"):
         append_security_log(
             SecurityLogEntry(
                 severity=severity,
@@ -108,7 +108,7 @@ def test_security_log_round_trip_all_severities(temp_db):
             )
         )
 
-    for severity in ("ADVISORY", "WARNING", "CRITICAL"):
+    for severity in ("Advisory", "Warning", "Critical"):
         rows = read_security_log_by_severity(severity)
         assert len(rows) == 1, f"expected 1 row at {severity}, got {len(rows)}"
         assert rows[0]["severity"] == severity
@@ -186,7 +186,7 @@ def test_security_log_correlation_id_both_cases(temp_db):
         append_security_log(
             SecurityLogEntry(
                 correlation_id=get_correlation_id(),
-                severity="WARNING",
+                severity="Warning",
                 issuing_agent="security_council",
                 issue_description="alert with correlation",
             )
@@ -196,7 +196,7 @@ def test_security_log_correlation_id_both_cases(temp_db):
         append_security_log(
             SecurityLogEntry(
                 correlation_id=None,
-                severity="ADVISORY",
+                severity="Advisory",
                 issuing_agent="system",
                 issue_description="startup event",
             )
@@ -209,7 +209,7 @@ def test_security_log_correlation_id_both_cases(temp_db):
         assert UUID(str(by_corr[0]["correlation_id"])) == cid
 
         # (b) NULL row is reachable via severity lookup …
-        advisories = read_security_log_by_severity("ADVISORY")
+        advisories = read_security_log_by_severity("Advisory")
         assert len(advisories) == 1
         assert advisories[0]["issue_description"] == "startup event"
         assert advisories[0]["correlation_id"] is None
@@ -244,7 +244,7 @@ def test_cross_log_join_on_correlation_id(temp_db):
         append_security_log(
             SecurityLogEntry(
                 correlation_id=cid,
-                severity="CRITICAL",
+                severity="Critical",
                 issuing_agent="security_council",
                 issue_description="extractor mismatch",
             )
@@ -256,11 +256,11 @@ def test_cross_log_join_on_correlation_id(temp_db):
                 SELECT d.agent, s.severity, s.issue_description
                 FROM decision_log d
                 JOIN security_log s ON d.correlation_id = s.correlation_id
-                WHERE s.severity = 'CRITICAL'
+                WHERE s.severity = 'Critical'
                 """
             ).fetchall()
 
         assert len(joined) == 1
-        assert joined[0] == ("extractor_a", "CRITICAL", "extractor mismatch")
+        assert joined[0] == ("extractor_a", "Critical", "extractor mismatch")
     finally:
         reset_correlation_id(token)
