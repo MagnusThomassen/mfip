@@ -62,6 +62,51 @@ requirements.txt, requirements.lock.txt
 
 Design documents live separately in the Claude project knowledge base. They are intentionally not in Git — `.docx` is binary and doesn't diff well; `decisions.md` plus `CLAUDE.md` together provide the architectural record for anyone reading the code in isolation.
 
+## First-time setup
+
+When cloning the repo to a fresh machine, complete these steps before running any code. They produce the runtime artifacts that the codebase depends on but does not version-control.
+
+1. **Create the virtual environment** and install dependencies:
+
+   ```powershell
+   python -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+   pip install -r requirements.lock.txt
+   ```
+
+2. **Create `.env`** by copying the template and filling in real values:
+
+   ```powershell
+   Copy-Item .env.example .env
+   # Edit .env in your editor — replace placeholder values.
+   ```
+
+   See `.env.example` for the full list of expected keys and their purposes.
+
+3. **Initialise the database schema:**
+
+   ```powershell
+   python scripts/init_db.py
+   ```
+
+   Creates `C:\MFIP\runtime\mfip.duckdb` (or `$env:MFIP_DB_PATH` if set) with the `decision_log` and `security_log` tables. Idempotent — safe to re-run; will verify the schema matches expectations. Pass `--verbose` for per-column detail when drift is detected.
+
+4. **Verify the test suite passes:**
+
+   ```powershell
+   python -m pytest
+   ```
+
+   Should return all tests green with zero deprecation warnings.
+
+5. **Launch the dashboard** (optional sanity check):
+
+   ```powershell
+   python -m mfip.dashboard
+   ```
+
+If any step fails, see `worklog.md` for known setup issues, or check `decisions.md` for relevant architectural context.
+
 ## What this project is and isn't
 
 **It is:**

@@ -400,3 +400,33 @@ Option A is preferred — Title-case reads more naturally in human-facing contex
 The warning write is wrapped in try/except — if it fails, the alert delivery is not blocked. The alert layer's contract is "deliver and report status"; anomaly flagging is best-effort.
 
 **Test coverage:** `tests/alerts/test_sender.py::test_malformed_correlation_id_writes_warning_and_proceeds` exercises the path. Verifies delivery succeeds, both rows are written, and the raw input is captured in the warning's `impact_assessment`.
+
+---
+
+## 2026-05-15 — Schema not initialised on production DB despite PR-A marked complete
+
+**Status:** CLOSED — fixed in this PR. Recurring pattern flagged for future phase close-outs.
+
+**Discovered:** Session 15B's live alert test crashed with `Catalog Error: Table with name security_log does not exist`. Investigation showed `C:\MFIP\runtime\mfip.duckdb` existed (12 KB, created during the live test itself by DuckDB's auto-create-on-connect) but contained zero application tables. PR-A (Session 14) shipped `scripts/init_db.py` to create the schema, but the script had never been run against the production DB. Tests passed because they use temporary DBs that get the schema fresh each time; production had never been touched.
+
+**Pattern:** This is the second instance in two sessions of a "phase deliverable marked complete because the code that produces the artifact shipped, but the artifact itself was never created" pattern. First was Session 15A's `.env` discovery (file missing despite Phase 0 marked complete). Same structural defect.
+
+**Lesson (broader than this PR):** Phase completion checklists should verify deliverable artifacts exist on disk and behave as expected, not just verify that the code producing them was merged. For future phase close-outs, the close-out checklist should include a "run the bootstrap" step that exercises each runtime artifact end-to-end:
+
+- `.venv` exists and `pip list` shows the lockfile contents → already covered by Session 14's venv recovery recipe
+- `.env` exists and has all expected keys → covered by the `.env.example` introduced in Session 15A
+- DB exists and has expected tables → fixed in this PR by making `init_db.py` idempotent and adding it to README first-time-setup
+- Any other phase-specific artifacts (Bloomberg templates archived, dashboard launches cleanly, etc.) → check each at phase close-out, not just at code-merge
+
+The README "First-time setup" section introduced in this PR is the operational counterpart to the lesson — by listing all bootstrap steps in one place, any future fresh-clone scenario (including a future Claude Code session on a different machine) follows the same recipe.
+
+**Resolution (this PR):**
+
+1. Made `scripts/init_db.py` idempotent with schema verification (three cases: empty → apply, current → no-op, drift → exit 1 with diff). EXPECTED_SCHEMA dict is the source of truth for what the verifier checks against; update it any time `mfip/logging/schema.sql` changes.
+2. Ran the script against production DB; schema now applied (`decision_log` + `security_log` tables present). The "file exists but empty" state from the failed live test was handled by the same code path as "file doesn't exist" — DuckDB creates tables in either case once `init_db.py` runs.
+3. Added "First-time setup" section to README listing all five bootstrap steps in order.
+4. This worklog entry documents the recurring pattern so the lesson doesn't get lost.
+
+**Test coverage:** The script's three cases (empty, current, drift) were exercised manually in this PR using a temp DB with simulated drift (an unexpected extra column). Adding automated tests for the script itself is out of scope — it's a one-shot operational tool, not pipeline code. If schema drift becomes a frequent concern (it shouldn't until Phase 3+), revisit and add tests then.
+
+**Verify after this PR:** Live alert test from Session 15B can now complete end-to-end. SMTP + render + `security_log` write all succeed. Closing condition for the prior `worklog.md` entries (`.env missing` and the original Phase 2 PR-A claim of "schema created") is now genuinely met.
