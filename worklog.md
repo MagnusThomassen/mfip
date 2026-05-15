@@ -384,6 +384,14 @@ Option A is preferred — Title-case reads more naturally in human-facing contex
 
 **Closes when:** Both models use the same severity casing and PR-B's `_ALERT_TO_LOG_SEVERITY` mapping is removed. Not blocking — defer to a small dedicated PR before Phase 3 starts (when more agents begin writing to `security_log`). Estimated 30 minutes including test updates.
 
+**Closed:** 2026-05-15 (Session 16 Item B). Resolved via Option A:
+`SecurityLogEntry.severity` changed to Title-case to match
+`Alert.severity`. `_ALERT_TO_LOG_SEVERITY` mapping in
+`mfip/alerts/sender.py` removed. Production DB rows migrated
+in-place using the new `--migrate` flag in `scripts/init_db.py`.
+All three existing `ADVISORY` rows preserved as `Advisory`.
+Status is now CLOSED.
+
 ---
 
 ## 2026-05-15 — correlation_id silent fallback in mfip_alerts (fixed in PR-B follow-up bundle)
@@ -489,3 +497,32 @@ management playbook entry — file-position-later (line 1535),
 commit-order-later — was the renumbering target. The Chief Analyst
 discovery form pattern entry (line 1064, file-position-earlier,
 commit-order-earlier) keeps `IDEA-028`.
+
+---
+
+## 2026-05-15 — Migrations module refactor trigger flagged
+
+**Status:** OPEN
+
+Session 16 Item B added `--migrate` to `scripts/init_db.py` with the
+row transform for the severity-casing migration encoded as a single
+named function (`_transform_row_severity_to_title_case`) registered
+via module-level constant `ROW_TRANSFORM`. This shape is correct
+for v1's needs but does not scale.
+
+**Refactor trigger:** When migration #2 lands (any future schema
+change requiring its own row transform), refactor at that point
+into a dedicated `mfip/logging/migrations/` module — one file per
+migration, each exporting a `transform(row, table_name)` function
+and a `description` string. The runner in `init_db.py` then
+discovers migrations in order rather than referencing a single
+constant.
+
+**Why wait:** Building the abstraction now from one example
+produces a guess. Building it from two concrete cases produces a
+fit. The cost of the refactor at #2 is small (the one existing
+transform moves into a file; the runner picks it up from there).
+
+**Closes when:** Either the migrations module gets built, or the
+project ships v1 with only this one migration in its history (no
+further trigger reached).

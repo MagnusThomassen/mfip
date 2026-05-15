@@ -56,7 +56,7 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 | Zone 1 tests | `tests/test_zone1.py` | 9 passing; 24 total green on branch `phase1/routing-restructure` |
 | `MEMORY.md` | `repo\MEMORY.md` | This file; added Session 7 |
 | `phase-validations/` | `repo\phase-validations\` | Per-phase validation pattern — `_template.md` canonical structure; one `PHASE_N_VALIDATION.md` per phase; PHASE_0 retroactive (2026-05-15) |
-| `decision_log` + `security_log` DuckDB tables | `C:\MFIP\runtime\mfip.duckdb` | Schema per `decisions.md` 2026-05-14 (`decision_log schema` + `security_log schema extension`); init via `python scripts/init_db.py` |
+| `decision_log` + `security_log` DuckDB tables | `C:\MFIP\runtime\mfip.duckdb` | Schema per `decisions.md` 2026-05-14 entries + 2026-05-15 severity Title-case; init via `python scripts/init_db.py`; migrate via `python scripts/init_db.py --migrate` |
 | Pydantic log entry models | `mfip/logging/models.py` | `DecisionLogEntry`, `SecurityLogEntry`, `PlaceholderPayload` + `DecisionPayload` discriminated-union scaffold |
 | Log writer functions | `mfip/logging/writers.py` | `write_decision`, `append_security_log`; append-only enforced by absence of update/delete functions in module API |
 | Pipeline context module | `mfip/pipeline/context.py` | `contextvars.ContextVar` for `correlation_id`; `new_/get_/set_/reset_` API |
@@ -89,6 +89,7 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 | Theme toggle cross-layout | Option 3: zone1-local intermediate store `zone1-theme-radio-store` (memory); two-callback relay | 2026-05-12 |
 | Overlay chrome ownership | Deferred to Alert Feed Panel build — decide for all three overlays at once | 2026-05-12 |
 | `security_log` schema extension | Nullable `correlation_id` column added for symmetry with `decision_log`; supersedes `06_SECURITY_COUNCIL.docx` schema text | 2026-05-14 |
+| Severity casing | Title-case (`Critical`/`Warning`/`Advisory`) across both `Alert` and `SecurityLogEntry` models | 2026-05-15 |
 | Served-layout callback smoke test | Open for Phase 2 close-out (IDEA-023 in `ideas.md`) | — |
 | AG Grid dark↔light visual check | Open; 5-minute manual at next app launch | — |
 
@@ -206,4 +207,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-15 — Session 16 Item 0: `phase-validations/` pattern established + retroactive PHASE_0_VALIDATION.md.*
+*Last updated: 2026-05-15 — Session 16 Item B: severity Title-case normalisation + `--migrate` flag in init_db.py + production DB migrated.*

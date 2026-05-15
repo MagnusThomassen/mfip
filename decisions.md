@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-15 — Severity casing normalised to Title-case across logging models; `--migrate` flag added to `init_db.py`](#2026-05-15--severity-casing-normalised-to-title-case-across-logging-models---migrate-flag-added-to-init_dbpy) `convention` `infrastructure`
 - [2026-05-15 — `phase-validations/` pattern established](#2026-05-15--phase-validations-pattern-established) `process` `docs`
 - [2026-05-15 — MFIP alert delivery uses service-account separation: magiconus@gmail.com sends to magnus.thomass1@gmail.com](#2026-05-15--mfip-alert-delivery-uses-service-account-separation-magiconusgmailcom-sends-to-magnusthomass1gmailcom) `infrastructure` `security`
 - [2026-05-15 — security_log self-event encoding: event_type as issue_description prefix, structured details as JSON in impact_assessment](#2026-05-15--security_log-self-event-encoding-event_type-as-issue_description-prefix-structured-details-as-json-in-impact_assessment) `convention` `infrastructure`
@@ -2673,3 +2674,127 @@ than 30 minutes to fill in beyond the live exercise itself),
 consider trimming the template. Initial expectation is that the
 template is sized correctly; the bulk of the time should be the
 live exercise, not the documentation of it.
+
+---
+
+## 2026-05-15 — Severity casing normalised to Title-case across logging models; `--migrate` flag added to `init_db.py`
+**Tags:** convention, infrastructure
+
+**Decision:** `SecurityLogEntry.severity` and `Alert.severity` now
+share the same Literal type — `Literal["Critical", "Warning",
+"Advisory"]`. Both models use Title-case. The bridging
+`_ALERT_TO_LOG_SEVERITY` mapping in `mfip/alerts/sender.py` is
+removed. `scripts/init_db.py` gains a `--migrate` flag as the
+canonical schema-migration tool going forward, with row data
+preserved by default and `--no-preserve` available for clean-slate
+recreates.
+
+**Context.** PR-B (Session 15B, `mfip/alerts/`) needed to write
+delivery-status rows to `security_log` from an `Alert` model. The
+two models used different severity casing: `Alert.severity` was
+Title-case (Magnus's preference for human-facing alert HTML);
+`SecurityLogEntry.severity` was UPPER-case (Phase 2 PR-A's original
+design). PR-B resolved the mismatch at the sender boundary via a
+private mapping rather than modifying either model, leaving the
+real inconsistency for a future session. The `worklog.md`
+2026-05-15 entry on severity casing flagged this as an OPEN item to
+be resolved before more agents began writing to `security_log` —
+i.e. before Phase 3.
+
+**Why Title-case wins over UPPER-case.** Title-case reads more
+naturally in human-facing contexts. Severity values surface in
+three places: alert email subject lines and HTML severity badges
+(human-facing), structured log rows scanned ad-hoc during
+debugging (human-facing), and SQL queries (case-insensitive in
+practice via `LOWER()` or matching the constraint). The first two
+contexts dominate. UPPER-case was the original choice because
+"log severity" sounded like it should be loud; in practice the
+loudness is carried by colour and placement in alert HTML, not by
+the string's casing.
+
+**Why `--migrate` ships with this change rather than later.** The
+severity-casing migration is the project's first real schema
+migration. Building the migration tool around the simplest possible
+case — a transformation that maps each old value to one new value,
+no schema-structure change, three rows in production — is much
+cheaper than building it later when there is real recommendation
+history at stake. The tool's shape (`--migrate` with row
+preservation by default, `--no-preserve` for clean-slate) becomes
+the convention for every future schema change.
+
+**Migration semantics:**
+
+1. `--migrate` dumps every row from every application table to
+   `<db-parent>/migrations/pre-migration-{UTC-timestamp}.jsonl`.
+   This dump is the audit trail and is gitignored
+   (`runtime/migrations/`).
+2. The runner discovers if a row-transform function is registered
+   for the current migration (one named function per migration, in
+   `init_db.py` until enough accumulate to justify a dedicated
+   module). The transform is `(row_dict, table_name) → row_dict`
+   and is applied row-by-row.
+3. Tables drop, schema re-applies from `mfip/logging/schema.sql`.
+4. Rows re-insert. Rows that fail validation against the new schema
+   are logged and skipped, with a count reported per table. The
+   pre-migration dump is preserved on disk regardless.
+5. Exit 0 if every row migrated; exit 2 if any row was skipped
+   (operator decides whether to amend the transform or accept the
+   loss).
+
+**Why preservation is the default.** Schema migrations on a
+project that has accumulated real data (the v1 endgame: 6 companies,
+30+ days of recommendations, ongoing portfolio decisions) cannot
+default to destructive behaviour. Defaulting to preservation means
+operator memory is never the safety net — the operator has to
+opt *in* to destruction via `--no-preserve`. The marginal cost of
+building preservation now is trivial against the long-term value of
+having the safety default in place before real data exists.
+
+**Row-transform implementation.** For this migration, a single
+function `_transform_row_severity_to_title_case` inside
+`init_db.py`, registered via the module-level constant
+`ROW_TRANSFORM`. Future migrations add their own named transform
+functions in the same file until accumulation justifies a
+dedicated `mfip/logging/migrations/` module. The refactor trigger
+is migration #2 — building the abstraction from one example is a
+guess; building it from two is a fit. Flagged in `worklog.md`
+2026-05-15 entry "Migrations module refactor trigger flagged".
+
+**Affected files:**
+
+- `mfip/logging/models.py` — Title-case Literal.
+- `mfip/logging/schema.sql` — CHECK constraint Title-case.
+- `scripts/init_db.py` — `--migrate` flag, migration runner, row
+  transform.
+- `mfip/alerts/sender.py` — `_ALERT_TO_LOG_SEVERITY` removed (was
+  unused dead code; hardcoded UPPER-case literals at three call
+  sites also updated to Title-case).
+- `tests/logging/test_writers.py` — fixtures and assertions
+  updated.
+- `tests/alerts/test_sender.py` — severity-string assertions
+  updated.
+- `.gitignore` — `runtime/migrations/` added.
+- `worklog.md` — OPEN severity casing entry closed; migrations-
+  module refactor-trigger entry added.
+- `MEMORY.md` — `Active Decisions` table gains a severity-casing
+  row; `What Is Built` table notes the new `--migrate` flag.
+
+**Production DB state after this PR.** Three existing rows in
+`security_log` (all `ADVISORY` from Session 15B live alert tests)
+migrated cleanly to `Advisory`. Pre-migration dump retained at
+`C:\MFIP\runtime\migrations\pre-migration-20260515T152930Z.jsonl`.
+
+**Note on the bridging mapping.** Inspection during implementation
+revealed that `_ALERT_TO_LOG_SEVERITY` in `mfip/alerts/sender.py`
+was defined but never referenced — the call sites
+(`_correlation_uuid`, `_log_delivery` invocations) used hardcoded
+UPPER-case literals directly. The mapping was dead code from PR-B,
+not an active bridge. The removal stands; the three hardcoded
+literals were also updated to Title-case.
+
+**Revisit trigger:** Migration #2 lands → refactor to
+`mfip/logging/migrations/` module per the worklog entry. If the
+migration runner proves heavy for v1's needs (unlikely given how
+infrequent schema changes will be), simplify by removing
+preservation as the default — but only after one full migration
+cycle on real data has happened.
