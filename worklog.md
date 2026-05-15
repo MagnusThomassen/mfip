@@ -321,6 +321,12 @@ followed by `pip install -r requirements.lock.txt`. Consider a
 text needs manual update by Magnus in a non-code pass — not blocking,
 but worth tracking. Close when the docx file is updated.
 
+**Update 2026-05-15 (Session 17 PR-C):** still OPEN.
+`correlation_id` (Session 14) and `row_seq` (Session 17 Item 2a)
+both extend the `security_log` schema beyond what the design doc
+describes. Single Magnus non-code pass recommended to reconcile
+all three additions in one sitting.
+
 ---
 
 ## 2026-05-15 — `.env` missing despite Phase 0 marked complete
@@ -744,3 +750,26 @@ ship) extend the file with their own selectors.
 first component, since that work will introduce more Dash core
 components and the override file should be in place first to avoid
 retrofitting.
+
+---
+
+## 2026-05-15 — Scheduled task XML location asymmetry
+
+**Status:** OPEN — low priority.
+
+Three backup tasks live under `scripts/backup/`
+(`Task-MfipBackup.xml`, `Task-MfipPrune.xml`,
+`Task-MfipPruneReminder.xml`) — legacy path from the 2026-05-10
+backup infrastructure decision. The new `Task-NightlyLogExport.xml`
+(Session 17 PR-C) lives under `scripts/scheduled_tasks/` per the
+Python Logistics Layer convention. `register_tasks.ps1` references
+both locations and works correctly; the asymmetry is purely
+cosmetic.
+
+**Closes when:** All four task XML files live under one directory
+(presumably `scripts/scheduled_tasks/`) and `register_tasks.ps1`
+references one path. Estimated 20 minutes — move three files,
+update one script, smoke-test `register_tasks.ps1`.
+
+**Schedule:** Whenever a contributor is touching the scheduled-task
+area for another reason and can fold this in cheaply.
