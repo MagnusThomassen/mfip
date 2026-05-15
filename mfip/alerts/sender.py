@@ -44,15 +44,6 @@ load_dotenv()
 
 SMTP_TIMEOUT_SECONDS = 30
 
-# Severity casing on Alert (Critical/Warning/Advisory) differs from the
-# `security_log` table convention (uppercase). Map at the write boundary
-# rather than rewriting either model.
-_ALERT_TO_LOG_SEVERITY: dict[str, str] = {
-    "Critical": "CRITICAL",
-    "Warning": "WARNING",
-    "Advisory": "ADVISORY",
-}
-
 _NETWORK_EXCEPTIONS: tuple[type[BaseException], ...] = (
     smtplib.SMTPException,
     ConnectionError,
@@ -100,7 +91,7 @@ def _correlation_uuid(alert: Alert) -> UUID | None:
             append_security_log(
                 SecurityLogEntry(
                     correlation_id=None,
-                    severity="WARNING",
+                    severity="Warning",
                     issuing_agent="mfip_alerts",
                     issue_description=(
                         "malformed_correlation_id: alert.correlation_id "
@@ -215,7 +206,7 @@ def send_alert(alert: Alert) -> bool:
         _queue_alert(alert)
         _log_delivery(
             alert=alert,
-            log_severity="WARNING",
+            log_severity="Warning",
             issue_description=f"alert_delivery_failed: {alert.title}",
             details={
                 "title": alert.title,
@@ -226,7 +217,7 @@ def send_alert(alert: Alert) -> bool:
 
     _log_delivery(
         alert=alert,
-        log_severity="ADVISORY",
+        log_severity="Advisory",
         issue_description=f"alert_delivered: {alert.title}",
         details={
             "title": alert.title,
