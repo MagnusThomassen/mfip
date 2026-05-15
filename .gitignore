@@ -33,3 +33,6 @@ credentials.json
 .Rhistory
 .RData
 .Rproj.user/
+
+# Claude Code — share .claude/settings.json and .claude/hooks/, keep personal overrides local
+.claude/settings.local.json
