@@ -9,9 +9,9 @@
 
 ## Current Focus
 
-**Phase 2 — Logging Infrastructure** (in progress)
+**Phase 3 — Bloomberg Ingestion** (not yet started)
 
-PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, log writers with append-only enforcement at the module-API layer, pipeline `contextvars`-based correlation-ID module, round-trip tests including cross-log JOIN coverage. PR-B landed: `mfip/alerts/` — Alert Pydantic model + multipart MIME renderer + SMTP sender with fallback queue under `runtime/unsent_alerts/` and drain-on-every-send. PR-C (Task Scheduler nightly export to `logs-archive` branch) remains.
+Phase 2 closed 2026-05-15. Next mainline build is Phase 3: parse Bloomberg export workbooks at `C:\MFIP\bloomberg_archive\<TICKER>\<DATE>\` per `07_BLOOMBERG_EXPORT_TEMPLATE.docx`. Requires a lab visit to generate fresh exports against the Git-versioned templates. See `04_BUILD_SEQUENCE.docx` Phase 3 entry for the deliverable list.
 
 ---
 
@@ -21,7 +21,7 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 |---|---|---|---|
 | 0 | Environment Setup | ✅ Complete | Commits `a258675`, `e556617`, `5c9db87`, `af3f02d`, `dac7e3b` |
 | 1 | Dashboard Shell | ✅ Complete | Sessions 5–10; final commit `a9cca58` |
-| 2 | Logging Infrastructure | 🟡 In progress | PR-A merged: schema, writers, context. PR-B and PR-C remaining |
+| 2 | Logging Infrastructure | ✅ Complete | Six PRs across Sessions 14-17; full pipeline with row_seq cursor, nightly export to logs-archive, `phase-validations/PHASE_2_VALIDATION.md` signed off 2026-05-15 |
 | 3 | Bloomberg Ingestion | ⬜ Not started | Requires lab visit |
 | 4 | PDF Extraction | ⬜ Not started | |
 | 5 | Intelligence Layer | ⬜ Not started | |
@@ -85,7 +85,7 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 | Python version | 3.12.10 venv; system 3.13.5 untouched | 2026-05-07 |
 | Bloomberg | Pull-and-cache at Kingston lab; no live queries | 2026-05-07 |
 | Logistics layer | Python (`watchdog` + Task Scheduler + `mfip_alerts.py`); Power Automate removed | 2026-05-07 |
-| Alerts | Gmail SMTP (`magnus.thomass1@gmail.com` → `magnus.t@live.no`); local fallback to `runtime\unsent_alerts\` | 2026-05-07 |
+| Alerts | Gmail SMTP service-account separation: `magiconus@gmail.com` → `magnus.thomass1@gmail.com`; local fallback to `runtime\unsent_alerts\` | 2026-05-15 |
 | Test invocation | Always `python -m pytest`; never venv shim (ASR blocked) | 2026-05-11 |
 | Clientside callbacks | Inline string form ≤30 lines; `assets/clientside.js` only when larger | 2026-05-11 |
 | Visual identity | Koyfin-anchored; dual dark+light from start; semantic color tokens; narrowed mono rule | 2026-05-11 |
@@ -96,9 +96,6 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 | Security Council mode | Training mode in v1 — logs everything, does not auto-suspend pipeline | System prompt |
 | Theme toggle cross-layout | Option 3: zone1-local intermediate store `zone1-theme-radio-store` (memory); two-callback relay | 2026-05-12 |
 | Overlay chrome ownership | Deferred to Alert Feed Panel build — decide for all three overlays at once | 2026-05-12 |
-| `security_log` schema extension | Nullable `correlation_id` column added for symmetry with `decision_log`; supersedes `06_SECURITY_COUNCIL.docx` schema text | 2026-05-14 |
-| Severity casing | Title-case (`Critical`/`Warning`/`Advisory`) across both `Alert` and `SecurityLogEntry` models | 2026-05-15 |
-| Served-layout callback smoke test | Open for Phase 2 close-out (IDEA-023 in `ideas.md`) | — |
 
 ---
 
@@ -106,6 +103,7 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 
 | Loop | Where tracked |
 |---|---|
+| Phase 3 lab visit | Required to generate fresh Bloomberg exports against the Git-versioned templates before Phase 3 build can start; see `04_BUILD_SEQUENCE.docx` Phase 3 entry |
 | `watchdog` scope decision (option a/b/c) | Phase 3 build-start deliverable; `04_BUILD_SEQUENCE.docx` |
 | PDF filename convention | Phase 4 build-start deliverable; log in `decisions.md` when decided |
 | Home screen contents | Design TBD; revisit after `/analysis` is in routine use. `ideas.md` 2026-05-10 "Project Dashboard View" RESOLVED-PARTIALLY |
@@ -214,4 +212,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-15 — Session 16 Item D: Phase 1 close-out logged; AG Grid entry migrated to Open Loops.*
+*Last updated: 2026-05-15 — Session 17 Item 3c: Phase 2 close-out logged; Phase 2 status flipped to ✅; Current Focus moved to Phase 3.*

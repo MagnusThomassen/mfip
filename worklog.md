@@ -773,3 +773,139 @@ update one script, smoke-test `register_tasks.ps1`.
 
 **Schedule:** Whenever a contributor is touching the scheduled-task
 area for another reason and can fold this in cheaply.
+
+---
+
+## 2026-05-15 — `Alert.recommended_action` should be Optional, not required
+
+**Status:** OPEN
+
+**Source:** Session 17 Phase 2 walkthrough (Item 3b, Section B1).
+
+`Alert.recommended_action` is declared as a required field on the
+`Alert` Pydantic model in `mfip/alerts/models.py`. Constructing
+an `Alert` without it raises
+`ValidationError: recommended_action Field required`. This was
+caught when sending the walkthrough test alert; the workaround
+was to pass `recommended_action='None — informational test
+alert. Safe to delete.'` as a string.
+
+The asymmetry: `SecurityLogEntry.recommended_action` is correctly
+nullable (per `decisions.md` 2026-05-15 self-event encoding
+convention — `recommended_action = None` for routine self-events).
+`Alert.recommended_action` should follow the same convention.
+
+Most `Advisory` alerts don't have a meaningful recommended
+action — the whole point of the four-tier severity is that
+`Advisory` is informational. Forcing every caller to pass a
+placeholder string defeats the model's expressiveness.
+
+**Fix:** Change `Alert.recommended_action: str` to
+`Alert.recommended_action: str | None = None` in
+`mfip/alerts/models.py`. The HTML renderer already handles
+missing fields gracefully (verified during PR-B). Test updates
+are mechanical.
+
+**Closes when:** Field type changed and existing tests still
+pass; a smoke test exercising an alert without
+`recommended_action` lands; the walkthrough-script-style
+omission stops failing.
+
+**Estimated effort:** ~10 minutes including test updates.
+**Priority:** Low — workaround is one extra kwarg.
+
+---
+
+## 2026-05-15 — Sequence advance persistence asymmetry across log tables (forensic observation)
+
+**Status:** OPEN (observation, not an action item)
+
+**Source:** Session 17 Phase 2 walkthrough (Item 3b, Section A4).
+
+`SELECT sequence_name, last_value FROM duckdb_sequences()`
+returned:
+- `seq_decision_log_row_seq`: `last_value = None`
+- `seq_security_log_row_seq`: `last_value = 5`
+
+Background: Item 2a (PR #55) included a nextval probe that
+called `SELECT nextval('seq_security_log_row_seq')` and
+`SELECT nextval('seq_decision_log_row_seq')` to verify the
+sequences existed and produced sensible values. The probe got
+`(4,)` and `(1,)` back at the time.
+
+Observation: the probe's advance persisted for `security_log`
+(sequence is now at 5 after one real row at 4 — that's
+"probe's 4 + one real INSERT at 4 advancing to 5", or possibly
+"probe's 4 + real INSERTs at 4-5 — exact reconstruction is
+ambiguous without more context"). The probe's advance did NOT
+persist for `decision_log` (last_value is None, suggesting
+nextval has never been "really" called on this sequence in a
+way that committed to catalog state).
+
+**Hypothesis (not investigated further):** Persistence may
+correlate with whether the table had INSERT activity in the
+same session as the probe. `security_log` had real writes; the
+probe's nextval landed in a catalog state that was committed
+on those writes. `decision_log` had no writes; the probe's
+nextval never reached committed state.
+
+**Why this is forensic, not actionable:**
+- End-state behaviour is correct: monotonicity is preserved,
+  no duplicate row_seq values exist, the cursor logic works.
+- The asymmetry would only matter if a future investigation
+  needed to understand "why does this sequence's last_value
+  differ from max(row_seq)+1 in the table?". This entry is
+  that future investigation's breadcrumb.
+
+**Closes when:** Either (a) a DuckDB version upgrade reveals
+this is fixed in a later version (note: implies the asymmetry
+was a 1.5.2 quirk, worth confirming), or (b) someone has cause
+to investigate sequence persistence semantics and writes a
+proper analysis.
+
+**Priority:** None — pure observation.
+
+---
+
+## 2026-05-15 — JSON export filename overwrites on same-day multiple runs
+
+**Status:** OPEN (observation, documented behaviour)
+
+**Source:** Session 17 Phase 2 walkthrough (Item 3b, Section C5).
+
+When the nightly export script runs multiple times on the same
+local date, the second run overwrites the first run's JSON file
+in place at `C:\MFIP\repo-logs-archive\exports\<YYYY-MM-DD>.json`.
+Both Item 2b and the Section C5 manual Task Scheduler trigger
+landed on 2026-05-15; the first file was 2339 bytes (3 rows),
+the second was 2012 bytes (2 rows) — the second overwrote the
+first.
+
+**Why this is acceptable in v1:** Documented in `decisions.md`
+2026-05-15 PR-C entry (D9). The scheduled run happens once
+per day at 02:00; manual triggers during dev/testing are
+expected and overwrites are acceptable in that mode. The
+underlying audit trail is preserved in `logs-archive` commits
+(each run produces a commit), so the overwritten data is
+recoverable via `git show` against the prior commit's diff.
+
+**When this would become a problem:**
+- If dev/test patterns produce multiple manual triggers per
+  day with meaningfully different payloads that need to be
+  individually addressable on disk (not just in Git history).
+- If a scheduled run somehow fires twice on the same day (Task
+  Scheduler's `MultipleInstancesPolicy: IgnoreNew` should
+  prevent this, but a configuration drift could expose it).
+
+**Fix (if it becomes operational):** Change the filename
+convention from `<YYYY-MM-DD>.json` to `<YYYY-MM-DD>_<HH-MM-SS>.json`.
+One-line change in `nightly_log_export.py` at the filename
+construction step. Existing JSON files on disk stay readable
+(only new files use the new format).
+
+**Closes when:** Either operational pattern surfaces the need
+for distinguishable same-day exports (apply the fix), or v1
+ships without ever encountering the issue (close as wontfix).
+
+**Priority:** Low — observation only; underlying audit trail
+is preserved in Git regardless.
