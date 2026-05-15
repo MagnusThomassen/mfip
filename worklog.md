@@ -361,3 +361,42 @@ File verified: exists at `C:\MFIP\repo\.env`, gitignored via
 without BOM, 17 lines. SMTP delivery itself is exercised in PR-B
 (`mfip_alerts.py`) — if SMTP fails, that opens a new worklog entry,
 not a reopening of this one.
+
+---
+
+## 2026-05-15 — Severity casing inconsistency: Alert.severity (Title) vs SecurityLogEntry.severity (UPPER)
+
+**Status:** OPEN — flagged for normalisation; not blocking PR-B or PR-C.
+
+**Discovered:** PR-B (`mfip_alerts.py`, PR #43) needed to write delivery-status rows to `security_log` from an `Alert` model. The two models use different severity casing conventions:
+- `Alert.severity: Literal["Critical", "Warning", "Advisory"]` — Title case.
+- `SecurityLogEntry.severity: Literal["CRITICAL", "WARNING", "ADVISORY"]` — UPPER case.
+
+PR-B resolved this at the sender boundary via a private `_ALERT_TO_LOG_SEVERITY` mapping. Neither model was modified. The mismatch is invisible inside the alerts module but will resurface every time another agent writes to `security_log`.
+
+**Impact:** Every future agent that writes to `security_log` either has to import the mapping from `mfip/alerts/sender.py` (creating an unwanted dependency from agent code onto the alerts module) or has to redefine the same mapping locally (duplicated convention). Neither is good.
+
+**Proposed resolution:** Normalise both models to one convention. Either:
+- Option A: Change `SecurityLogEntry.severity` to Title-case. Updates to PR-A's existing tests, PR-B's mapping removed.
+- Option B: Change `Alert.severity` to UPPER. Cosmetic change to user-facing alert HTML (the severity label appears in the header bar).
+
+Option A is preferred — Title-case reads more naturally in human-facing contexts (alert emails, logs scanned by Magnus), and "log severity" is a fundamentally human-readable field.
+
+**Closes when:** Both models use the same severity casing and PR-B's `_ALERT_TO_LOG_SEVERITY` mapping is removed. Not blocking — defer to a small dedicated PR before Phase 3 starts (when more agents begin writing to `security_log`). Estimated 30 minutes including test updates.
+
+---
+
+## 2026-05-15 — correlation_id silent fallback in mfip_alerts (fixed in PR-B follow-up bundle)
+
+**Status:** CLOSED — fixed in this PR.
+
+**Discovered:** PR-B's deviation review flagged that `mfip/alerts/sender.py` was silently coercing malformed `correlation_id` strings to `None` when constructing the delivery-status `SecurityLogEntry`. The reasoning at PR-B time was "defensive against a broken caller," but the side effect was that a real upstream bug (a caller passing a non-UUID string) would be invisible in the audit trail.
+
+**Resolution (this PR):** When `UUID(alert.correlation_id)` raises, the alert layer now:
+1. Sets `log_correlation_id = None` for the delivery-status row (preserving non-blocking alert delivery — correct behaviour).
+2. Additionally writes a separate Warning `SecurityLogEntry` flagging the malformed input, with the raw input value captured in `impact_assessment` JSON for upstream debugging.
+3. Continues with the SMTP send as before.
+
+The warning write is wrapped in try/except — if it fails, the alert delivery is not blocked. The alert layer's contract is "deliver and report status"; anomaly flagging is best-effort.
+
+**Test coverage:** `tests/alerts/test_sender.py::test_malformed_correlation_id_writes_warning_and_proceeds` exercises the path. Verifies delivery succeeds, both rows are written, and the raw input is captured in the warning's `impact_assessment`.

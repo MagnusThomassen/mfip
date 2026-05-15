@@ -194,6 +194,48 @@ def test_drain_retries_oldest_first(
     assert sent_titles == titles_by_order
 
 
+def test_malformed_correlation_id_writes_warning_and_proceeds(
+    temp_db, smtp_env, unsent_dir
+):
+    """A non-UUID `correlation_id` does not block delivery; the alert is
+    sent, the delivery-status row stores correlation_id=None, and a
+    separate Warning row captures the raw input for upstream debugging."""
+    alert = _alert(title="Malformed cid case")
+    alert = alert.model_copy(update={"correlation_id": "not-a-uuid-at-all"})
+
+    with patch("mfip.alerts.sender.smtplib.SMTP") as smtp_cls:
+        smtp_cls.return_value.__enter__.return_value = MagicMock()
+        result = send_alert(alert)
+
+    assert result is True, "alert delivery must not be blocked by malformed cid"
+
+    # Delivery-status row: Advisory, alert_delivered, correlation_id=None.
+    advisories = read_security_log_by_severity("ADVISORY")
+    delivered = [
+        r for r in advisories
+        if r["issuing_agent"] == "mfip_alerts"
+        and "alert_delivered" in r["issue_description"]
+    ]
+    assert len(delivered) == 1
+    assert delivered[0]["correlation_id"] is None
+    assert "Malformed cid case" in delivered[0]["issue_description"]
+
+    # Warning row: malformed_correlation_id, correlation_id=None,
+    # impact_assessment JSON contains the raw input.
+    warnings_ = read_security_log_by_severity("WARNING")
+    malformed = [
+        r for r in warnings_
+        if r["issuing_agent"] == "mfip_alerts"
+        and "malformed_correlation_id" in r["issue_description"]
+    ]
+    assert len(malformed) == 1
+    assert malformed[0]["correlation_id"] is None
+    details = json.loads(malformed[0]["impact_assessment"])
+    assert details["raw_correlation_id"] == "not-a-uuid-at-all"
+    assert details["alert_title"] == "Malformed cid case"
+    assert details["fallback"] == "logged as None"
+
+
 def test_drained_files_moved_to_sent_dated_subdir(
     temp_db, smtp_env, unsent_dir
 ):

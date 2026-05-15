@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-15 — security_log self-event encoding: event_type as issue_description prefix, structured details as JSON in impact_assessment](#2026-05-15--security_log-self-event-encoding-event_type-as-issue_description-prefix-structured-details-as-json-in-impact_assessment) `convention` `infrastructure`
 - [2026-05-15 — mfip_alerts implementation choices: severity colors, 30-line stack truncation, Windows-safe queue filenames, SMTP 30s timeout, drain-on-every-send](#2026-05-15--mfip_alerts-implementation-choices-severity-colors-30-line-stack-truncation-windows-safe-queue-filenames-smtp-30s-timeout-drain-on-every-send) `implementation` `infrastructure`
 - [2026-05-15 — decisions.md split ordering: newest-first index, oldest-first body](#2026-05-15--decisionsmd-split-ordering-newest-first-index-oldest-first-body) `meta`
 - [2026-05-15 — Git guardrails hook: Python over shell, settings.json wiring, ship with repo](#2026-05-15--git-guardrails-hook-python-over-shell-settingsjson-wiring-ship-with-repo) `infrastructure` `tooling`
@@ -2505,3 +2506,35 @@ The convention was discovered the hard way in Session 15 when a worktree-isolati
 **Affected docs:** `mfip/alerts/renderer.py` and `mfip/alerts/sender.py` docstrings reference this entry. `MEMORY.md` `What Is Built` row added in this PR.
 
 **Revisit trigger:** If alert volume grows past ~1 successful send per minute, replace drain-on-every-send with a separate scheduled drain. If Gmail's SMTP behaviour changes materially (rare). If we add non-email alert channels (Slack, SMS) and need a unified rendering abstraction.
+
+---
+
+## 2026-05-15 — security_log self-event encoding: event_type as issue_description prefix, structured details as JSON in impact_assessment
+
+**Tags:** convention, infrastructure
+
+**Decision:** When an agent or subsystem writes a "self-event" to `security_log` (an event about its own operation, e.g. `mfip_alerts` recording the success or failure of its own delivery attempt), the encoding pattern is:
+
+- `issue_description = "{event_type}: {short human description}"`. The `event_type` portion is a stable machine-readable identifier (e.g. `alert_delivered`, `alert_delivery_failed`, `malformed_correlation_id`); the description after the colon is for human readers.
+- `impact_assessment = json.dumps(details_dict, sort_keys=True)` where `details_dict` carries structured context (e.g. recipient address on success, exception class name on failure). `sort_keys=True` for deterministic output in tests.
+- `recommended_action = None` for routine self-events; populated only when a specific operator action is suggested.
+- `correlation_id` follows the row's actual context: bound to a pipeline run if applicable, `None` for system-level events.
+- `severity` uses `SecurityLogEntry`'s UPPER convention (`CRITICAL`, `WARNING`, `ADVISORY`).
+
+**Reasoning:** The `SecurityLogEntry` model defined in PR-A (Session 14) carries `issue_description`, `impact_assessment`, and `recommended_action` as primary fields. PR-B's original handoff specified `event_type` and `details` fields that don't exist on the model. Rather than expand `SecurityLogEntry`'s schema for the alerts module (which would have been a substrate change), PR-B mapped to the existing fields by encoding event types as prefixes and serialising details to JSON. This is now the convention: future agents writing self-events to `security_log` follow the same encoding rather than each inventing their own mapping.
+
+Encoding rationale:
+- `event_type` as a prefix in `issue_description` keeps event types discoverable via simple SQL `LIKE 'event_type_name:%'` queries.
+- JSON in `impact_assessment` preserves structured context without schema migrations every time a new event type adds a new field.
+- `sort_keys=True` ensures test assertions don't break on dict-ordering differences across Python versions.
+
+**Implication:**
+
+- Any future module writing self-events to `security_log` (Security Council agents, the Orchestrator's heartbeat checks, the nightly export pipeline) uses this encoding.
+- Queries against `security_log` for specific event types use `WHERE issue_description LIKE 'event_type_name:%'`. Build a small helper if usage proliferates.
+- The pattern is not strictly enforced by code — it's a convention. A code-level enforcement (e.g. a typed wrapper around `append_security_log`) would be valuable if the convention drifts; for now, document-and-trust.
+- The pattern does NOT apply to `decision_log`, which has its own structured schema (`agent`, `action`, `outcome`, etc.) and doesn't need the prefix encoding.
+
+**Affected docs:** `mfip/alerts/sender.py` docstrings reference this entry. Future self-event-writing modules should reference this entry in their own docs.
+
+**Revisit trigger:** If three or more modules write self-events with the same `event_type`, consider introducing a typed wrapper function (e.g. `append_self_event(event_type, description, details, severity, ...)`) that encodes the convention. If the convention drifts across modules, escalate to a code-level enforcement.

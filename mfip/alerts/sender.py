@@ -81,14 +81,48 @@ def _windows_safe_filename(alert: Alert) -> str:
 
 
 def _correlation_uuid(alert: Alert) -> UUID | None:
+    """Parse alert.correlation_id to UUID; log a warning on malformed input.
+
+    Returns None when correlation_id is missing OR malformed. On malformed
+    input also writes a separate Warning `SecurityLogEntry` flagging the
+    anomaly so the upstream bug surfaces in the audit trail instead of
+    being silently absorbed. The warning write is best-effort — wrapped
+    in try/except so a logging failure never blocks alert delivery.
+    Encoding follows the `security_log` self-event convention; see
+    `decisions.md` 2026-05-15 "security_log self-event encoding".
+    """
     if alert.correlation_id is None:
         return None
     try:
         return UUID(alert.correlation_id)
     except ValueError:
-        # Non-UUID correlation strings shouldn't reach the alert layer,
-        # but logging substrate requires UUID-or-None; fall back to None
-        # so a malformed value never blocks a delivery-status write.
+        try:
+            append_security_log(
+                SecurityLogEntry(
+                    correlation_id=None,
+                    severity="WARNING",
+                    issuing_agent="mfip_alerts",
+                    issue_description=(
+                        "malformed_correlation_id: alert.correlation_id "
+                        "was not a valid UUID"
+                    ),
+                    impact_assessment=json.dumps(
+                        {
+                            "raw_correlation_id": alert.correlation_id,
+                            "alert_title": alert.title,
+                            "fallback": "logged as None",
+                        },
+                        sort_keys=True,
+                    ),
+                    recommended_action=(
+                        "Identify the caller passing malformed "
+                        "correlation_id; expected format is UUID hex string"
+                    ),
+                )
+            )
+        except Exception:
+            # Best-effort: never block alert delivery on warning-write failure.
+            pass
         return None
 
 
