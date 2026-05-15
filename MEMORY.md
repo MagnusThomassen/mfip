@@ -11,7 +11,7 @@
 
 **Phase 2 — Logging Infrastructure** (in progress)
 
-PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, log writers with append-only enforcement at the module-API layer, pipeline `contextvars`-based correlation-ID module, round-trip tests including cross-log JOIN coverage. Next: PR-B (`mfip_alerts.py` — Gmail SMTP with local fallback queue). PR-C (Task Scheduler nightly export to `logs-archive` branch) follows PR-B.
+PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, log writers with append-only enforcement at the module-API layer, pipeline `contextvars`-based correlation-ID module, round-trip tests including cross-log JOIN coverage. PR-B landed: `mfip/alerts/` — Alert Pydantic model + multipart MIME renderer + SMTP sender with fallback queue under `runtime/unsent_alerts/` and drain-on-every-send. PR-C (Task Scheduler nightly export to `logs-archive` branch) remains.
 
 ---
 
@@ -60,6 +60,8 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 | Log writer functions | `mfip/logging/writers.py` | `write_decision`, `append_security_log`; append-only enforced by absence of update/delete functions in module API |
 | Pipeline context module | `mfip/pipeline/context.py` | `contextvars.ContextVar` for `correlation_id`; `new_/get_/set_/reset_` API |
 | Logging tests | `tests/logging/test_writers.py`, `tests/pipeline/test_context.py` | 12 passing (7 writer + 5 context); 37 total green |
+| `mfip/alerts/` | `mfip\alerts\` | Alert model + multipart MIME renderer + SMTP sender with fallback queue and drain-on-send (Phase 2 PR-B) |
+| Alerts tests | `tests/alerts/test_models.py`, `tests/alerts/test_renderer.py`, `tests/alerts/test_sender.py` | 18 collected (4 model + 9 renderer with severity parametrize + 5 sender); 55 total green |
 | `CONTEXT.md` | `repo\CONTEXT.md` | Canonical pipeline/agent domain language; session/build terms remain in `CLAUDE.md` |
 | Debugging protocol | `CLAUDE.md § Debugging protocol` | Six-step loop for runtime-only failures (reproduce → minimise → hypothesise → instrument → fix → regression-test) |
 | Git guardrails hook | `.claude/hooks/git-guardrails.py` | Blocks `git push --force` (any variant), `git reset --hard`, destructive `git clean` flags; wired via `.claude/settings.json` `PreToolUse` |
@@ -203,4 +205,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-15 — Session 15A complete; `.env.example` template added (real `.env` is Magnus-side manual step pre-15B).*
+*Last updated: 2026-05-15 — Phase 2 PR-B merged (`mfip/alerts/` — alert delivery with SMTP fallback queue).*

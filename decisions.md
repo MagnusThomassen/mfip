@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-15 — mfip_alerts implementation choices: severity colors, 30-line stack truncation, Windows-safe queue filenames, SMTP 30s timeout, drain-on-every-send](#2026-05-15--mfip_alerts-implementation-choices-severity-colors-30-line-stack-truncation-windows-safe-queue-filenames-smtp-30s-timeout-drain-on-every-send) `implementation` `infrastructure`
 - [2026-05-15 — decisions.md split ordering: newest-first index, oldest-first body](#2026-05-15--decisionsmd-split-ordering-newest-first-index-oldest-first-body) `meta`
 - [2026-05-15 — Git guardrails hook: Python over shell, settings.json wiring, ship with repo](#2026-05-15--git-guardrails-hook-python-over-shell-settingsjson-wiring-ship-with-repo) `infrastructure` `tooling`
 - [2026-05-14 — Claude Code worktree isolation: parallel Layer 4 agents use --worktree flag per build session](#2026-05-14--claude-code-worktree-isolation-parallel-layer-4-agents-use---worktree-flag-per-build-session) `infrastructure`
@@ -2474,3 +2475,33 @@ The convention was discovered the hard way in Session 15 when a worktree-isolati
 **Affected docs:** None. This entry IS the documentation of the convention. Future session handoffs that touch `decisions.md` should reference this entry if placement ambiguity arises.
 
 **Revisit trigger:** If the file grows large enough that scanning the body top-to-bottom becomes impractical (estimate: ~50+ entries), the convention may need revisiting — perhaps a year-segmented body with newest-year-first, oldest-within-year-first. Not a near-term concern.
+
+---
+
+## 2026-05-15 — mfip_alerts implementation choices: severity colors, 30-line stack truncation, Windows-safe queue filenames, SMTP 30s timeout, drain-on-every-send
+
+**Tags:** implementation, infrastructure
+
+**Decision:** PR-B's `mfip/alerts/` module locks in the following implementation choices for the alert delivery substrate. The 2026-05-07 "Python Handles Logistics" entry defined the design intent; these are the specific numbers and formats chosen at implementation time.
+
+- **Severity → color hex:** Critical = `#c0392b` (red), Warning = `#e67e22` (amber), Advisory = `#f1c40f` (yellow). Inline styles only in the HTML body — email clients commonly strip `<style>` blocks.
+- **Stack trace truncation:** exactly 30 lines, then append `... [truncated]` on its own line. Truncation lives in the renderer, not the Alert model — the model stores the full stack trace; the renderer decides display length.
+- **Queue filename format:** `{YYYY-MM-DDTHH-MM-SS-microseconds}_{correlation_id_or_'system'}.json`. ISO timestamps contain colons, which are invalid in NTFS filenames; replaced with hyphens. Full timezone-aware timestamp is preserved inside the file content via `alert.model_dump_json()`.
+- **SMTP connection timeout:** 30 seconds. Both connection establishment and individual command waits. Timeouts trigger the fallback queue path identically to other network failures.
+- **Drain-on-every-send:** every successful `send_alert()` triggers `drain_unsent_alerts()` before returning. Avoids dedicated drain scheduling. Acceptable because successful sends are rare-ish (alerts are exceptional events, not steady traffic).
+- **Each retry uses a fresh SMTP connection.** Reusing the triggering-send's connection risks Gmail's per-connection rate limits.
+- **Failure `details` field does NOT contain exception message text.** SMTP exception messages can leak credentials in some failure modes; only the exception class name is recorded. Successful send `details` includes the recipient address (already in env config, not credential-sensitive).
+
+**Reasoning:** Each choice resolves a specific failure mode or ambiguity. Severity colors picked for accessible contrast on white email backgrounds (the flat UI palette — Pomegranate, Carrot, Sun Flower — is widely used for severity coding and renders consistently across Gmail, Outlook, and Apple Mail). 30 lines covers typical Python tracebacks while keeping email bodies under most clients' display thresholds. Windows-safe filenames are a hard NTFS constraint; the original spec used naive ISO strings that would have crashed at first network failure. 30s SMTP timeout is a balance: fast enough that hanging connections don't block the calling agent indefinitely, long enough to tolerate normal Gmail-side latency. Drain-on-every-send is the simplest correct policy given alerts are not high-frequency; if alert volume ever grows materially, a separate drain scheduler can replace it.
+
+**Implication:**
+
+- The full Alert JSON serialized into the fallback queue contains the original timezone-aware timestamp, so date arithmetic on queued items is reliable even though the filename strips the `+00:00` suffix.
+- Tests that exercise the fallback path must assert the Windows-safe filename pattern (no `:` in filename) — this is a regression-prone area.
+- If we ever target a non-NTFS filesystem (e.g. dev container on Linux for CI), the filename convention is still safe — colons are also problematic in macOS pre-OS-X and some Linux tooling. Cross-platform-safe is the right default.
+- Future agents that issue alerts should rely on the locked severity-color mapping for visual consistency. Magnus's eye will train on these colors over time.
+- `SecurityLogEntry` does not have explicit `event_type` or `details` fields; PR-B uses `issue_description` for the event_type-prefixed summary (`alert_delivered: <title>` / `alert_delivery_failed: <title>`) and JSON-encodes the details dict into `impact_assessment`. Mapping happens at the write boundary, not in the schema.
+
+**Affected docs:** `mfip/alerts/renderer.py` and `mfip/alerts/sender.py` docstrings reference this entry. `MEMORY.md` `What Is Built` row added in this PR.
+
+**Revisit trigger:** If alert volume grows past ~1 successful send per minute, replace drain-on-every-send with a separate scheduled drain. If Gmail's SMTP behaviour changes materially (rare). If we add non-email alert channels (Slack, SMS) and need a unified rendering abstraction.
