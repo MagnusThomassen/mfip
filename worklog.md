@@ -526,3 +526,65 @@ transform moves into a file; the runner picks it up from there).
 **Closes when:** Either the migrations module gets built, or the
 project ships v1 with only this one migration in its history (no
 further trigger reached).
+
+---
+
+## 2026-05-15 — Phase 1 gap: Zone 2-4 placeholder containers shipped without layout or visible content
+
+**Status:** CLOSED — fixed in this PR.
+
+**Discovered:** Session 16's live validation walkthrough (Item C)
+revealed that `/analysis` rendered Zone 1 at the top with a vast
+empty canvas below. Initial diagnosis suspected DOM-absence; closer
+inspection during the handoff discovery phase showed the
+placeholders are in fact present as inert `html.Div` containers
+with IDs `zone-2`, `zone-3`, `zone-4` and class `zone-placeholder`.
+What's missing is everything that would make them visible: no CSS
+file targets any of those IDs (`grep` across the five existing
+`assets/*.css` files returns zero matches); the divs are
+content-empty; no grid layout positions them. The containers
+exist structurally and render to zero visible pixels.
+
+**Pattern this fits.** Different shape from the two prior instances
+in the current arc:
+- First instance (`.env` missing, PR #41): true artifact absence —
+  the file did not exist on disk.
+- Second instance (DuckDB schema not initialised, PR #45): true
+  artifact absence — the tables did not exist in the database.
+- This instance (Zone 2-4 visibility): the artifact exists at the
+  structural level (DOM containers with stable IDs are mounted)
+  but not at the level Phase 1's principle required ("dashboard
+  must look complete and professional in both dark and light mode
+  with placeholder data"). Empty unstyled divs fail that standard.
+
+The underlying defect is the same — phase close-out passed on
+self-report rather than visible-walkthrough confirmation — but the
+artifact-vs-visibility distinction matters for diagnosis. A
+filesystem walk would not have caught this; only a browser
+walkthrough does. The `phase-validations/` pattern (Item 0) covers
+both: its "Runtime artifacts verified on disk" section handles the
+first two cases, and its "Live exercise log" section handles this
+third one.
+
+**Resolution (this PR):** Added CSS grid layout for the existing
+`zone-2`/`zone-3`/`zone-4` placeholder containers in a new file
+`mfip/dashboard/assets/analysis-layout.css`. Layout per
+`05_DASHBOARD_SPEC.docx` LAYOUT STRUCTURE: 60/40 horizontal split
+between Zones 2 and 3, 65/35 vertical split between Zones 2+3 and
+Zone 4, 8px gap. Added title/caption children to each placeholder
+so they show "Zone N — <Name>" and "Phase 1 placeholder" captions.
+Border uses `--border-subtle` to read as inert chrome. Container
+IDs unchanged (`zone-2`, `zone-3`, `zone-4`) so the same IDs carry
+through to when each zone's real components ship — no rename
+needed in Phase 5+ or Phase 8.
+
+**Future placeholders:** Zone-internal design decisions remain
+deferred per existing `ideas.md` decision gates:
+- Zone 2 design pass: run-up to Phase 5 (Intelligence Layer kickoff)
+- Zone 3 design pass: same as Zone 2
+- Zone 4 design pass: before Phase 8 (per `2026-05-10 — Portfolio
+  overview` entry)
+
+The placeholder containers ship here as visible cards with labels;
+each gets internal content (cards, charts, tables) at the
+respective zone's design-pass moment.

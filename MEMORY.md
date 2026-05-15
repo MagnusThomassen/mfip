@@ -49,7 +49,8 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 | AG Grid overrides | `assets/ag-grid-overrides.css` | CSS vars from same token set as theme.py; sync enforced by unit test |
 | `app.py` | `mfip/dashboard/app.py` | Dash Pages app; imports `pages/home` + `pages/analysis`; `dcc.Location` + theme stores; clientside callback for OS theme detection (inline string form) |
 | `pages/home.py` | `mfip/dashboard/pages/home.py` | Home stub at `/`; placeholder content + link to `/analysis` |
-| `pages/analysis.py` | `mfip/dashboard/pages/analysis.py` | Analysis page at `/analysis`; composes Zone 1 + Zone 2-4 placeholder containers |
+| `pages/analysis.py` | `mfip/dashboard/pages/analysis.py` | Analysis page at `/analysis`; composes Zone 1 + Zone 2-4 placeholder containers (CSS Grid layout, 60/40 × 65/35 proportions per spec) |
+| Analysis layout CSS | `mfip/dashboard/assets/analysis-layout.css` | CSS Grid for Zone 2-4 placeholder layout; replaces nothing (new) |
 | `zone1.py` | `mfip/dashboard/zones/zone1.py` | Zone 1 Command Centre; exports `layout` as module-level constant; composed into `pages/analysis.py` (not a page itself) |
 | Theme tests | `tests/test_theme.py` | 8 passing |
 | App tests | `tests/test_app.py` | 7 passing (includes `/` and `/analysis` route registration tests) |
@@ -207,4 +208,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-15 — Session 16 Item B: severity Title-case normalisation + `--migrate` flag in init_db.py + production DB migrated.*
+*Last updated: 2026-05-15 — Session 16 Item C-1: Zone 2-4 placeholder containers shipped (Phase 1 deliverable gap close).*
