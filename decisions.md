@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-15 — Phase 2 close-out: Logging Infrastructure complete](#2026-05-15--phase-2-close-out-logging-infrastructure-complete) `process`
 - [2026-05-15 — PR-C nightly log export contract](#2026-05-15--pr-c-nightly-log-export-contract) `infrastructure` `convention`
 - [2026-05-15 — Add row_seq IDENTITY column to log tables for monotonic cursor](#2026-05-15--add-row_seq-identity-column-to-log-tables-for-monotonic-cursor) `data-contract` `infrastructure`
 - [2026-05-15 — Migrations module refactor: discoverable package, no schema version tracking in v1](#2026-05-15--migrations-module-refactor-discoverable-package-no-schema-version-tracking-in-v1) `infrastructure` `convention`
@@ -3215,3 +3216,108 @@ tomorrow's export — audit trail preserved.
   exceed 1 MB).
 - If operators on a future multi-machine setup need to
   coordinate exports (current model assumes single writer).
+
+---
+
+## 2026-05-15 — Phase 2 close-out: Logging Infrastructure complete
+
+**Tags:** process
+
+**Decision:** Phase 2 (Logging Infrastructure) is formally
+closed. Validation evidence is recorded in
+`phase-validations/PHASE_2_VALIDATION.md`, signed off
+2026-05-15 (Item 3b walkthrough). All deliverables shipped,
+all runtime artifacts walked through against the production
+DB and file system, three observation-class findings logged
+to `worklog.md` for future-session disposition.
+
+**Context.** Phase 2 work began Session 14 (PR-A: schema,
+writers, context module) and continued through Session 15B
+(PR-B: `mfip/alerts/`), Session 16 (severity casing normalisation,
+schema bootstrap fix, `--migrate` flag), and Session 17
+(Migrations module refactor, `row_seq` IDENTITY column, PR-C
+nightly export pipeline, walkthrough sign-off). Six PRs
+across four sessions delivered the full Phase 2 scope from
+`04_BUILD_SEQUENCE.docx`:
+
+| PR | Session | Scope |
+|---|---|---|
+| #36 | 14 | PR-A: DuckDB schema, Pydantic models, writers, pipeline context |
+| #43, #44, #46 | 15B | PR-B: `mfip/alerts/` Alert model, multipart MIME renderer, SMTP sender, fallback queue, malformed-correlation_id handling, service-account separation |
+| #45 | 15B | `init_db.py` idempotency + first-time-setup README section |
+| #49 | 16 | Severity Title-case + `--migrate` flag + production DB migrated |
+| #54 | 17 | Migrations module refactor: discoverable `mfip/logging/migrations/` package |
+| #55 | 17 | Migration #2: `row_seq BIGINT NOT NULL DEFAULT nextval(...)` column |
+| #56 | 17 | PR-C: nightly Task Scheduler export with `row_seq` cursor, `logs-archive` worktree, `register_tasks.ps1` |
+
+**Phase 2 deliverables vs Phase 1's close-out:** Phase 1's
+walkthrough caught one substantive in-session defect (Zone 2-4
+placeholder invisibility, PR #50). Phase 2's walkthrough caught
+zero substantive defects — Phase 2 shipped through three clean
+PRs in Session 17 plus prior-session work, all gated by the
+verification discipline established earlier. The
+`phase-validations/` pattern continues to prove its value as
+both audit and prospective gate; this is the second prospective
+use.
+
+**Key architectural decisions baked in during Phase 2:**
+
+- Append-only Security Log enforced at the module-API layer
+  (`mfip/logging/writers.py` exposes only `write_decision` and
+  `append_security_log`; no update or delete functions exist
+  by design).
+- Schema migration via the `--migrate` flag with row-transform
+  pattern; migrations live in `mfip/logging/migrations/` as
+  numbered files discovered by `importlib.util.spec_from_file_location`.
+- `row_seq BIGINT NOT NULL DEFAULT nextval(...)` as the first
+  column of both log tables (DuckDB 1.5.2's substitute for
+  IDENTITY); enables monotonic-cursor-based export without
+  clock-skew dependency.
+- Service-account separation for SMTP delivery
+  (`magiconus@gmail.com` → `magnus.thomass1@gmail.com`)
+  combined with local fallback queue under
+  `runtime/unsent_alerts/`.
+- `logs-archive` Git branch as durable audit archive; nightly
+  exports commit JSON files via a dedicated worktree at
+  `C:\MFIP\repo-logs-archive\`.
+- Cross-cutting Title-case severity convention (`Critical` /
+  `Warning` / `Advisory`) on both `Alert` and `SecurityLogEntry`.
+- `correlation_id` semantics: required on `decision_log`
+  (pipeline runs always have one); nullable on `security_log`
+  (system-level events have no pipeline run to attribute to).
+- Self-event encoding convention: event_type as
+  `issue_description` prefix, structured details as JSON in
+  `impact_assessment`.
+
+**Walkthrough findings disposition:**
+
+Three observation-class entries logged to `worklog.md`:
+- `Alert.recommended_action` Optional fix (~10 min follow-up PR)
+- Sequence advance persistence asymmetry (forensic observation,
+  no action)
+- JSON filename overwrite on same-day runs (documented
+  behaviour, fix path identified if ever needed)
+
+None block Phase 3.
+
+**Affected docs.**
+
+- `phase-validations/PHASE_2_VALIDATION.md` — runtime artifacts
+  walked through, signed off in this PR.
+- `worklog.md` — three new 2026-05-15 entries.
+- `decisions.md` — this entry.
+- `MEMORY.md` — Phase 2 row flips 🟡 → ✅; `Active Decisions`
+  row for Phase 2 retired; Open Loops updated.
+
+**Revisit trigger:** None — this is a close-out entry. Phase
+2's substrate is now durable. Phase 3 (Bloomberg ingestion)
+can build on top of:
+- A populated `decision_log` (currently empty; Phase 3 will
+  produce its first rows via the Bloomberg parser and
+  validator).
+- The cursor-based export pipeline (Phase 3's writes
+  automatically participate in the nightly export without any
+  Phase 3 code changes).
+- The Security Council surface (Phase 8 will build on Phase
+  2's `security_log` substrate without needing further schema
+  work).

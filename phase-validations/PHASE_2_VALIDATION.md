@@ -1,9 +1,9 @@
 # Phase 2 Validation
 
 **Phase:** Logging Infrastructure
-**Status:** PR-C shipped; pending manual walkthrough sign-off (Item 3b)
+**Status:** ✅ Complete
 **Started:** 2026-05-14 (Session 14 — PR-A kickoff)
-**Completed:** [YYYY-MM-DD — fill in when PR-C ships and walkthrough completes]
+**Completed:** 2026-05-15
 **Validated by:** Magnus Thomassen
 **Session:** 17
 
@@ -114,9 +114,9 @@ of Session 17.
   - notes: SMTP fallback path; exercised by
     `mfip/alerts/sender.py` drain-on-send logic.
 
-- [ ] JSON export file lands on disk after nightly export task runs
-  - [ ] verified existing
-  - [ ] verified behaving correctly
+- [x] JSON export file lands on disk after nightly export task runs
+  - [x] verified existing
+  - [x] verified behaving correctly
   - notes: Path changed from spec — actual location is
     `C:\MFIP\repo-logs-archive\exports\<YYYY-MM-DD>.json`
     (inside the worktree, not under `C:\MFIP\logs\exports\`).
@@ -130,10 +130,10 @@ of Session 17.
     `row_seq` 1-3 in ascending order, `decision_log` array is
     empty.
 
-- [ ] `logs-archive` Git branch contains exported JSON file commits
+- [x] `logs-archive` Git branch contains exported JSON file commits
   after nightly export task runs
-  - [ ] verified existing
-  - [ ] verified behaving correctly
+  - [x] verified existing
+  - [x] verified behaving correctly
   - notes: Item 2b's live exercise produced commit `a6ae66b` on
     `logs-archive` with message "nightly log export 2026-05-15 /
     decision_log: 0 rows / security_log: 3 rows (row_seq 1
@@ -143,9 +143,9 @@ of Session 17.
     shows the export commit at HEAD; `git log origin/logs-archive --oneline -3`
     shows the same commit pushed remotely.
 
-- [ ] Task Scheduler entry registered for nightly export at 02:00
-  - [ ] verified existing
-  - [ ] verified behaving correctly
+- [x] Task Scheduler entry registered for nightly export at 02:00
+  - [x] verified existing
+  - [x] verified behaving correctly
   - notes: Item 2b registered `MFIP-NightlyLogExport` via
     `scripts/scheduled_tasks/register_tasks.ps1`. State=Ready,
     next trigger 2026-05-16T02:00:00 local. Verify during
@@ -154,10 +154,10 @@ of Session 17.
     four tasks (`MFIP-Backup`, `MFIP-Prune`, `MFIP-PruneReminder`,
     `MFIP-NightlyLogExport`) registered idempotently.
 
-- [ ] `security_log` self-event row written by nightly export task
+- [x] `security_log` self-event row written by nightly export task
   recording success or failure
-  - [ ] verified existing
-  - [ ] verified behaving correctly
+  - [x] verified existing
+  - [x] verified behaving correctly
   - notes: Item 2b's live exercise wrote one
     `nightly_log_export_succeeded` row at `row_seq=4`, severity
     `Advisory`, `correlation_id IS NULL`. Verify during
@@ -170,11 +170,11 @@ of Session 17.
     self-event row at `row_seq=5+`. Audit trail compounds
     correctly.
 
-- [ ] Export-cursor state file at
+- [x] Export-cursor state file at
   `C:\MFIP\runtime\export_state.json` exists and reflects last
   successful export
-  - [ ] verified existing
-  - [ ] verified behaving correctly
+  - [x] verified existing
+  - [x] verified behaving correctly
   - notes: Item 2b's live exercise populated the file with
     `decision_log: 0`, `security_log: 3`, plus
     `last_export_started_utc` and `last_export_completed_utc`
@@ -186,11 +186,11 @@ of Session 17.
     success (not commit success) per the Q3 design decision in
     `decisions.md` 2026-05-15.
 
-- [ ] `logs-archive` worktree exists at
+- [x] `logs-archive` worktree exists at
   `C:\MFIP\repo-logs-archive\` and is checked out to the
   `logs-archive` branch
-  - [ ] verified existing
-  - [ ] verified behaving correctly
+  - [x] verified existing
+  - [x] verified behaving correctly
   - notes: One-time operator setup per Item 2b's `decisions.md`
     2026-05-15 entry "PR-C nightly log export contract".
     Worktree shares the main repo's `.git` directory; the export
@@ -207,38 +207,153 @@ of Session 17.
 
 ## Live exercise log
 
-[Populate during Session 17 walkthrough after PR-C merges.]
+Walkthrough run by Magnus on 2026-05-15.
+
+**Section A — Database state**
+- `python scripts\init_db.py` → "Schema already current. No changes." Exit 0.
+- `security_log`: 4 rows confirmed via direct query (`row_seq` 1-3 are
+  Session 15B alert delivery rows; `row_seq=4` is Item 2b's
+  `nightly_log_export_succeeded` self-event).
+- `decision_log`: 0 rows.
+- Sequences: `seq_decision_log_row_seq.last_value = None`,
+  `seq_security_log_row_seq.last_value = 5` (asymmetry observed
+  and logged to worklog as a forensic note — see Findings).
+- Migrations discovered: `001_severity_title_case.py` and
+  `002_add_row_seq.py` both present in `mfip/logging/migrations/`.
+
+**Section B — Alert delivery dry-run**
+- Sent a test Advisory alert from `phase_2_walkthrough` agent.
+  First attempt failed with `ValidationError: recommended_action
+  Field required` — logged to worklog as Finding 1 (model shape
+  issue). Re-ran with `recommended_action='None — informational
+  test alert. Safe to delete.'` → "Sent." returned.
+- Email arrived at `magnus.thomass1@gmail.com` from
+  `magiconus@gmail.com` with correct Advisory styling, all
+  fields populated, correlation_id visible. Subject:
+  `[MFIP Advisory] Phase 2 validation walkthrough — test alert`.
+- Delivery-status row visible in `security_log` at the expected
+  row_seq position.
+
+**Section C — Nightly export pipeline**
+- Cursor state file at `C:\MFIP\runtime\export_state.json` matched
+  expected post-Item-2b state (`decision_log: 0, security_log: 3`,
+  both UTC timestamps populated).
+- JSON file from Item 2b at
+  `C:\MFIP\repo-logs-archive\exports\2026-05-15.json` opened
+  cleanly, contained valid JSON with `export_metadata`,
+  empty `decision_log` array, and 3 `security_log` entries
+  (`row_seq` 1, 2, 3 in ascending order).
+- `logs-archive` branch HEAD was `a6ae66b nightly log export
+  2026-05-15 decision_log: 0 rows security_log: 3 rows (row_seq 1
+  through 3) files_committed: 1`. Local and remote in sync.
+- `git worktree list` confirmed two checkouts: main at
+  `C:\MFIP\repo` on `main`, worktree at
+  `C:\MFIP\repo-logs-archive` on `logs-archive`.
+- **Real Task Scheduler trigger:** `Start-ScheduledTask -TaskName
+  MFIP-NightlyLogExport` → `LastRunTime: 22:32:04,
+  LastTaskResult: 0`. The XML's action wiring is correct
+  end-to-end.
+- Post-trigger state file: cursor advanced to `security_log: 5`
+  (captured Item 2b's self-event row at `row_seq=4` and Section
+  B's test alert delivery row at `row_seq=5`).
+- JSON file overwrote in place — same `2026-05-15.json` filename,
+  size 2012 bytes (vs Item 2b's 2339), 2 rows in the new payload.
+  Overwrite-on-same-day behaviour is documented in `decisions.md`
+  PR-C entry (D9) and logged to worklog as a known limitation
+  observation — see Findings.
+- New commit on `logs-archive`: `d35ef7b nightly log export
+  2026-05-15 decision_log: 0 rows security_log: 2 rows (row_seq
+  4 through 5) files_committed: 1`. Pushed to remote.
+- `Get-ScheduledTask` confirmed all four tasks (`MFIP-Backup`,
+  `MFIP-Prune`, `MFIP-PruneReminder`, `MFIP-NightlyLogExport`)
+  Ready.
+
+**Section D — Cross-cutting conventions**
+- Severity casing: only `Advisory` appears in `security_log`
+  distinct severities. Title-case convention enforced.
+- correlation_id usage: 4 rows non-null (live alert deliveries),
+  2 rows null (system-level self-events from nightly export).
+  Asymmetry matches the design — self-events are correctly
+  unattributed to a pipeline run.
+- Writers module API: `write_decision` and `append_security_log`
+  present; `update_security_log` and `delete_security_log`
+  absent. Append-only enforced at the module-API boundary.
 
 ---
 
 ## Findings
 
-[Populate during Session 17 walkthrough.]
-
 ### Working as intended
 
-[List confirmed during walkthrough.]
+- SMTP delivery via service-account separation
+  (`magiconus@gmail.com` → `magnus.thomass1@gmail.com`)
+  end-to-end clean. Advisory styling renders correctly in
+  Gmail's web UI.
+- Real Task Scheduler invocation
+  (`Start-ScheduledTask`, not direct Python) produces the same
+  end-state as manual script invocation. XML action wiring
+  validated.
+- The two-locus skip-counter design from Item 2a-prereq
+  (transform-layer skipped + INSERT-layer skipped) was not
+  exercised against bad data during the walkthrough — all
+  rows passed through cleanly — but the structural
+  observability is in place for future migrations.
+- `logs-archive` worktree pattern keeps the main checkout's
+  branch state isolated. Confirmed via `git worktree list` and
+  by observing that the main checkout stayed on `main`
+  throughout the export script's commit + push.
+- Compounding audit trail works as designed: each export run's
+  own self-event row lands in `security_log` AFTER the cursor
+  has advanced for that run, so it gets captured in the NEXT
+  run's export. The audit trail is fully self-documenting
+  across runs.
+- Cursor-based export semantics are correct:
+  cursor-advances-on-write (not on commit) was validated by
+  observing that the state file reflected the new cursor values
+  immediately after the JSON file landed, before the commit
+  step ran.
+- All cross-cutting conventions hold across the production DB:
+  Title-case severity, correlation_id nullability used
+  semantically, append-only writers API.
 
 ### Issues discovered (fixed in this session)
 
-[Any in-session fixes — likely tied to PR-C.]
+None. Phase 2 shipped through three clean PRs (Item 2a-prereq
+migrations module refactor, Item 2a row_seq migration, Item 2b
+PR-C export pipeline) before the walkthrough; no substantive
+defects surfaced during the walkthrough itself.
 
 ### Issues discovered (fixed in later sessions)
 
-[Likely empty unless something surfaces that fits this bucket.]
+None. The three observations below are deferred low-priority
+items, not fixable-defects.
 
 ### Issues discovered (deferred)
 
-[Any items logged to worklog or ideas.]
+- `Alert.recommended_action` should be Optional, not required.
+  Surfaced during Section B1. Single-line model change. Logged
+  to `worklog.md` as 2026-05-15 entry. Closes in a small
+  follow-up PR.
+- Sequence advance persistence asymmetry between
+  `seq_decision_log_row_seq` (last_value None) and
+  `seq_security_log_row_seq` (last_value 5). End-state is
+  correct; the asymmetry is forensic curiosity around DuckDB
+  1.5.2's persistence semantics. Logged to `worklog.md` as
+  2026-05-15 observation.
+- JSON export filename overwrites on same-day multiple runs.
+  Documented behaviour per `decisions.md` 2026-05-15 PR-C
+  entry (D9). Logged to `worklog.md` as a 2026-05-15
+  observation for visibility if dev/test patterns ever require
+  distinguishable same-day exports.
 
 ---
 
 ## Sign-off
 
-- [ ] I have personally walked through every deliverable and
+- [x] I have personally walked through every deliverable and
   runtime artifact above and confirmed each one. New findings
   (if any) are logged in `worklog.md` or `ideas.md` per the
   boundary rule.
 
 **Signed:** Magnus Thomassen
-**Date:** [YYYY-MM-DD]
+**Date:** 2026-05-15
