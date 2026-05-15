@@ -55,6 +55,7 @@ PR-A landed: DuckDB schema (`decision_log` + `security_log`), Pydantic models, l
 | App tests | `tests/test_app.py` | 7 passing (includes `/` and `/analysis` route registration tests) |
 | Zone 1 tests | `tests/test_zone1.py` | 9 passing; 24 total green on branch `phase1/routing-restructure` |
 | `MEMORY.md` | `repo\MEMORY.md` | This file; added Session 7 |
+| `phase-validations/` | `repo\phase-validations\` | Per-phase validation pattern — `_template.md` canonical structure; one `PHASE_N_VALIDATION.md` per phase; PHASE_0 retroactive (2026-05-15) |
 | `decision_log` + `security_log` DuckDB tables | `C:\MFIP\runtime\mfip.duckdb` | Schema per `decisions.md` 2026-05-14 (`decision_log schema` + `security_log schema extension`); init via `python scripts/init_db.py` |
 | Pydantic log entry models | `mfip/logging/models.py` | `DecisionLogEntry`, `SecurityLogEntry`, `PlaceholderPayload` + `DecisionPayload` discriminated-union scaffold |
 | Log writer functions | `mfip/logging/writers.py` | `write_decision`, `append_security_log`; append-only enforced by absence of update/delete functions in module API |
@@ -205,4 +206,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-15 — Phase 2 PR-B merged (`mfip/alerts/` — alert delivery with SMTP fallback queue).*
+*Last updated: 2026-05-15 — Session 16 Item 0: `phase-validations/` pattern established + retroactive PHASE_0_VALIDATION.md.*
