@@ -15,6 +15,7 @@ models/
 theses/
 filings/
 logs/
+runtime/migrations/
 
 # IDE
 .vscode/
