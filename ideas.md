@@ -1532,7 +1532,7 @@ final Phase 1 PR.
 
 ---
 
-## IDEA-028 — Claude Code context management playbook
+## IDEA-030 — Claude Code context management playbook
 
 **Status:** PROPOSED
 **Added:** 2026-05-14
