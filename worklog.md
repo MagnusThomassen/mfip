@@ -444,3 +444,48 @@ The README "First-time setup" section introduced in this PR is the operational c
 **Resolution (this PR):** MFIP alert delivery configuration switched per `decisions.md` 2026-05-15 service-account separation entry. Outlook is no longer in the alert path. The Outlook quarantine pattern itself remains documented as a parking-lot item in `ideas.md` (IDEA-029).
 
 **Closing note:** All MFIP alerts module behaviour (SMTP, render, `security_log` write, drain queue) is validated working end-to-end. The Outlook-delivery question turned out to be a recipient-platform problem, not an MFIP problem.
+
+---
+
+## 2026-05-15 — IDEA-028 duplicate in `ideas.md` cleaned up + tie-breaker rule adopted
+
+**Status:** CLOSED
+
+Two `IDEA-028` entries existed in `ideas.md`, both added 2026-05-14:
+"Claude Code context management playbook" (appears earlier in the
+file) and "Chief Analyst discovery form pattern" (appears later).
+The collision was flagged in Session 15B PR #46's report-back and
+cleared in Session 16 Item A.
+
+**Resolution:** The later entry — "Claude Code context management
+playbook" — was renumbered to `IDEA-030`. `IDEA-029` was taken in
+PR #46 for the Outlook delivery investigation.
+
+**Tie-breaker rule adopted for future duplicate-ID resolution.**
+Applied in this order:
+
+1. **Cross-reference check (primary).** If one duplicate is
+   referenced from elsewhere in the repo, that one keeps the
+   original number and the un-referenced one is renumbered.
+   Cross-references would dangle if the referenced entry's number
+   changed; renumbering the un-referenced entry costs nothing.
+2. **File position (fallback).** If neither (or both) duplicates
+   are referenced externally, the entry appearing earlier in the
+   file keeps the number. The author who wrote the second entry
+   would have caught the collision at write time if file order had
+   been swapped.
+3. **Commit-order verification (defensive).** Confirm file-position
+   matches commit-introduction order before executing the renumber.
+   If they disagree, halt and re-evaluate.
+
+The rule applies to any ID-bearing file in the repo — `ideas.md`,
+`worklog.md`, and future equivalents.
+
+**Application to this case:** `git grep -n "IDEA-028"` returned hits
+only inside `ideas.md`. The cross-reference gate did not fire. File
+position was applied as the fallback. Commit-order matched file
+position (verified at execution time). The Claude Code context
+management playbook entry — file-position-later (line 1535),
+commit-order-later — was the renumbering target. The Chief Analyst
+discovery form pattern entry (line 1064, file-position-earlier,
+commit-order-earlier) keeps `IDEA-028`.
