@@ -41,6 +41,13 @@ These terms are canonical across all MFIP discussions, design docs, decisions lo
 4. Read `CONTEXT.md` for canonical pipeline/agent terminology before
    writing any agent code or naming any variable that corresponds
    to a pipeline concept.
+5. If kicking off a new phase or closing one, check
+   `phase-validations/`. New phases get a skeleton
+   `PHASE_N_VALIDATION.md` (copy `_template.md`) at kickoff;
+   completed phases get the document fully filled in and signed off
+   before the phase status flips to ✅ in `MEMORY.md`. See
+   `decisions.md` 2026-05-15 "`phase-validations/` pattern
+   established" for the rationale.
 
 ## Division of responsibilities
 
