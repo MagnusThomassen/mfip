@@ -1586,3 +1586,157 @@ The investigation closed for now with a service-account redesign that removed Ou
 **Recorded artifacts from Session 15B investigation:** correlation IDs of the live test runs (`8b4c3eea-cc8c-4c52-950e-24329540e539`, `0e3dd879-4d8e-4481-ad9b-a6278f49e765`, `0809d4b7-f68e-475e-acc9-2ca37449bae0`, `65843789-e0a3-4b8c-9e64-d74d332f0635`) are searchable in `security_log` for the success cases; failures left no log trail because Microsoft silently dropped.
 
 **Estimated investigation cost when revisited:** 2–4 hours for a quick-fix attempt (header improvements, sender reputation tuning); 1–2 days for a transactional email service integration.
+
+---
+
+## 2026-05-15 — DuPont Decomposition Tree View (Zone 2D enhancement)
+
+**Status:** BACKLOG
+
+**Added:** 2026-05-15
+
+**Source:** Pre-Phase-2 dashboard design scouting session
+
+**The idea:**
+Within Zone 2D (FSA Heatmap), add an expandable tree/pyramid view that
+renders the DuPont decomposition visually: ROE → Net Profit Margin ×
+Asset Turnover × Equity Multiplier (3-factor), with optional 5-factor
+expansion (Tax Burden × Interest Burden × EBIT Margin × Asset Turnover
+× Equity Multiplier). The tree expands on click from a collapsed state
+within the heatmap card. Default view remains the flat ratio heatmap;
+the tree is a secondary analytical lens, not a replacement.
+
+**Rationale:**
+The flat heatmap (rows = metrics, columns = years, diverging colour
+scale) is the right primary surface for fast multi-metric scanning.
+But it does not communicate *why* ROE is what it is — it shows the
+output alongside its inputs without making the multiplicative
+relationship explicit. A decomposition tree makes the DuPont logic
+visible: a user can see at a glance whether a high ROE is driven by
+genuine margin expansion, asset efficiency, or leverage. This is
+analytically important for MFIP's universe (e.g. DNB's ROE is
+structurally leverage-driven; Novo Nordisk's is margin-driven — the
+tree makes that contrast immediate). It is also an interview-quality
+touch: it demonstrates understanding of the decomposition, not just
+the ratio output.
+
+Reference: GuruFocus implements this as a dedicated chart type on every
+stock summary page. FineBI pyramid chart pattern is the closest visual
+precedent for a Plotly implementation.
+
+**Proposed design:**
+- Trigger: a small expand icon or "DuPont view" toggle in the Zone 2D
+  card header. One click collapses the heatmap and renders the tree;
+  one click returns to heatmap. State is not persisted across sessions.
+- Tree structure: top node = ROE (current year value + YoY delta).
+  Three child nodes = Net Profit Margin, Asset Turnover, Equity
+  Multiplier. Each node shows current value, 3-year trend sparkline,
+  and a RAG dot (green/amber/red vs. sector peer median).
+- 5-factor expansion: a secondary toggle within the tree view splits
+  Net Profit Margin into Tax Burden × Interest Burden × EBIT Margin.
+  Off by default; on-demand only.
+- Colour: node background uses the same diverging scale as the heatmap
+  (green = above peer median, red = below). Connecting lines are
+  border.default — no colour signal on the lines themselves.
+- Implementation: Plotly treemap or a custom Dash HTML/CSS component.
+  Avoid a full Plotly figure if a lightweight CSS flex tree is
+  sufficient — fewer re-render cycles.
+
+**Dependencies:**
+- FSA Agent must be built and producing reformulated statements with
+  DuPont component data (Net Profit Margin, Asset Turnover, Equity
+  Multiplier as discrete outputs, not just ROE).
+- Peer median data must be available (Comps Agent output or a static
+  sector-median reference table).
+- Zone 2D heatmap card must be built first (Phase 1 placeholder,
+  Phase 2 real data wire-up).
+
+**Decision gate:** FSA Agent ships and produces DuPont component data
+as discrete named outputs. At that point, evaluate whether the tree
+adds enough over the heatmap to justify the build time, given what
+else is queued for Zone 2.
+
+---
+
+## 2026-05-18 — rtk: shell-output token compression for Claude Code Bash tool
+
+**Status:** BACKLOG
+
+**Added:** 2026-05-18
+
+**Source:** Session 18 chat thread; raised pre-Phase-3 kickoff
+
+**Idea:** Install `rtk` (github.com/rtk-ai/rtk), a Rust CLI proxy
+that intercepts Claude Code's Bash tool calls and compresses shell
+output before it reaches the context window. Single binary, hook
+installed via `rtk init -g`, ~10ms overhead per command. Claimed
+~75-80% reduction on `pytest`, `git diff/log/status`, `cat`, `grep`,
+`ruff check`, `cargo test`, and ~100 other commands.
+
+**Rationale:** Phase 3+ work shifts the build's command surface
+toward exactly the operations rtk compresses hardest. Phase 3
+(Bloomberg parser) means heavy `pytest` runs with verbose openpyxl
+validation output. Phase 4 (Extraction Layer) adds multi-file
+Python reasoning across the two extraction agents. Phase 8
+(Security Council) brings four agents whose integration tests
+will produce large structured output. The compounding cost of
+not having this through Phases 3-8 is meaningful; the cost of
+installing it now is ~30 seconds.
+
+Independent benchmarks (kuba-guzik/caveman-micro methodology,
+applied to similar tools) suggest the 75% headline is realistic
+for the compressed slice but represents ~4-15% of total session
+tokens depending on workload. For MFIP's test-heavy phases that
+proportion shifts upward — pytest output dominates active build
+sessions.
+
+**Trade-offs to weigh:**
+- The hook only intercepts Bash tool calls, not Claude Code's
+  built-in Read/Grep/Glob. Mitigation is a CLAUDE.md prompt
+  preferring `cat`/`rg`/`find` over the native tools for codebase
+  scanning. That prompt would need to land alongside the install
+  or the savings are partial.
+- Windows support exists but rtk's README explicitly says WSL is
+  where the hook is most battle-tested. MFIP runs Claude Code
+  natively on Windows. Worth a one-session trial before
+  committing.
+- Phase-validation walkthroughs depend on unfiltered ground truth
+  (Session 17 walkthrough cross-checked DuckDB query output
+  against expected row_seq values). rtk's compression could mask
+  a real discrepancy. Convention needed: bypass rtk for
+  phase-validation queries, use raw commands. CLAUDE.md addition
+  or a `rtk:disable` block scoped to walkthrough sections.
+- Name collision on crates.io with a different package called
+  `rtk` (Rust Type Kit). Install via `brew install rtk`,
+  the curl script, or `cargo install --git`, never bare
+  `cargo install rtk`.
+- Adds a runtime dependency to the build harness. If rtk's
+  output format changes between releases, Claude Code's
+  interpretation of shell output could shift subtly. Pin the
+  version in any documented setup.
+
+**Open questions for Phase 3→4 boundary trial:**
+- Does the Windows-native (non-WSL) experience hold up under a
+  full Phase 3 session, or does it produce edge cases that cost
+  more time than they save?
+- Is `rtk gain` worth wiring into the session-end handoff prompt
+  as a routine metric, or is that noise?
+- Does the CLAUDE.md "prefer shell over Read/Grep/Glob" guidance
+  conflict with any existing instruction Claude Code has been
+  given about tool preference?
+
+**Decision gate:** Phase 3→4 boundary. Either install before
+Phase 4 kickoff (compound benefit across Phases 4-8) or defer
+to a later phase boundary if the Windows trial surfaces friction.
+If installed, the install commit and CLAUDE.md changes should
+land in a dedicated PR ahead of any Phase 4 work, not bundled
+with Phase 4 scope.
+
+**Session 18 decision:** Option A selected at Session 18 thread.
+Deferred to Phase 3→4 boundary (was: Session 18 thread). Rationale:
+walkthrough-bypass convention not yet codified, Windows-native
+unproven, Phase 3 walkthrough integrity prioritised. The
+asymmetric reversibility argument applied — picking "install now"
+wrong would cost ongoing friction during Phase 3 walkthrough;
+picking "defer" wrong costs marginal extra Phase 3 tokens until
+the boundary arrives.
