@@ -106,7 +106,6 @@ Phase 2 closed 2026-05-15. Phase 3 kicked off 2026-05-18 with `phase-validations
 | Loop | Where tracked |
 |---|---|
 | Phase 3 lab visit | Required for parser-validator end-to-end exercise and first production `decision_log` row; pre-lab parser scaffolding can land without it against the Git-versioned templates at `templates/bloomberg/`; see `04_BUILD_SEQUENCE.docx` Phase 3 entry |
-| `watchdog` scope decision (option a/b/c) | Phase 3 build-start deliverable; `04_BUILD_SEQUENCE.docx` |
 | PDF filename convention | Phase 4 build-start deliverable; log in `decisions.md` when decided |
 | Home screen contents | Design TBD; revisit after `/analysis` is in routine use. `ideas.md` 2026-05-10 "Project Dashboard View" RESOLVED-PARTIALLY |
 | ANR enhancements (Bloomberg) | Deferred until next lab session |
@@ -214,4 +213,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-18 — Session 18 kickoff: PHASE_3_VALIDATION.md skeleton seeded; PHASE_2_VALIDATION.md row backfilled into What Is Built; Phase 3 status flipped ⬜ → 🟡; Current Focus and Open Loops phrasing aligned with status flip.*
+*Last updated: 2026-05-18 — Session 18: watchdog scope decision logged (option c — dropped from v1, reserved for v2); Open Loops "watchdog scope decision" row retired.*

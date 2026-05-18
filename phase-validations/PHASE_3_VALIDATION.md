@@ -17,14 +17,16 @@ ordering within each sub-heading follows the build-sequence ordering.
 
 ### Architectural decisions (before code)
 
-- [ ] Decide watchdog scope at Phase 3 build start — three options
+- [x] Decide watchdog scope at Phase 3 build start — three options
   on the table given exports flow directly to `bloomberg_archive\`:
   (a) re-purpose watchdog to validate `bloomberg_archive\` directly,
   (b) introduce inbox usage as part of Phase 3 to gain
   format-quarantine benefits, (c) drop watchdog from v1 entirely.
   Decision logged in `decisions.md` before downstream Phase 3 code
   begins.
-  - evidence: [`decisions.md` YYYY-MM-DD entry — TBD]
+  - evidence: `decisions.md` 2026-05-18 "Watchdog scope decision:
+    dropped from v1; reserved for v2 (Phase 3 first deliverable)" —
+    option (c) selected.
 
 ### Parser core
 

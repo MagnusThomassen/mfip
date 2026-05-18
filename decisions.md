@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-18 — Watchdog scope decision: dropped from v1; reserved for v2 (Phase 3 first deliverable)](#2026-05-18--watchdog-scope-decision-dropped-from-v1-reserved-for-v2-phase-3-first-deliverable) `architecture` `infrastructure` `phase-3`
 - [2026-05-15 — Phase 2 close-out: Logging Infrastructure complete](#2026-05-15--phase-2-close-out-logging-infrastructure-complete) `process`
 - [2026-05-15 — PR-C nightly log export contract](#2026-05-15--pr-c-nightly-log-export-contract) `infrastructure` `convention`
 - [2026-05-15 — Add row_seq IDENTITY column to log tables for monotonic cursor](#2026-05-15--add-row_seq-identity-column-to-log-tables-for-monotonic-cursor) `data-contract` `infrastructure`
@@ -3321,3 +3322,170 @@ can build on top of:
 - The Security Council surface (Phase 8 will build on Phase
   2's `security_log` substrate without needing further schema
   work).
+
+---
+
+## 2026-05-18 — Watchdog scope decision: dropped from v1; reserved for v2 (Phase 3 first deliverable)
+**Tags:** architecture, infrastructure, phase-3
+
+**Decision:** Option (c) from `04_BUILD_SEQUENCE.docx` Phase 3's
+"Decide watchdog scope at Phase 3 build start" deliverable. The
+`watchdog` Python library is dropped from MFIP v1 entirely. The
+Phase 3 Bloomberg parser and the Phase 4 PDF Extractor run on
+**manual invocation** — they are callable library functions
+(`parse_workbook(path) -> ParsedCompanyData` and the equivalent
+for PDFs) with thin CLI shells. No long-running file-watcher
+process exists in v1. `bloomberg_inbox\` remains on disk as
+dormant infrastructure per the 2026-05-09 "Bloomberg storage
+architecture" entry; the Orchestrator heartbeat at
+`C:\MFIP\runtime\orchestrator.heartbeat` remains as the
+designated integration point for the future watchdog process,
+with the version label flipped from "v1.5 watchdog" to "v2
+watchdog" wherever it appears in the design docs.
+
+**Context.** The original `01_ARCHITECTURE.docx` PYTHON LOGISTICS
+LAYER table specified three pillars — file watching (watchdog),
+scheduled jobs (Task Scheduler), alerts (mfip_alerts.py). The
+watchdog pillar was specified to watch `bloomberg_inbox\` and
+`filings\<TICKER>\`, validate against the relevant template, and
+queue for the Orchestrator. The 2026-05-09 storage architecture
+entry reclassified `bloomberg_inbox\` as dormant in v1 on the
+grounds that "the export discipline enforced at the lab obviates
+the need for runtime format quarantine" — Magnus is the sole
+file source, exports happen in bounded lab sessions, and the
+watchdog's primary use case (catching malformed automated drops)
+does not apply. The watchdog scope decision was deferred to
+Phase 3 build-start. Phase 3 kicked off Session 18; this entry
+resolves the deferred decision.
+
+Three options were on the table:
+
+- **(a) Re-purpose watchdog to validate `bloomberg_archive\`
+  directly.** Watch the archive (instead of inbox) for new file
+  drops; run `validate_workbook()`; log to `decision_log`.
+- **(b) Introduce inbox usage as part of Phase 3.** Revive the
+  lab → OneDrive → `bloomberg_inbox\` → (validate via watchdog)
+  → `bloomberg_archive\` flow as originally specified.
+- **(c) Drop watchdog from v1 entirely.** Pipeline is
+  session-driven, not event-driven; validator runs inside the
+  parser, not inside a watchdog wrapper.
+
+**Why option (c).**
+
+1. **The 2026-05-09 storage architecture analysis already pointed
+   here.** The conclusion that watchdog's primary use case does
+   not apply in v1 was already on the record; the decision was
+   deferred only because the time wasn't right. The arguments did
+   not change between then and Phase 3 kickoff.
+
+2. **Option (a) is fake automation.** Watching the archive
+   doesn't add functional value over running the validator
+   manually after a lab session. Every event the watcher would
+   observe is Magnus dropping a file into the archive himself.
+   The "every event logged" property is illusory because the
+   event is already known to the only operator. Watching the
+   archive also muddies the "archive is durable, inbox is
+   event-driven" semantic that the storage architecture
+   deliberately encoded.
+
+3. **Option (b) contradicts a decision already made.** The
+   2026-05-09 architecture entry rejected inbox usage in v1 on
+   substantive grounds. Selecting (b) would walk that decision
+   back without new information.
+
+4. **Reversibility is asymmetric.** Picking (c) wrong (v1
+   discovers it needs event-driven file handling) costs a future
+   half-day to add watchdog back — `watchdog` is a stable,
+   well-known dependency. Picking (a) or (b) wrong costs ongoing
+   maintenance of infrastructure that nothing meaningfully uses,
+   plus a code path through every Phase 3 PR that has to plan
+   around the watchdog seam.
+
+5. **Resolves a v1/v1.5 doc inconsistency.** `01_ARCHITECTURE.docx`
+   KEY ARCHITECTURAL CONSTRAINTS treats watchdog as v1.5 (the
+   heartbeat is "the integration point for the v1.5 watchdog
+   process"). The same doc's PYTHON LOGISTICS LAYER table treats
+   it as a v1 pillar. Option (c) aligns the table with the
+   constraint; (a) and (b) preserve or worsen the inconsistency.
+
+**Forward compatibility.** The decision is reversible without
+touching v1 code. Re-introducing watchdog at v2 requires:
+
+1. One new file at `scripts/watchers/bloomberg_inbox_watcher.py`
+   (~80 lines): a long-running process that uses
+   `watchdog.observers.Observer` + a custom
+   `FileSystemEventHandler` subclass. The `on_created` method
+   calls the existing `validate_workbook(event.src_path)`
+   function from `scripts/ingestion/validate_bloomberg_workbook.py`
+   and routes the file to `bloomberg_archive\` (PASS) or to a
+   new `bloomberg_quarantine\` folder (FAIL).
+2. One `requirements.lock.txt` line: `watchdog>=X.Y.Z` (pinned at
+   v2 implementation time).
+3. One Task Scheduler XML at
+   `scripts/scheduled_tasks/Task-BloombergInboxWatcher.xml`,
+   following the existing four-task pattern (At log on trigger,
+   restart-on-failure 3× at 1-min intervals, runs
+   `.venv\Scripts\python.exe`).
+4. One entry in `scripts/scheduled_tasks/register_tasks.ps1` to
+   register the new task idempotently.
+5. The watcher imports the existing `decision_log` and
+   `security_log` writers from `mfip.logging.writers`, uses the
+   existing `correlation_id` context-var from
+   `mfip.pipeline.context`, and emits self-events using the
+   Phase 2 self-event encoding convention. No v1 code modified.
+
+The Phase 4 PDF watcher (when v2 brings it back) follows the
+same pattern, one file each. The Orchestrator heartbeat at
+`C:\MFIP\runtime\orchestrator.heartbeat` remains as the v2
+watchdog integration point per `01_ARCHITECTURE.docx`.
+
+**Soft design constraint kept by Phase 3 parser scaffolding.**
+The Phase 3 parser is designed library-first
+(`def parse_workbook(path: Path) -> ParsedCompanyData`) with the
+CLI as a thin shell over it. This is good design independent of
+watchdog, but it specifically keeps the v2 watchdog handler's
+implementation simple: the handler imports `parse_workbook` and
+calls it directly, rather than subprocess-spawning a CLI. The
+Phase 4 PDF extractor follows the same shape.
+
+**Affected docs (this PR).**
+
+- `decisions.md` — this entry.
+- `MEMORY.md` — Open Loops "watchdog scope decision (option
+  a/b/c)" row retired.
+- `phase-validations/PHASE_3_VALIDATION.md` — Architectural-
+  decisions checkbox ticked; evidence line points to this entry.
+
+**Affected docs (deferred — separate non-code design-doc
+reconciliation pass; not this PR).**
+
+- `01_ARCHITECTURE.docx` PYTHON LOGISTICS LAYER table — pillar 1
+  revised from "File watching (watchdog)" to "Manual ingestion
+  (v1); watchdog reserved for v2" or equivalent.
+- `01_ARCHITECTURE.docx` KEY ARCHITECTURAL CONSTRAINTS — heartbeat
+  bullet label flipped from "v1.5 watchdog" to "v2 watchdog".
+- `03_TECH_STACK.docx` — `watchdog` row marked v2 (or moved to a
+  v2 section). Verify whether `watchdog` is in the v1
+  `requirements.lock.txt`; if so, it can stay (deps don't have to
+  be exercised to be present) or be removed in the same pass.
+- `04_BUILD_SEQUENCE.docx` Phase 3 — watchdog deliverable updated
+  to "Resolved: see decisions.md 2026-05-18".
+- `04_BUILD_SEQUENCE.docx` Phase 4 — note that PDF watchdog is
+  also dropped to v2; Phase 4 ingestion runs on manual invocation.
+- `07_BLOOMBERG_EXPORT_TEMPLATE.docx` QUARANTINE CONDITIONS —
+  minor update aligning with "watchdog is v2". The v1-status
+  callout already present per the 2026-05-09 doc-revision pass.
+
+**Revisit trigger.** Two triggers, either of which warrants
+re-evaluation:
+
+1. **v2 kickoff.** Watchdog reintroduction is a v2 work item.
+   Re-evaluate scope at v2 planning time — option (a), (b), or
+   a new option may be more appropriate by then. The 2026-05-18
+   analysis is specifically a v1 decision.
+2. **MFIP gains a second file source in v1.** If for any reason
+   MFIP starts receiving Bloomberg exports from someone other
+   than Magnus (e.g. a collaborator, an automated downloader),
+   the "disciplined-human sole source" premise breaks and
+   inbox quarantine becomes valuable. Pull the v2 watchdog work
+   forward as a v1.5 phase at that point.
