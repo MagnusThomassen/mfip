@@ -9,9 +9,9 @@
 
 ## Current Focus
 
-**Phase 3 — Bloomberg Ingestion** (not yet started)
+**Phase 3 — Bloomberg Ingestion** (in progress; skeleton seeded, lab visit pending)
 
-Phase 2 closed 2026-05-15. Next mainline build is Phase 3: parse Bloomberg export workbooks at `C:\MFIP\bloomberg_archive\<TICKER>\<DATE>\` per `07_BLOOMBERG_EXPORT_TEMPLATE.docx`. Requires a lab visit to generate fresh exports against the Git-versioned templates. See `04_BUILD_SEQUENCE.docx` Phase 3 entry for the deliverable list.
+Phase 2 closed 2026-05-15. Phase 3 kicked off 2026-05-18 with `phase-validations/PHASE_3_VALIDATION.md` skeleton seeded. Phase 3 parses Bloomberg export workbooks at `C:\MFIP\bloomberg_archive\<TICKER>\<DATE>\` per `07_BLOOMBERG_EXPORT_TEMPLATE.docx`. Pre-lab parser scaffolding can land against the Git-versioned templates at `templates/bloomberg/`; end-to-end exercise requires a lab visit to generate a fresh export. First Phase 3 deliverable: watchdog scope decision (options a/b/c per `04_BUILD_SEQUENCE.docx`).
 
 ---
 
@@ -22,7 +22,7 @@ Phase 2 closed 2026-05-15. Next mainline build is Phase 3: parse Bloomberg expor
 | 0 | Environment Setup | ✅ Complete | Commits `a258675`, `e556617`, `5c9db87`, `af3f02d`, `dac7e3b` |
 | 1 | Dashboard Shell | ✅ Complete | Sessions 5–10; final commit `a9cca58` |
 | 2 | Logging Infrastructure | ✅ Complete | Six PRs across Sessions 14-17; full pipeline with row_seq cursor, nightly export to logs-archive, `phase-validations/PHASE_2_VALIDATION.md` signed off 2026-05-15 |
-| 3 | Bloomberg Ingestion | ⬜ Not started | Requires lab visit |
+| 3 | Bloomberg Ingestion | 🟡 In progress | Skeleton seeded 2026-05-18 (Session 18); lab visit pending; watchdog scope is first deliverable |
 | 4 | PDF Extraction | ⬜ Not started | |
 | 5 | Intelligence Layer | ⬜ Not started | |
 | 5.5 | Thesis Monitor Agent | ⬜ Not started | Agent 21; own Task Scheduler XML |
@@ -58,6 +58,8 @@ Phase 2 closed 2026-05-15. Next mainline build is Phase 3: parse Bloomberg expor
 | `MEMORY.md` | `repo\MEMORY.md` | This file; added Session 7 |
 | `phase-validations/` | `repo\phase-validations\` | Per-phase validation pattern — `_template.md` canonical structure; one `PHASE_N_VALIDATION.md` per phase; PHASE_0 retroactive (2026-05-15) |
 | `PHASE_1_VALIDATION.md` | `repo\phase-validations\PHASE_1_VALIDATION.md` | Phase 1 walkthrough validation, signed-off 2026-05-15 (Session 16 Item C); first instance of `phase-validations/_template.md` pattern in active use after the retroactive PHASE_0 |
+| `PHASE_2_VALIDATION.md` | `repo\phase-validations\PHASE_2_VALIDATION.md` | Phase 2 walkthrough validation, signed off 2026-05-15 (Session 17 Item 3c); deliverables checklist complete; live exercise covered DB state, alert delivery, nightly export pipeline, and cross-cutting conventions; three findings deferred to `worklog.md` (none blocking Phase 3). Backfilled into `What Is Built` at Session 18 kickoff. |
+| `PHASE_3_VALIDATION.md` | `repo\phase-validations\PHASE_3_VALIDATION.md` | Phase 3 skeleton seeded at Session 18 kickoff (2026-05-18); deliverables checklist derived from `04_BUILD_SEQUENCE.docx` Phase 3 entry; awaiting backfill of `evidence:` lines as Phase 3 PRs ship; walkthrough + sign-off pending at close-out. Status: In progress. |
 | `decision_log` + `security_log` DuckDB tables | `C:\MFIP\runtime\mfip.duckdb` | Schema per `decisions.md` 2026-05-14 entries + 2026-05-15 severity Title-case; init via `python scripts/init_db.py`; migrate via `python scripts/init_db.py --migrate`; `row_seq` IDENTITY-style column (sequence + DEFAULT nextval) added in Session 17 PR for migration #2 |
 | Migrations package | `mfip/logging/migrations/` | One file per migration, numbered prefix; discovered by `scripts/init_db.py --migrate` in numeric order; refactor trigger fired at migration #2 per `decisions.md` 2026-05-15; `002_add_row_seq` adds `row_seq` IDENTITY-style column |
 | Nightly log export script | `scripts/scheduled_tasks/nightly_log_export.py` | Exports new `decision_log`/`security_log` rows to JSON in `logs-archive` worktree, commits, pushes; cursor advances on JSON write success; writes self-event rows for all four outcomes |
@@ -103,7 +105,7 @@ Phase 2 closed 2026-05-15. Next mainline build is Phase 3: parse Bloomberg expor
 
 | Loop | Where tracked |
 |---|---|
-| Phase 3 lab visit | Required to generate fresh Bloomberg exports against the Git-versioned templates before Phase 3 build can start; see `04_BUILD_SEQUENCE.docx` Phase 3 entry |
+| Phase 3 lab visit | Required for parser-validator end-to-end exercise and first production `decision_log` row; pre-lab parser scaffolding can land without it against the Git-versioned templates at `templates/bloomberg/`; see `04_BUILD_SEQUENCE.docx` Phase 3 entry |
 | `watchdog` scope decision (option a/b/c) | Phase 3 build-start deliverable; `04_BUILD_SEQUENCE.docx` |
 | PDF filename convention | Phase 4 build-start deliverable; log in `decisions.md` when decided |
 | Home screen contents | Design TBD; revisit after `/analysis` is in routine use. `ideas.md` 2026-05-10 "Project Dashboard View" RESOLVED-PARTIALLY |
@@ -212,4 +214,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-15 — Session 17 Item 3c: Phase 2 close-out logged; Phase 2 status flipped to ✅; Current Focus moved to Phase 3.*
+*Last updated: 2026-05-18 — Session 18 kickoff: PHASE_3_VALIDATION.md skeleton seeded; PHASE_2_VALIDATION.md row backfilled into What Is Built; Phase 3 status flipped ⬜ → 🟡; Current Focus and Open Loops phrasing aligned with status flip.*
