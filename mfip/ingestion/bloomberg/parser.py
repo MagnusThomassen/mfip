@@ -16,11 +16,12 @@ fill in the sheet-extraction bodies.
 import argparse
 import logging
 import sys
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
@@ -408,14 +409,136 @@ def _extract_anr(wb) -> AnalystRecommendationsSheet:
     return AnalystRecommendationsSheet()
 
 
+def _read_price_series(
+    ws: Worksheet,
+    *,
+    start_row: int = 6,
+    date_col: str = "B",
+    value_col: str = "C",
+    na_cells: list[str],
+) -> pd.Series:
+    """Read a Date | Value array spill into a pandas.Series (PR #65).
+
+    Iterates from `start_row` and terminates at the first row where
+    both `date_col` and `value_col` are None. Openpyxl's `max_row` is
+    NOT a reliable signal: templates are pre-sized for the eventual
+    spill (HP_Daily template has max_row=1310 with only B6 populated),
+    so we look at the data instead.
+
+    Row-level handling:
+        * Date col `#`-prefixed string  -> end-of-spill marker. Record
+          coord in na_cells and break. (Bloomberg array formulas emit
+          their error sentinel into the first cell of the spill region
+          when the spill never materialised; the `#` prefix is the same
+          closed lexical convention as in _read_scalar.)
+        * Date col is None, value present -> price-without-date is
+          unusable. Skip the row entirely, record the date coord.
+        * Date col not a datetime/date  -> raises WorkbookExtractionError.
+        * Value col None or `#`-prefixed -> store NaN in the series,
+          record the value coord.
+        * Value col numeric string  -> permissive parse (matches
+          _read_scalar's "1,234.5" path).
+        * Value col unexpected type  -> raises WorkbookExtractionError.
+
+    Returns:
+        pandas.Series indexed by DatetimeIndex(name="Date"),
+        name="PX_LAST", dtype="float64". Empty Series with the right
+        shape if the spill was a single `#NAME?` row (template case).
+    """
+    dates: list = []
+    prices: list[float] = []
+    row = start_row
+    while True:
+        raw_date = ws[f"{date_col}{row}"].value
+        raw_value = ws[f"{value_col}{row}"].value
+
+        if raw_date is None and raw_value is None:
+            break  # End of spill.
+
+        if isinstance(raw_date, str) and raw_date.startswith("#"):
+            # Excel/Bloomberg error sentinel in the date column means
+            # the spill never materialised (template case). Treat as
+            # end-of-spill rather than a date-typed row.
+            na_cells.append(f"{ws.title}!{date_col}{row}")
+            break
+
+        if raw_date is None:
+            # Price without a date is unusable; skip the row.
+            na_cells.append(f"{ws.title}!{date_col}{row}")
+            row += 1
+            continue
+
+        if not isinstance(raw_date, (datetime, date)):
+            raise WorkbookExtractionError(
+                ws.title,
+                f"non-date value in date column at "
+                f"{ws.title}!{date_col}{row}: {raw_date!r}",
+            )
+
+        # Date is good; handle the value.
+        if raw_value is None or (
+            isinstance(raw_value, str) and raw_value.startswith("#")
+        ):
+            na_cells.append(f"{ws.title}!{value_col}{row}")
+            dates.append(raw_date)
+            prices.append(float("nan"))
+        elif isinstance(raw_value, (int, float)):
+            dates.append(raw_date)
+            prices.append(float(raw_value))
+        elif isinstance(raw_value, str):
+            try:
+                parsed = float(raw_value.replace(",", "").strip())
+            except ValueError as exc:
+                raise WorkbookExtractionError(
+                    ws.title,
+                    f"non-numeric, non-NA value in price column at "
+                    f"{ws.title}!{value_col}{row}: {raw_value!r}",
+                ) from exc
+            dates.append(raw_date)
+            prices.append(parsed)
+        else:
+            raise WorkbookExtractionError(
+                ws.title,
+                f"unexpected type in price column at "
+                f"{ws.title}!{value_col}{row}: "
+                f"{type(raw_value).__name__} {raw_value!r}",
+            )
+        row += 1
+
+    return pd.Series(
+        prices,
+        index=pd.DatetimeIndex(dates, name="Date"),
+        name="PX_LAST",
+        dtype="float64",
+    )
+
+
+def _assert_hp_headers(ws: Worksheet) -> None:
+    """Cheap belt-and-braces against accidental row edits before save."""
+    if ws["B5"].value != "Date" or ws["C5"].value != "PX_LAST":
+        raise WorkbookExtractionError(
+            ws.title,
+            f"header mismatch at row 5: B5={ws['B5'].value!r}, "
+            f"C5={ws['C5'].value!r}",
+        )
+
+
 def _extract_hp_monthly(wb) -> PriceHistorySheet:
-    """STUB — populated in PR #64."""
-    return PriceHistorySheet()
+    """Extract the monthly close-price array spill (PR #65)."""
+    ws = wb["HP_Monthly"]
+    _assert_hp_headers(ws)
+    na_cells: list[str] = []
+    series = _read_price_series(ws, na_cells=na_cells)
+    return PriceHistorySheet(series=series, na_cells=sorted(na_cells))
 
 
 def _extract_hp_daily(wb) -> PriceHistorySheet:
-    """STUB — populated in PR #64."""
-    return PriceHistorySheet()
+    """Extract the daily close-price array spill (PR #65)."""
+    ws = wb["HP_Daily"]
+    _assert_hp_headers(ws)
+    na_cells: list[str] = []
+    series = _read_price_series(ws, na_cells=na_cells)
+    return PriceHistorySheet(series=series, na_cells=sorted(na_cells))
 
 
 def _extract_rv_comps(wb) -> RVCompsSheet | None:

@@ -114,10 +114,11 @@ class PriceHistorySheet(_BaseSheetModel):
     """HP_Monthly or HP_Daily — date-indexed close price series."""
 
     series: pd.Series | None = None
-    # Series index = pd.DatetimeIndex; values = float. Empty Series
-    # if extraction yielded no rows; None if sheet absent (shouldn't
-    # happen for HP_Monthly / HP_Daily — validator FAILs on missing
-    # required sheets).
+    # Series index = pd.DatetimeIndex (name='Date'); values = float
+    # (name='PX_LAST'). Empty Series if extraction yielded no rows;
+    # None if sheet absent (shouldn't happen for HP_Monthly /
+    # HP_Daily — validator FAILs on missing required sheets).
+    na_cells: list[str] = Field(default_factory=list)
 
 
 class RVCompsSheet(_BaseSheetModel):
