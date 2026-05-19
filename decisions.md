@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-19 — Phase 3 parser conventions: `na_cells` provenance, `#N/A` taxonomy, two-tier fixture strategy](#2026-05-19--phase-3-parser-conventions-na_cells-provenance-na-taxonomy-two-tier-fixture-strategy) `data-contract` `tests` `phase-3`
 - [2026-05-19 — Bloomberg Parser scaffolding: public API, handoff schema, exception hierarchy](#2026-05-19--bloomberg-parser-scaffolding-public-api-handoff-schema-exception-hierarchy) `architecture` `phase-3` `data-contract`
 - [2026-05-19 — Bloomberg Validator moved to mfip/ingestion/bloomberg/](#2026-05-19--bloomberg-validator-moved-to-mfipingestionbloomberg) `architecture` `phase-3`
 - [2026-05-18 — Watchdog scope decision: dropped from v1; reserved for v2 (Phase 3 first deliverable)](#2026-05-18--watchdog-scope-decision-dropped-from-v1-reserved-for-v2-phase-3-first-deliverable) `architecture` `infrastructure` `phase-3`
@@ -3663,3 +3664,139 @@ break extraction.
 **Revisit trigger:** None for the API surface itself; per-sheet
 extraction PRs (#63-#66) fill in the stubs against this fixed
 contract.
+
+---
+
+## 2026-05-19 — Phase 3 parser conventions: `na_cells` provenance, `#N/A` taxonomy, two-tier fixture strategy
+
+**Tags:** `data-contract` `tests` `phase-3`
+
+PR #64 shipped BETA + EE scalar extraction — the first per-sheet
+extractors to land on top of the parser scaffolding from PR #62b. The
+implementation is mechanical, but it locked three conventions that
+every subsequent extraction PR (DVD, ANR, HP, RV_Comps) will inherit.
+Recording them here so the next PR doesn't re-litigate.
+
+**Convention 1: `na_cells` records `"SHEET!COORD"` and sits per-sheet,
+sorted at construction.**
+
+Cell coordinates with a sheet prefix (e.g. `"EE!C8"`, `"BETA!C8"`) win
+over the other two candidates that were on the table:
+- Bloomberg field codes (`"BEST_LTG_EEPS"`) are semantically nice but
+  require a lookup hop to verify which cell returned `#N/A`.
+- Model field paths (`"EE.best_ltg_eeps"`) couple log content to the
+  Pydantic API — every model rename invalidates historical logs.
+
+Cell coordinates survive model renames and field-code drift. When a
+future `decision_log` row references `na_cells=["EE!C8"]`, the
+debugger opens the workbook and looks at exactly that cell.
+
+The `na_cells` field already exists per-sheet on `BetaSheet`,
+`EarningsEstimatesSheet`, and `AnalystRecommendationsSheet` (shipped
+in PR #62b). We kept that layout rather than introducing a top-level
+`na_cells` on `ParsedCompanyData`. Per-sheet is more granular without
+duplication: the consumer that cares about EE's NA cells reads
+`parsed.ee.na_cells`, not a globally-merged list it has to filter.
+
+Each extractor sorts its `na_cells` before constructing the sub-model
+— deterministic across runs, matches the validator's sorted-prefix
+discipline from PR #62.
+
+**Convention 2: `#N/A` detection is centralised in `_read_scalar` with
+a known taxonomy *and* a `#`-prefix guard.**
+
+`parser.py` defines a private `_NA_VALUES` frozenset enumerating the
+known Excel/Bloomberg error strings: `#N/A`, `#N/A Requesting Data...`,
+`#N/A N/A`, `#N/A Invalid Security`, `#N/A Field Not Applicable`,
+`#VALUE!`, `#NAME?`, `#REF!`, `#DIV/0!`, `#NUM!`, `#NULL!`. The runtime
+check uses both:
+1. Exact match against `_NA_VALUES` — documents the known taxonomy.
+2. `startswith("#")` fallback — catches future variants (or unknown
+   regional/version forms) without requiring a code change.
+
+Belt-and-braces: the enumerated set is readable documentation, the
+prefix guard is the actual safety net. The Master template's cells
+return `'#NAME?'` under `data_only=True` (cached error from saving
+without the Bloomberg add-in active); the prefix guard handles that
+without `#NAME?` needing to be on a maintenance list.
+
+`_read_scalar` returns `None` for any NA-like value and appends the
+`SHEET!COORD` to the passed `na_cells` list. It returns `float` for
+numeric cells (including comma-grouped strings like `"1,234.5"` that
+Bloomberg occasionally emits under locale drift). It raises
+`WorkbookExtractionError` for non-numeric, non-NA strings — values
+like `"approx 1.2"` are workbook corruption that should fail loud
+rather than silently coerce to None.
+
+Distinction: `0.0` is a real number, `None` is "Bloomberg didn't
+return one", `WorkbookExtractionError` is "something is wrong with
+this workbook". Three states, three meanings, no conflation.
+
+No `ParserError` class was introduced — the existing
+`WorkbookExtractionError(sheet, detail)` from `exceptions.py`
+covers this. The brief had specified `ParserError`; sticking with
+the existing hierarchy keeps the API surface stable.
+
+**Convention 3: two-tier test fixtures — templates for shape,
+committed sanitised real export for values.**
+
+The repo carries one committed real Bloomberg export at
+`tests/fixtures/bloomberg/EQNR_NO_2026-05-08.xlsx` (86 KB; well under
+repo-bloat threshold). EQNR is a public-equity ticker with no PII or
+unrelated company data — sanitisation is a one-time check, not an
+ongoing scrub. `.gitattributes` already marks `*.xlsx` as binary so
+this works cleanly.
+
+Test layout:
+- **Tier 1 — template-fixture tests.** Use the existing
+  `templates/bloomberg/Template_Ticker/MFIP_…_Master.xlsx`. The
+  template's BDP cells cache as `#NAME?` under `data_only=True`
+  (saved without the add-in active), so `_extract_beta` /
+  `_extract_ee` return all-`None` sub-models with full `na_cells`
+  coverage. Tests assert exactly that — shape, not values.
+- **Tier 2 — real-export fixture tests.** Use the committed EQNR
+  fixture. Tests assert types (`float`) and plausible ranges
+  (`0 < raw_beta < 3`, `0 <= r_squared <= 1`, etc.), never exact
+  decimal values — Bloomberg's cached values drift between
+  re-saves and we don't want CI churn from that.
+- **Helper-function tests.** `_read_scalar` is parametrised over
+  the full `_NA_VALUES` set plus boundary cases (empty string,
+  None cell, comma-grouped number, int, float, unknown `#`-prefix,
+  unexpected string).
+
+Going forward, each future extraction PR (#65 ANR + RV_Comps, #66
+indices/FX) adds one committed sanitised fixture per company that
+exercises a sheet-specific edge case — DNB for `BEST_LTG_EEPS = #N/A`,
+CKN for GBp double conversion, etc. The fixture directory stays under
+50 files total, well within Git's comfortable range.
+
+**Tests:** 79 → 102 green (more than the brief's "+12" target because
+the parametrisation over the 11-value `_NA_VALUES` expands to 11
+test cases by itself; the design choice was good coverage > round
+number).
+
+**What was *not* changed.**
+
+- No model renames. `EarningsEstimatesSheet` keeps Bloomberg-mnemonic
+  field names (`best_eps`, `best_ltg_eeps`, etc.) — matches sibling
+  sheet convention (ANR uses `total_buys`, `buys_pct`, etc.) and
+  avoids breaking the Pydantic API.
+- No `frozen=True` on the sub-models. The existing
+  `_BaseSheetModel(arbitrary_types_allowed=True)` is required for
+  `pandas.Series` storage on `PriceHistorySheet`; switching to
+  frozen would break that and serves no extraction-time purpose.
+- No top-level `na_cells` field on `ParsedCompanyData`. Per-sheet is
+  enough.
+- No ArrayFormula tripwire. With `data_only=True` (already in
+  `parse_workbook`), openpyxl never surfaces `ArrayFormula` objects
+  — they're collapsed to cached values (or `#NAME?` errors). The
+  check would be dead code.
+
+**Affected docs (this PR):**
+- `decisions.md` — this entry + TOC line.
+- `MEMORY.md` — "What Is Built" parser row upgraded from "scaffolding"
+  to "CONFIG + BETA + EE scalars"; last-updated line bumped.
+
+**Revisit trigger:** When DVD lands (PR #65), the array-spill row
+shape will need a sibling convention — but the scalar conventions
+above carry forward unchanged.

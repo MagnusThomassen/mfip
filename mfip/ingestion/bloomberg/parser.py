@@ -19,8 +19,10 @@ import sys
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 from openpyxl import load_workbook
+from openpyxl.worksheet.worksheet import Worksheet
 
 from mfip.ingestion.bloomberg.exceptions import (
     BloombergParserError,
@@ -247,19 +249,158 @@ def _derive_ticker_short(path: Path, ticker_str: str) -> str:
     )
 
 
+# ---------------------------------------------------------------------------
+# Scalar-cell helper (used by BETA, EE; reused by ANR scalars in #65).
+# ---------------------------------------------------------------------------
+
+# Bloomberg / Excel surfaces several variants of "no usable value":
+#   #N/A, #N/A Requesting Data..., #N/A N/A, #N/A Invalid Security,
+#   #N/A Field Not Applicable, #VALUE!, #NAME?, #REF!, #DIV/0!, #NUM!, #NULL!
+# The enumerated set is documentation; the runtime check uses the broader
+# "#"-prefix guard so future variants don't require a code change. The two
+# together are belt-and-braces: the set lets readers see the known taxonomy,
+# the prefix guard catches everything Excel/Bloomberg can throw.
+_NA_VALUES = frozenset({
+    "#N/A",
+    "#N/A Requesting Data...",
+    "#N/A N/A",
+    "#N/A Invalid Security",
+    "#N/A Field Not Applicable",
+    "#VALUE!",
+    "#NAME?",
+    "#REF!",
+    "#DIV/0!",
+    "#NUM!",
+    "#NULL!",
+})
+
+
+def _read_scalar(
+    ws: Worksheet,
+    coord: str,
+    *,
+    na_cells: list[str],
+) -> float | None:
+    """Read a single cell as float, recording NA-likes in `na_cells`.
+
+    Returns None for any Excel/Bloomberg error string (any value starting
+    with '#' after stripping), for None, or for empty string. Mutates
+    `na_cells` in place: appends f"{ws.title}!{coord}" whenever None is
+    returned. The "SHEET!COORD" format is intentional — when a caller
+    needs to debug an NA value, they open the workbook and look at that
+    cell. Field codes would require a lookup hop; model paths couple
+    log content to the Pydantic API.
+
+    Numeric strings ("1,234.5") are parsed permissively because Bloomberg
+    occasionally emits comma-grouped values when locale settings drift.
+
+    Raises:
+        WorkbookExtractionError: cell holds a non-numeric, non-NA string.
+            A value of 0.0 is a real number; None is "Bloomberg didn't
+            return one"; an unexpected string like "approx 1.2" is a
+            workbook corruption that should fail loud rather than be
+            silently coerced to None.
+    """
+    raw: Any = ws[coord].value
+
+    if raw is None or raw == "":
+        na_cells.append(f"{ws.title}!{coord}")
+        return None
+
+    if isinstance(raw, str):
+        stripped = raw.strip()
+        # Any '#'-prefixed string is an Excel/Bloomberg error sentinel
+        # (#N/A, #VALUE!, #NAME?, #REF!, #DIV/0!, #NUM!, #NULL!, and the
+        # open-ended #N/A-family Bloomberg variants). Prefix guard is
+        # correct here specifically because '#' is a closed lexical
+        # convention — no real value can start with it in a paste-as-
+        # values cell.
+        if stripped in _NA_VALUES or stripped.startswith("#"):
+            na_cells.append(f"{ws.title}!{coord}")
+            return None
+        try:
+            return float(stripped.replace(",", ""))
+        except ValueError as exc:
+            raise WorkbookExtractionError(
+                ws.title,
+                f"non-numeric, non-NA value at {ws.title}!{coord}: {raw!r}",
+            ) from exc
+
+    if isinstance(raw, (int, float)):
+        return float(raw)
+
+    raise WorkbookExtractionError(
+        ws.title,
+        f"unexpected cell type at {ws.title}!{coord}: {type(raw).__name__} {raw!r}",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Per-sheet extraction helpers
+# ---------------------------------------------------------------------------
+
 def _extract_beta(wb) -> BetaSheet:
-    """STUB — populated in PR #63."""
-    return BetaSheet()
+    """Extract BETA sheet scalars (PR #64).
+
+    Coordinate map (header row 5):
+        BETA!C6  raw_beta       (BETA_RAW_OVERRIDABLE)
+        BETA!C7  adjusted_beta  (BETA_ADJ_OVERRIDABLE)
+        BETA!C8  r_squared      (COEF_DETER_R_SQUARED)
+
+    #N/A is expected for thin-coverage names on BETA!C8.
+    """
+    ws = wb["BETA"]
+    na_cells: list[str] = []
+    raw_beta = _read_scalar(ws, "C6", na_cells=na_cells)
+    adjusted_beta = _read_scalar(ws, "C7", na_cells=na_cells)
+    r_squared = _read_scalar(ws, "C8", na_cells=na_cells)
+    return BetaSheet(
+        raw_beta=raw_beta,
+        adjusted_beta=adjusted_beta,
+        r_squared=r_squared,
+        na_cells=sorted(na_cells),
+    )
 
 
 def _extract_dvd(wb) -> DividendSheet:
-    """STUB — populated in PR #64."""
+    """STUB — populated in PR #65."""
     return DividendSheet()
 
 
 def _extract_ee(wb) -> EarningsEstimatesSheet:
-    """STUB — populated in PR #63."""
-    return EarningsEstimatesSheet()
+    """Extract EE sheet scalars (PR #64).
+
+    Coordinate map (header row 6):
+        EE!C7   best_eps             (BEST_EPS)
+        EE!C8   best_ltg_eeps        (BEST_LTG_EEPS) — decimal, not %
+        EE!C9   best_sales           (BEST_SALES)
+        EE!C10  best_ebitda          (BEST_EBITDA)
+        EE!C11  best_analyst_rating  (BEST_ANALYST_RATING)
+
+    Unit note: the template formula for C8 is `=_xll.BDP(...)%`, so the
+    paste-as-values cell carries a decimal (0.05 = 5%). Extraction is
+    faithful to the cell; normalisation happens at the consumer layer.
+
+    BEST_LTG_EEPS expected #N/A for DNB (no LTG consensus on banks)
+    and CKN (small-cap thin coverage). BEST_ANALYST_RATING is extracted
+    for forensic completeness but not consumed downstream — the real
+    signal lives in ANR's raw broker counts (decisions.md 2026-05-08).
+    """
+    ws = wb["EE"]
+    na_cells: list[str] = []
+    best_eps = _read_scalar(ws, "C7", na_cells=na_cells)
+    best_ltg_eeps = _read_scalar(ws, "C8", na_cells=na_cells)
+    best_sales = _read_scalar(ws, "C9", na_cells=na_cells)
+    best_ebitda = _read_scalar(ws, "C10", na_cells=na_cells)
+    best_analyst_rating = _read_scalar(ws, "C11", na_cells=na_cells)
+    return EarningsEstimatesSheet(
+        best_eps=best_eps,
+        best_ltg_eeps=best_ltg_eeps,
+        best_sales=best_sales,
+        best_ebitda=best_ebitda,
+        best_analyst_rating=best_analyst_rating,
+        na_cells=sorted(na_cells),
+    )
 
 
 def _extract_anr(wb) -> AnalystRecommendationsSheet:
