@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-19 — Reader alignment: STATE.md introduced, three-reader review pattern recorded](#2026-05-19--reader-alignment-statemd-introduced-three-reader-review-pattern-recorded) `process` `docs`
 - [2026-05-19 — Phase 3 parser: array-spill extraction convention (HP sheets)](#2026-05-19--phase-3-parser-array-spill-extraction-convention-hp-sheets) `data-contract` `phase-3`
 - [2026-05-19 — Phase 3 parser conventions: `na_cells` provenance, `#N/A` taxonomy, two-tier fixture strategy](#2026-05-19--phase-3-parser-conventions-na_cells-provenance-na-taxonomy-two-tier-fixture-strategy) `data-contract` `tests` `phase-3`
 - [2026-05-19 — Bloomberg Parser scaffolding: public API, handoff schema, exception hierarchy](#2026-05-19--bloomberg-parser-scaffolding-public-api-handoff-schema-exception-hierarchy) `architecture` `phase-3` `data-contract`
@@ -3936,3 +3937,118 @@ inherits the termination rule and `#`-prefix symmetry from here but
 diverges on per-column type discrimination. If the divergence is
 narrower than expected, consider lifting the termination logic into
 a shared helper; if wider, keep them parallel.
+
+---
+
+## 2026-05-19 — Reader alignment: STATE.md introduced, three-reader review pattern recorded
+
+**Tags:** `process` `docs`
+
+**Trigger.** Mid-session, chat-based Claude answered as if the project
+were at Phase 0 because `SYSTEM_PROMPT.docx` in Project Knowledge
+asserted "Phase 0 complete, next action Phase 1 — dashboard shell."
+We are mid-Phase 3, with PR #65 (HP_Monthly + HP_Daily extraction)
+just merged. Chat-Claude's behaviour was correct — it trusted the
+document — but the document was a frozen snapshot from 2026-05-09.
+
+**Root cause.** Project Knowledge is write-once-per-upload with no
+auto-sync to the repo. Any state asserted there *will* drift; the
+only question is when. Until this PR, state lived in two places:
+`SYSTEM_PROMPT.docx` (stale snapshot, visible to chat-Claude) and
+`MEMORY.md` (live, invisible to chat-Claude). Two sources of truth
+that could silently disagree. The fix has to do two things at once:
+remove false assertions from Project Knowledge, *and* establish a
+default-deny posture so chat-Claude refuses state-dependent questions
+until live state is injected.
+
+**Decision.** One home per fact, default-deny on state.
+
+1. **`STATE.md` is the only live-state file.** Created at repo root,
+   carved from MEMORY.md's volatile sections (Current Focus, Phase
+   Status, What Is Built, Active Decisions quick-reference, Open
+   Loops). Carries a `Last updated:` line at the top — drives the
+   staleness check on the chat-Claude side.
+2. **`MEMORY.md` deleted.** Its stable sections were duplicates with
+   homes elsewhere: Universe and Four Portfolio Strategies already
+   in `SYSTEM_PROMPT.docx`, Key Paths and Storage Layout already in
+   `CLAUDE.md`, Agent Count folded into `CONTEXT.md`'s new "Agent
+   inventory" section. Keeping a thinned MEMORY.md as a paranoia
+   hedge would re-create the duplication surface this PR is meant
+   to eliminate. One home per fact, no exceptions.
+3. **`SYSTEM_PROMPT.docx` purged of state.** CURRENT STATUS table
+   replaced with a pointer to STATE.md. New `READING LIVE STATE`
+   section sets a hard-refusal default: at session open, chat-Claude
+   looks for a fenced `state` block in Magnus's first message;
+   absence of one + a state-dependent question = single-line refusal,
+   no improvisation, no fallback to anything in the system prompt.
+   Architecture and design questions still work without state. A
+   24-hour staleness check on the `Last updated:` line catches old
+   chat tabs.
+4. **`ENDING A SESSION` restructured into two blocks.** Block 1 is
+   an updated STATE.md draft (copy-pasteable, ready for the next
+   chat thread); Block 2 is the Claude Code handoff prompt (existing
+   convention). Magnus applies Block 1 to the repo and commits
+   `state: <summary>` before opening the next chat thread.
+   Pre-formatting the paste removes the most likely failure mode of
+   the whole workflow.
+5. **`CLAUDE.md` STATE.md ownership contract.** Eight numbered rules
+   covering: single source of truth, dual writers (Claude Code inline
+   per state-affecting commit + chat-Claude session-close draft),
+   repo-wins on disagreement, cross-session order of operations
+   (apply chat-Claude draft *before* opening next thread), mandatory
+   `Last updated:` bump on every inline edit, Magnus-overrides,
+   one-chat-thread-at-a-time, no-implicit-session-ends.
+
+**Soft vs hard register, deliberately split.** `SYSTEM_PROMPT.docx`
+uses hard-refusal phrasing ("your first reply is a single line...")
+because that's what enforces the behaviour in chat-Claude's
+instruction-following. `README.md`'s cold-reader description softens
+to "treats itself as not having current state and asks for the
+paste." Different audiences, same actual behaviour.
+
+**The three-reader review pattern (durable practice).** The bug
+that triggered this redesign was a single-reader failure: chat-Claude
+saw the static prompt, didn't see the repo, asserted with confidence.
+The redesign itself avoided that mode by running as a three-step loop:
+chat-Claude proposed, Claude Code read the live repo and reasoned
+from first principles, and the two reconciled to convergence over a
+few rounds. Each reader caught things the other missed — Claude Code
+argued for splitting MEMORY.md (vs. marker comments) and for the
+pre-formatted handoff; chat-Claude argued for slimming MEMORY.md in
+the same PR rather than deferring, and for keeping the full eight-rule
+ownership contract rather than collapsing it. The pattern — propose
+in one reader → independent reasoning from a different reader →
+reconcile to convergence — is the durable lesson and is worth
+applying to any architectural decision going forward, not just this
+one. Stale-state drift is the second-most-likely failure mode after
+single-reader rationalisation; this loop defends against the latter.
+
+**Affected docs:**
+- `STATE.md` — new file at repo root, the only live-state file.
+- `MEMORY.md` — deleted.
+- `CLAUDE.md` — bootstrap step 1 reads STATE.md; new `Updating
+  STATE.md` section with the eight-rule ownership contract;
+  terminology / storage-tree / phase-flip / routine-doc-edit
+  references swapped from MEMORY.md to STATE.md.
+- `CONTEXT.md` — new `Agent inventory` section (folded in from
+  MEMORY.md's former Agent Count).
+- `README.md` — stale "Phase 0 complete" status line replaced with
+  a pointer to STATE.md; new `Working on this project with Claude`
+  section explains the two-reader workflow for cold readers in the
+  soft register.
+- `SYSTEM_PROMPT.docx` — CURRENT STATUS table replaced; new
+  `READING LIVE STATE` section; `ENDING A SESSION` restructured
+  into two blocks. Rewrite produced via the `docx` editing skill,
+  re-uploaded to Project Knowledge by Magnus.
+- `ideas.md` — IDEA-028 "What does NOT apply" note softened
+  (MEMORY.md → STATE.md).
+- `decisions.md` — this entry plus its TOC line.
+
+**Revisit trigger:** If Anthropic ships an auto-sync between Project
+Knowledge and an external repo (so chat-Claude reads live files
+instead of static uploads), `STATE.md` and the paste ritual become
+redundant — collapse the workflow back to a single live source.
+Until then, the two-writer / paste-at-session-open / pre-formatted-
+handoff discipline is what holds. The three-reader review pattern
+stays regardless: it's about cross-checking reasoning, not about the
+state-injection workflow.

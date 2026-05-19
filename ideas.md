@@ -1557,7 +1557,7 @@ following context-discipline practices from the session start:
    behind decisions; handover-then-clear does not.
 
 **What does NOT apply:**
-The session handoff pattern (MEMORY.md, decisions.md, CLAUDE.md
+The session handoff pattern (STATE.md, decisions.md, CLAUDE.md
 session-bootstrap) already implements the "plan file as memory"
 principle the article recommends. No new work needed on that front.
 

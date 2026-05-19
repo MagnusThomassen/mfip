@@ -22,7 +22,7 @@ These terms are canonical across all MFIP discussions, design docs, decisions lo
 | Local repo | `C:\MFIP\` on the Windows machine — the actual working tree where code is built and run. |
 | GitHub | `github.com/MagnusThomassen/mfip` — the published remote, including rulesets, PRs, and repo metadata. |
 | Design docs | The numbered `.docx` files (`00_PROJECT_OVERVIEW.docx` through `07_BLOOMBERG_EXPORT_TEMPLATE.docx`) plus `SYSTEM_PROMPT.docx`. Live in Project Knowledge; local working copies at `C:\MFIP\docs\`. |
-| Repo docs | `CLAUDE.md`, `decisions.md`, `ideas.md`, `worklog.md`, `MEMORY.md`, `README.md` — Markdown files Git-versioned in the local repo. |
+| Repo docs | `CLAUDE.md`, `STATE.md`, `decisions.md`, `ideas.md`, `worklog.md`, `README.md` — Markdown files Git-versioned in the local repo. |
 | Bloomberg templates | The three `.xlsx` master templates (`Master`, `FX`, `Indices`). Defines the export contract. Git-versioned under `repo\templates\bloomberg\`. |
 | Bloomberg export files | The actual saved exports in `bloomberg_archive\<TICKER>\<YYYY-MM-DD>\`. The data, not the contract. |
 | Validator | Reserved for `scripts/ingestion/validate_bloomberg_workbook.py` specifically. Future ingestion components (parser, reconciliation engine) get their own names. |
@@ -32,20 +32,21 @@ These terms are canonical across all MFIP discussions, design docs, decisions lo
 
 ## How to start each session
 
-1. Read `decisions.md` in the local repo to catch up on architectural decisions made in chat sessions.
-2. Check `git log --oneline` to see recent build progress.
-3. Design docs: local working copies live at `C:\MFIP\docs\`. Project Knowledge is the canonical source; local copies are working copies that may drift. `C:\MFIP\docs\README.md` tracks the last sync date.
+1. Read `STATE.md` for current phase, what's built, active decisions, and open loops. `STATE.md` is the live-state snapshot; it changes every session and is the file pasted into chat-Claude threads. You and chat-Claude share this file as the single source of truth for "where the project is right now."
+2. Read `decisions.md` to catch up on architectural decisions made in chat sessions.
+3. Check `git log --oneline` to see recent build progress.
+4. Design docs: local working copies live at `C:\MFIP\docs\`. Project Knowledge is the canonical source; local copies are working copies that may drift. `C:\MFIP\docs\README.md` tracks the last sync date.
    - **Routine lookups** (colour values, sheet names, zone dimensions) — read local, no confirmation needed.
    - **Architectural reads** (constraints, agent contracts, decisions you'll encode in code) — read local, then ask the user: "`docs\README.md` last sync is `<date>`. Is Project Knowledge newer?"
    - If the user says Project Knowledge is newer, ask them to paste the relevant section. Do not proceed on potentially-stale guidance.
-4. Read `CONTEXT.md` for canonical pipeline/agent terminology before
+5. Read `CONTEXT.md` for canonical pipeline/agent terminology before
    writing any agent code or naming any variable that corresponds
    to a pipeline concept.
-5. If kicking off a new phase or closing one, check
+6. If kicking off a new phase or closing one, check
    `phase-validations/`. New phases get a skeleton
    `PHASE_N_VALIDATION.md` (copy `_template.md`) at kickoff;
    completed phases get the document fully filled in and signed off
-   before the phase status flips to ✅ in `MEMORY.md`. See
+   before the phase status flips to ✅ in `STATE.md`. See
    `decisions.md` 2026-05-15 "`phase-validations/` pattern
    established" for the rationale.
 
@@ -129,10 +130,10 @@ C:\MFIP\
 │   ├── mfip.duckdb                       ← decision_log + security_log
 │   └── exports\                          ← nightly JSON exports, committed to logs-archive branch
 └── repo\                                 ← you are here
+    ├── STATE.md
     ├── decisions.md
     ├── ideas.md
     ├── worklog.md
-    ├── MEMORY.md
     ├── requirements.txt
     ├── requirements.lock.txt
     ├── .gitignore
@@ -203,7 +204,7 @@ Optional scope in parentheses (e.g. `feat(ingestion):`, `docs(claude-md):`) when
 
 `main` is protected: no direct push, no force push, no merge commits. Every change to `main` goes through a PR with squash-or-rebase merge. Admin bypass is limited to PRs.
 
-Practical implication for routine doc edits (`CLAUDE.md`, `decisions.md`, `ideas.md`, `worklog.md`, `MEMORY.md`, `README.md`):
+Practical implication for routine doc edits (`CLAUDE.md`, `STATE.md`, `decisions.md`, `ideas.md`, `worklog.md`, `README.md`):
 
 - **Local-branch flow** (full control, slower): create branch → commit → push → open PR → squash-merge → pull main → delete branch. Use this for substantive edits or anything touching multiple files.
 - **GitHub web UI** (faster for small edits): open the file on GitHub, click the pencil icon, edit, commit straight to a new branch with PR. GitHub handles the branch creation and PR opening in one flow. Use this for typo fixes, small clarifications, single-line edits. Pull main locally afterwards.
@@ -275,6 +276,66 @@ an idea. If measured in *days* or "next session," it's a worklog item.
 As with `decisions.md`, content is drafted in chat sessions and pasted
 to you for committing. Commit messages: `ideas: <summary>` and
 `worklog: <summary>`.
+
+## Updating STATE.md
+
+`STATE.md` is the live project-state file. It is the single source of
+truth for current phase, what's built, active decisions, and open
+loops. Chat-based Claude has no automatic channel into the repo, so
+`STATE.md` is also what Magnus pastes into chat-Claude at session
+open (in a fenced ```state``` block). Keeping it accurate is what
+prevents the "chat-Claude asserts stale state" failure mode this
+file was created to fix.
+
+Update `STATE.md` inline whenever your work changes state:
+
+- A PR ships → add or update the relevant row in `What Is Built`.
+- A phase opens, closes, or changes notes → update `Phase Status`.
+- A new active decision worth surfacing in the quick-reference →
+  add a row to `Active Decisions (quick-reference)` (the full entry
+  still lives in `decisions.md`).
+- A loop opens, closes, or is reframed → update `Open Loops`.
+- The current phase's near-term plan shifts → update `Current Focus`.
+
+**Always bump the `Last updated:` line** at the top of `STATE.md`
+when you edit it. The line follows the format
+`**Last updated:** YYYY-MM-DD — <short summary>`. Staleness checks
+in chat-Claude rely on this; if you skip it, chat-Claude will not
+flag a paste from a day-old branch.
+
+**Commit `STATE.md` in the same commit as the code change it
+reflects**, not as a follow-up. Same rationale as the
+`decisions.md`-with-code rule above: a squash-merge captures the
+commits on the branch at merge time, and a trailing `state:` commit
+pushed after merge races the merge and is left out.
+
+Commit message: `state: <what changed>`.
+
+**Ownership contract (shared with chat-Claude):**
+
+1. `STATE.md` is the only live-state file. `SYSTEM_PROMPT.docx`,
+   `CLAUDE.md`, and `README.md` must not assert phase status,
+   what's built, or next actions.
+2. Two writers: Claude Code (inline, per state-affecting commit, as
+   above) and chat-Claude (drafts an updated `STATE.md` as block 1
+   of every session-close; Magnus applies it to the repo before
+   opening the next chat thread).
+3. **Repo wins** on any disagreement. If chat-Claude's pasted view
+   and the repo differ — because Magnus ran Claude Code mid-thread,
+   edited the draft, or skipped a session — the repo is canonical.
+   Chat-Claude rebases from the next paste.
+4. **Order of operations across sessions:** apply chat-Claude's
+   session-close draft to `repo\STATE.md` and commit *before*
+   opening the next chat thread.
+5. **Staleness check:** the `Last updated:` line drives chat-Claude's
+   24-hour staleness flag. Bump it on every inline edit.
+6. **Magnus overrides.** Chat-Claude's draft is a draft, not
+   authoritative — Magnus reviews and edits before applying.
+7. **One chat thread at a time.** Overlapping chat sessions are not
+   supported; last-write to `STATE.md` wins.
+8. **Implicit session ends are not supported.** If a chat session
+   ends without "session over," no draft is produced; the next
+   thread proceeds via paste of the existing repo `STATE.md`.
 
 ## Ending a session
 

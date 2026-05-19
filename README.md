@@ -4,7 +4,7 @@ A multi-agent financial analysis pipeline that takes company filings and Bloombe
 
 Personal learning project. Built by [Magnus Thomassen](https://github.com/MagnusThomassen), MSc Finance at Kingston University London. Bridges financial-statement analysis, valuation modelling, and applied AI engineering.
 
-> **Status:** Phase 0 complete (environment, Bloomberg templates, validator, infrastructure). Phase 1 (dashboard shell) is next. See [`decisions.md`](decisions.md) for the full design log.
+> **Status:** See [`STATE.md`](STATE.md) for current phase, what's built, and what's next. See [`decisions.md`](decisions.md) for the architectural design log.
 
 ## What it does
 
@@ -19,6 +19,20 @@ The pipeline runs in seven layers, each with strict schema contracts at the hand
 7. **Security Council** — Four agents monitor the system itself (training mode, learning-focused).
 
 A Plotly Dash dashboard surfaces the full state — pipeline status, recommendations, portfolio P&L, news feed, security alerts.
+
+## Working on this project with Claude
+
+MFIP is built with two Claude readers, and they read different things. The chat-based Claude (used for design conversations, decisions, and session planning) reads the project library — the `.docx` files in the Claude project knowledge base. Claude Code (used for code, tests, and Git operations) reads the repository directly, with `CLAUDE.md` auto-loaded as its session-bootstrap file.
+
+Both readers need a shared picture of **where the project is right now**: which phase, what's built, recent decisions, what's in flight. That live state lives in [`STATE.md`](STATE.md) at the repo root. Claude Code reads it on every session start. Chat-based Claude has no automatic channel into the repo, so its copy of `STATE.md` must be pasted into the conversation at the top of every chat thread, in a fenced block:
+
+    ```state
+    <paste STATE.md content here>
+    ```
+
+If a chat thread opens without a `state` block, chat-based Claude treats itself as not having current state and asks for the paste before answering questions that depend on it. Architecture and design questions still work without it. This is deliberate: stale state from a static system prompt is what caused the workflow to be redesigned in the first place.
+
+`STATE.md` is updated in two places. Chat-based Claude drafts an updated `STATE.md` as the first block of its session-close output; Magnus applies it to the repo and commits before opening the next chat thread (`state: <summary>` commit message). Claude Code updates `STATE.md` inline whenever code-side work changes state — a shipped PR, a phase status change, a new active decision — in the same commit as the work itself, and bumps the `Last updated:` line at the top. When the two views disagree, the repo wins: chat-Claude rebases its mental model from the next paste. This convention, plus the rituals encoded in `SYSTEM_PROMPT.docx` and `CLAUDE.md`, is the whole of the cross-reader workflow.
 
 ## Coverage universe (v1)
 

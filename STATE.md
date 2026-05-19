@@ -1,9 +1,12 @@
-# MFIP — Memory
+# MFIP — Live State
 
-> **Source of truth for current project state.**
-> Updated at the end of every session, before the handoff prompt is written.
-> Git-tracked. Every change committed with message `memory: <what changed>`.
-> Keep under 300 lines. This is the map, not the territory.
+> **Volatile project state.** Pasted into chat-Claude at session open inside a fenced ```state``` block.
+> Updated by Claude Code in the same commit as any state-affecting code change (new PR row in `What Is Built`, phase status flip, new `Active Decisions` row, opened/closed loop). Also redrafted by chat-Claude as block 1 of every session-close output, then applied to the repo by Magnus before opening the next chat thread.
+> Git-tracked. Commit message: `state: <what changed>`.
+> Keep under 200 lines. This file is the live snapshot, not the archive.
+> When editing inline, **always bump the `Last updated:` line below** — staleness checks downstream rely on it.
+
+**Last updated:** 2026-05-19 — Session 19 PR #65: HP_Monthly + HP_Daily array-spill extraction shipped.
 
 ---
 
@@ -58,7 +61,7 @@ PR #62a (validator relocation) and PR #62b (parser scaffolding + handoff schema)
 | Theme tests | `tests/test_theme.py` | 8 passing |
 | App tests | `tests/test_app.py` | 7 passing (includes `/` and `/analysis` route registration tests) |
 | Zone 1 tests | `tests/test_zone1.py` | 9 passing; 24 total green on branch `phase1/routing-restructure` |
-| `MEMORY.md` | `repo\MEMORY.md` | This file; added Session 7 |
+| `STATE.md` | `repo\STATE.md` | This file; live state snapshot. Split out of the former `MEMORY.md` during the chat-Claude/Claude-Code reader-alignment redesign. |
 | `phase-validations/` | `repo\phase-validations\` | Per-phase validation pattern — `_template.md` canonical structure; one `PHASE_N_VALIDATION.md` per phase; PHASE_0 retroactive (2026-05-15) |
 | `PHASE_1_VALIDATION.md` | `repo\phase-validations\PHASE_1_VALIDATION.md` | Phase 1 walkthrough validation, signed-off 2026-05-15 (Session 16 Item C); first instance of `phase-validations/_template.md` pattern in active use after the retroactive PHASE_0 |
 | `PHASE_2_VALIDATION.md` | `repo\phase-validations\PHASE_2_VALIDATION.md` | Phase 2 walkthrough validation, signed off 2026-05-15 (Session 17 Item 3c); deliverables checklist complete; live exercise covered DB state, alert delivery, nightly export pipeline, and cross-cutting conventions; three findings deferred to `worklog.md` (none blocking Phase 3). Backfilled into `What Is Built` at Session 18 kickoff. |
@@ -120,100 +123,3 @@ PR #62a (validator relocation) and PR #62b (parser scaffolding + handoff schema)
 | Zone 1 chrome styling completeness (popover dismissal, tooltips on display-only indicators) | `worklog.md` — outside-click dismissal cluster + Zone 1 chrome tooltips cluster (Session 16 walkthrough); schedule with Zone 2 build |
 | Dash core component overrides (Dropdown, DatePickerRange) | `worklog.md` — architectural entry (Session 16 walkthrough); schedule before Zone 2 first component |
 | AG Grid dark↔light visual check | Exercise at Zone 4 first-component build; AG Grid renders only when Zone 4's Holdings Table ships |
-
----
-
-## Universe
-
-| # | Ticker | Company | Sector | Role |
-|---|---|---|---|---|
-| 1 | EQNR | Equinor | Energy | Norway — primary test company |
-| 2 | DNB | DNB | Financials | Norway |
-| 3 | TEL | Telenor | Telecom | Norway |
-| 4 | NOVO B | Novo Nordisk | Healthcare | Denmark |
-| 5 | MSFT | Microsoft | Technology | USA |
-| 6 | CKN | Clarkson | Shipbroking | UK |
-
-All phases use EQNR as the test company until Phase 9 scales to full universe.
-
----
-
-## Four Portfolio Strategies
-
-| Strategy | Horizon | Focus |
-|---|---|---|
-| Core Long-Term | 5–10 years | Quality compounders |
-| Active Short-Term | 1–6 months | Tactical |
-| Conservative Income | — | Capital preservation, dividends |
-| Alpha Fund | — | Concentrated; 10% annual return target |
-
----
-
-## Key Paths
-
-```
-C:\MFIP\
-├── repo\                  ← Git root
-│   ├── mfip\              ← Python package
-│   │   └── dashboard\     ← Dash app
-│   │       ├── theme.py
-│   │       ├── app.py
-│   │       ├── __main__.py    ← enables `python -m mfip.dashboard`
-│   │       ├── pages\
-│   │       │   ├── home.py        ← /
-│   │       │   └── analysis.py    ← /analysis (composes Zone 1)
-│   │       ├── zones\
-│   │       │   └── zone1.py       ← component, not a page
-│   │       └── assets\    ← ag-grid-overrides.css
-│   ├── scripts\
-│   │   ├── ingestion\     ← validate_bloomberg_workbook.py
-│   │   └── backup\        ← Task Scheduler XMLs
-│   ├── templates\
-│   │   └── bloomberg\     ← Master xlsx templates (Git-versioned)
-│   ├── tests\
-│   │   ├── test_app.py
-│   │   ├── test_theme.py
-│   │   └── test_zone1.py
-│   ├── CLAUDE.md          ← Claude Code session bootstrap
-│   ├── decisions.md
-│   ├── ideas.md
-│   ├── worklog.md
-│   └── MEMORY.md          ← this file
-├── bloomberg_archive\     ← exported Bloomberg data (off Git)
-├── filings\               ← annual report PDFs (off Git)
-├── docs\                  ← local copies of design docs
-└── runtime\
-    └── unsent_alerts\     ← alert fallback (off Git)
-```
-
----
-
-## Document Index
-
-| File | Contents | Canonical location |
-|---|---|---|
-| `SYSTEM_PROMPT.docx` | Project instructions; behaviour rules | Claude project library |
-| `00_PROJECT_OVERVIEW.docx` | Vision, principles, glossary | Claude project library |
-| `01_ARCHITECTURE.docx` | Full system architecture | Claude project library |
-| `02_AGENT_DESCRIPTIONS.docx` | All 21 agents specified | Claude project library |
-| `03_TECH_STACK.docx` | Tools and libraries | Claude project library |
-| `04_BUILD_SEQUENCE.docx` | Build plan with phases and checklists | Claude project library |
-| `05_DASHBOARD_SPEC.docx` | Dashboard specification v1.3 | Claude project library |
-| `06_SECURITY_COUNCIL.docx` | Security Council detailed design | Claude project library |
-| `07_BLOOMBERG_EXPORT_TEMPLATE.docx` | Bloomberg export contract | Claude project library |
-| `decisions.md` | Architectural decisions log — self-indexed (TOC + per-entry tags) | `repo\decisions.md` |
-| `ideas.md` | Forward-looking backlog — phase-gated items | `repo\ideas.md` |
-| `worklog.md` | In-flight observations and bug-shaped items — days-gated | `repo\worklog.md` |
-| `MEMORY.md` | This file — live current-state index | `repo\MEMORY.md` |
-| `CLAUDE.md` | Claude Code session bootstrap | `repo\CLAUDE.md` |
-
----
-
-## Agent Count
-
-**21 agents in v1** across 7 layers + Security Council + Orchestrator.
-Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentional.
-
----
-
-*Last updated: 2026-05-19 — Session 19 PR #65: HP_Monthly + HP_Daily array-spill extraction shipped. `_read_price_series` helper returning `pandas.Series(name="PX_LAST")` with `DatetimeIndex(name="Date")`; terminator at first all-None row (not openpyxl's `max_row`, which is unreliable for pre-sized spill regions); symmetric `#`-prefix guard on date and value columns; per-sheet `na_cells` added to `PriceHistorySheet` for consistency with BETA/EE. Reused PR #64's EQNR fixture; no new fixture files committed. 102 → 117 tests green. DVD / ANR / RV_Comps still stubbed pending PR #66.*

@@ -35,6 +35,15 @@ build terms (Project Knowledge, repo, GitHub, phases, etc.), see
 
 ---
 
+## Agent inventory
+
+**21 agents in v1** across 7 layers + Security Council + Orchestrator.
+Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and
+intentional. See `02_AGENT_DESCRIPTIONS.docx` for the full per-agent
+spec.
+
+---
+
 ## Flagged ambiguities
 
 - **"Bloomberg data"** was previously used loosely for both export files
