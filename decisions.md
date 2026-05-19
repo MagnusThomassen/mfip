@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-19 — Bloomberg Parser scaffolding: public API, handoff schema, exception hierarchy](#2026-05-19--bloomberg-parser-scaffolding-public-api-handoff-schema-exception-hierarchy) `architecture` `phase-3` `data-contract`
 - [2026-05-19 — Bloomberg Validator moved to mfip/ingestion/bloomberg/](#2026-05-19--bloomberg-validator-moved-to-mfipingestionbloomberg) `architecture` `phase-3`
 - [2026-05-18 — Watchdog scope decision: dropped from v1; reserved for v2 (Phase 3 first deliverable)](#2026-05-18--watchdog-scope-decision-dropped-from-v1-reserved-for-v2-phase-3-first-deliverable) `architecture` `infrastructure` `phase-3`
 - [2026-05-15 — Phase 2 close-out: Logging Infrastructure complete](#2026-05-15--phase-2-close-out-logging-infrastructure-complete) `process`
@@ -3565,3 +3566,100 @@ exit codes, or report contents.
 
 **Revisit trigger:** None — structural move with no behaviour change
 beyond the deterministic-ordering note above.
+
+## 2026-05-19 — Bloomberg Parser scaffolding: public API, handoff schema, exception hierarchy
+**Tags:** architecture, phase-3, data-contract
+
+**Decision:** PR #62b lands the Bloomberg parser package skeleton at
+`mfip/ingestion/bloomberg/{parser,models,exceptions}.py`. Three
+architectural surfaces are now ratified and stable; subsequent Phase 3
+PRs (#63-#66) populate per-sheet extraction against this contract
+without changing it.
+
+**Public API (parser.py).** The canonical entrypoint is:
+
+    parse_workbook(path: Path, *, validation_policy=ValidationPolicy.STRICT) -> ParsedCompanyData
+
+The parser calls `validate_workbook(path)` first. `ValidationPolicy.STRICT`
+raises `WorkbookValidationError` on validator FAIL (including the
+FILE_NOT_FOUND case — the validator catches missing files before the
+parser sees them). `PERMISSIVE` logs the FAIL at WARNING and proceeds
+with extraction. ADVISORY findings carry forward into
+`ParsedCompanyData.advisories` regardless of policy.
+
+`REPORT_ONLY` (in the original design doc) was dropped as YAGNI —
+it duplicated PERMISSIVE's behaviour with only a log-level difference.
+Reintroduce when a consumer demonstrably needs it.
+
+Sibling skeletons `parse_indices_workbook(path)` and `parse_fx_workbook(path)`
+are signature-only in #62b — no `validation_policy` parameter yet because
+no indices/FX validator exists; that lands with extraction in PR #66.
+
+**Handoff schema (models.py).** `ParsedCompanyData` is a Pydantic v2
+BaseModel — the Phase 3 contract between the parser and every downstream
+agent per `CONTEXT.md`'s handoff-schema rule. Seven per-sheet sub-models
+(`BetaSheet`, `DividendSheet`, `EarningsEstimatesSheet`,
+`AnalystRecommendationsSheet`, `PriceHistorySheet` (×2 for HP_Monthly /
+HP_Daily), `RVCompsSheet`) plus `ParsedIndicesData` and `ParsedFXData`.
+`arbitrary_types_allowed=True` is set on a shared `_BaseSheetModel` base
+so `pandas.Series` / `pandas.DataFrame` fields work — pandas is in
+`requirements.lock.txt` and is the natural type for time-series data.
+
+`config_currency` is typed `str` (not `Literal["USD", ""]`). Reason:
+the validator surfaces non-USD CONFIG B4 as ADVISORY, not FAIL — the
+parser must not promote this to a hard schema error and reject workbooks
+the validator merely advised on. `RVCompsSheet.peers` is
+`list[dict[str, Any]]` because RV column values mix strings (Ticker,
+Name) and floats (multiples) — a narrower type would mis-type the
+string columns.
+
+**No `TYPE_CHECKING` / `model_rebuild()` machinery.** `models.py` and
+`exceptions.py` both import `ValidationReport` and `Finding` directly
+from `validator.py`. There is no circular dependency: `validator.py`
+imports only from `archive_lookup.py`, never from `models` or
+`exceptions`. The Pydantic-v2 forward-reference pattern (TYPE_CHECKING
++ `from __future__ import annotations` + `model_rebuild()`) was
+specified in the original design doc but creates a bootstrap-order
+trap; direct imports are simpler and equivalent here.
+
+**Exception hierarchy (exceptions.py).** Three classes:
+`BloombergParserError` (base), `WorkbookValidationError` (validator
+FAIL + STRICT — carries the full `ValidationReport`),
+`WorkbookExtractionError` (validator passed but extraction failed
+anyway, typically a contract drift the validator didn't catch).
+Callers catch `BloombergParserError` for "parser failed somehow"
+semantics; specific classes for finer-grained handling.
+
+**Pure-function principle.** The parser does not write to
+`decision_log`, does not send alerts, does not modify the input file.
+It emits stdlib `logging` calls (logger = `mfip.ingestion.bloomberg.parser`)
+at INFO/WARNING; callers route them. CLI logging is configured in
+the `if __name__ == "__main__":` block — never from `main()` itself,
+so programmatic callers don't get their root logger overwritten.
+
+**Filename-first `ticker_short` derivation.** The validator's
+`FILENAME_RE` (the saved-file naming contract, e.g.
+`EQNR_NO_2026-05-08.xlsx` → prefix `EQNR_NO`) is authoritative.
+`_derive_ticker_short(path, ticker_str)` matches the filename first;
+if it doesn't match (template files, non-canonical names), falls back
+to whitespace-splitting the Bloomberg ticker string and joining the
+first two tokens with underscore. Verified for the v1 universe
+(EQNR_NO, DNB_NO, NOVOB_DC, MSFT_US, CKN_LN) — the
+filename-first ordering means future ticker-format changes won't
+break extraction.
+
+**Affected docs (this PR):**
+- `decisions.md` — this entry + TOC line.
+- `MEMORY.md` — three new "What Is Built" rows (parser, models,
+  exceptions); Current Focus paragraph updated for Phase 3 progress;
+  last-updated line bumped.
+- `phase-validations/PHASE_3_VALIDATION.md` — "Build Bloomberg Excel
+  parser (openpyxl-based)" deliverable checked, evidence: PR #62b.
+
+**Affected docs (deferred):**
+- `CLAUDE.md § Terminology` — still pending the batched watchdog
+  doc-alignment pass.
+
+**Revisit trigger:** None for the API surface itself; per-sheet
+extraction PRs (#63-#66) fill in the stubs against this fixed
+contract.

@@ -9,9 +9,9 @@
 
 ## Current Focus
 
-**Phase 3 — Bloomberg Ingestion** (in progress; skeleton seeded, lab visit pending)
+**Phase 3 — Bloomberg Ingestion** (in progress; scaffolding complete, sheet extraction next)
 
-Phase 2 closed 2026-05-15. Phase 3 kicked off 2026-05-18 with `phase-validations/PHASE_3_VALIDATION.md` skeleton seeded. Phase 3 parses Bloomberg export workbooks at `C:\MFIP\bloomberg_archive\<TICKER>\<DATE>\` per `07_BLOOMBERG_EXPORT_TEMPLATE.docx`. Pre-lab parser scaffolding can land against the Git-versioned templates at `templates/bloomberg/`; end-to-end exercise requires a lab visit to generate a fresh export. First Phase 3 deliverable: watchdog scope decision (options a/b/c per `04_BUILD_SEQUENCE.docx`).
+PR #62a (validator relocation) and PR #62b (parser scaffolding + handoff schema) shipped 2026-05-19. Per-sheet extraction follows in PRs #63 (BETA + EE scalars), #64 (DVD + HP_Monthly + HP_Daily), #65 (ANR + RV_Comps + `currency.py`), #66 (Indices + FX). Lab visit still pending for the end-to-end exercise (PR #68).
 
 ---
 
@@ -43,6 +43,9 @@ Phase 2 closed 2026-05-15. Phase 3 kicked off 2026-05-18 with `phase-validations
 | `.env.example` | `repo\.env.example` | Environment variable template; real `.env` is Magnus-side, gitignored, not in repo |
 | Bloomberg templates | `repo\templates\bloomberg\` | Git-versioned; FX, Indices, Master xlsx + 4 .py support files |
 | Bloomberg validator | `mfip/ingestion/bloomberg/validator.py` (+ thin CLI shell at `scripts/ingestion/validate_bloomberg_workbook.py`) | PASS / ADVISORY / FAIL; encodes 07_BLOOMBERG_EXPORT_TEMPLATE.docx contract; archive-walking helpers extracted into sibling `archive_lookup.py` |
+| Bloomberg parser (scaffolding) | `mfip/ingestion/bloomberg/parser.py` | `parse_workbook(path, *, validation_policy=STRICT) -> ParsedCompanyData`. Scaffolding only — CONFIG live (with filename-first `ticker_short` derivation via validator's `FILENAME_RE`), per-sheet extraction stubbed pending PRs #63-#65. `parse_indices_workbook` and `parse_fx_workbook` skeletons. |
+| Parser handoff schema | `mfip/ingestion/bloomberg/models.py` | `ParsedCompanyData` Pydantic v2 model + 7 sub-models (Beta, Dividend, EarningsEstimates, AnalystRecommendations, PriceHistory ×2, RVComps); `ParsedIndicesData`, `ParsedFXData`. `arbitrary_types_allowed=True` for `pandas.Series` fields. `config_currency: str` (not `Literal`) so parser doesn't promote validator ADVISORY on non-USD to FAIL. |
+| Parser exception hierarchy | `mfip/ingestion/bloomberg/exceptions.py` | `BloombergParserError` (base); `WorkbookValidationError` (validator FAIL + STRICT — carries the full `ValidationReport`); `WorkbookExtractionError` (post-validation extraction problems) |
 | `CLAUDE.md` | `repo\CLAUDE.md` | Session-bootstrap file for Claude Code; rewritten 2026-05-09 |
 | `theme.py` | `mfip/dashboard/theme.py` | Both dark + light token sets; `apply_theme(fig, mode)` helper |
 | Theme CSS | `assets/theme.css` | `[data-theme]` selectors; defines all color tokens on `:root`/`html`; mirrors theme.py DARK + LIGHT |
@@ -213,4 +216,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-19 — Session 19 PR #62a: Bloomberg validator relocated to `mfip/ingestion/bloomberg/validator.py`; archive walkers extracted into sibling `archive_lookup.py`; thin CLI shell retained at the old script path. Phase 3 parser scaffolding (PR #62b) unblocked.*
+*Last updated: 2026-05-19 — Session 19 PR #62b: Bloomberg parser scaffolding shipped. `parse_workbook` public API + `ParsedCompanyData` Pydantic v2 handoff schema + 3-class exception hierarchy at `mfip/ingestion/bloomberg/{parser,models,exceptions}.py`. CONFIG extraction live; per-sheet extraction stubbed pending PRs #63-#66.*

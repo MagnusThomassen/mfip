@@ -30,8 +30,16 @@ ordering within each sub-heading follows the build-sequence ordering.
 
 ### Parser core
 
-- [ ] Build Bloomberg Excel parser (openpyxl-based)
-  - evidence: [PR #N / module path TBD]
+- [x] Build Bloomberg Excel parser (openpyxl-based)
+  - evidence: PR #62b — `mfip/ingestion/bloomberg/parser.py`
+    delivers `parse_workbook(path, *, validation_policy) ->
+    ParsedCompanyData` plus skeletons for the indices/FX workbooks,
+    Pydantic v2 handoff schema in `models.py`, and the 3-class
+    exception hierarchy in `exceptions.py`. CONFIG extraction
+    (ticker, currency) is functional; per-sheet extraction stubbed
+    pending PRs #63 (BETA + EE), #64 (DVD + HP), #65 (ANR +
+    RV_Comps), #66 (indices + FX). See `decisions.md` 2026-05-19
+    "Bloomberg Parser scaffolding" for full rationale.
 - [ ] Skip CONFIG sheet during parsing — CONFIG is metadata
   (ticker, currency) retained for self-documentation, not data.
   Saved company workbooks have 8 sheets total (7 data sheets +
