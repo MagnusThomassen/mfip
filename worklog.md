@@ -909,3 +909,34 @@ ships without ever encountering the issue (close as wontfix).
 
 **Priority:** Low — observation only; underlying audit trail
 is preserved in Git regardless.
+
+---
+
+## 2026-05-19 — `tests/<package>/__init__.py` inconsistency
+
+**Status:** OPEN (observation only)
+
+**Observation:** PR #62a adds `tests/ingestion/__init__.py` and
+`tests/ingestion/bloomberg/__init__.py` following the precedent
+set by `tests/scheduled_tasks/__init__.py`. The other test
+sub-packages — `tests/alerts/`, `tests/logging/`, `tests/pipeline/`
+— have no `__init__.py` and rely on pytest's rootdir-based
+discovery. Both forms work today; the inconsistency is harmless
+but means a future contributor has no obvious convention to
+follow when adding a new test sub-package.
+
+**Resolution options:**
+- Add `__init__.py` to the three sub-packages currently missing
+  one (uniformity, matches `tests/scheduled_tasks/` and the new
+  `tests/ingestion/`).
+- Delete `__init__.py` from `tests/scheduled_tasks/` and the
+  new `tests/ingestion/` files (uniformity, matches the majority
+  pre-PR-#62a state).
+
+Either works. Defer to whoever next touches a test sub-package
+or runs the next housekeeping pass.
+
+**Closes when:** Convention is picked and applied uniformly,
+or v1 ships and nobody notices.
+
+**Priority:** Low.

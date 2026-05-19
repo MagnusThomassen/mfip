@@ -215,7 +215,15 @@ that.
 
 ### Working as intended
 
-- [list TBD at close-out]
+- Validator relocation to `mfip/ingestion/bloomberg/validator.py`
+  (PR #62a, 2026-05-19) — Phase 3 prerequisite, no behaviour
+  change, all existing tests stayed green (70/70 post-PR including
+  3 new import-surface sanity tests). Smoke test against the
+  2026-05-08 archive: `PASS=0 ADVISORY=6 FAIL=0` diff-equal across
+  both the new `python -m mfip.ingestion.bloomberg.validator` and
+  the legacy `python scripts\ingestion\validate_bloomberg_workbook.py`
+  invocation paths.
+- [further entries TBD at close-out]
 
 ### Issues discovered (fixed in this session)
 

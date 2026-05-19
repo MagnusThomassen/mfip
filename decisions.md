@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-19 — Bloomberg Validator moved to mfip/ingestion/bloomberg/](#2026-05-19--bloomberg-validator-moved-to-mfipingestionbloomberg) `architecture` `phase-3`
 - [2026-05-18 — Watchdog scope decision: dropped from v1; reserved for v2 (Phase 3 first deliverable)](#2026-05-18--watchdog-scope-decision-dropped-from-v1-reserved-for-v2-phase-3-first-deliverable) `architecture` `infrastructure` `phase-3`
 - [2026-05-15 — Phase 2 close-out: Logging Infrastructure complete](#2026-05-15--phase-2-close-out-logging-infrastructure-complete) `process`
 - [2026-05-15 — PR-C nightly log export contract](#2026-05-15--pr-c-nightly-log-export-contract) `infrastructure` `convention`
@@ -3489,3 +3490,78 @@ re-evaluation:
    the "disciplined-human sole source" premise breaks and
    inbox quarantine becomes valuable. Pull the v2 watchdog work
    forward as a v1.5 phase at that point.
+
+## 2026-05-19 — Bloomberg Validator moved to mfip/ingestion/bloomberg/
+**Tags:** architecture, phase-3
+
+**Decision:** The Phase 0 Bloomberg saved-file validator
+(`scripts/ingestion/validate_bloomberg_workbook.py`, shipped per
+`decisions.md` 2026-05-10) is relocated to
+`mfip/ingestion/bloomberg/validator.py`. The archive-walking helpers
+(`find_latest_workbook`, multi-company walker logic) are extracted
+into a sibling `mfip/ingestion/bloomberg/archive_lookup.py`. The
+universe-membership constants (`UNIVERSE`, `KNOWN_ABSENT`) move into
+`archive_lookup.py` with `validator.py` re-importing them. The old
+script path becomes a thin CLI shell using the same sys.path-tweak
+pattern as `scripts/scheduled_tasks/nightly_log_export.py`,
+preserving the existing invocation form.
+
+**Reasoning:** The Phase 3 parser (PR #62b onward) must import the
+validator's public surface (`validate_workbook`, `ValidationReport`,
+`Tier`, `Finding`, `RV_BASELINE_COLUMNS`, `RV_PLANNED_COLUMNS`).
+Library code under `mfip/` does not import from `scripts/` anywhere
+else in the repo — the only cross-tree imports go the other direction
+(scripts importing mfip via sys.path tweak). Establishing the reverse
+pattern only for the parser would be architecturally awkward. Moving
+the validator into `mfip/ingestion/bloomberg/` aligns it with the
+package it serves, makes the parser's imports natural, and pre-allocates
+clean space for the Phase 4 PDF Extractor at `mfip/ingestion/pdf/`.
+
+Extracting `archive_lookup.py` was flagged in `decisions.md` 2026-05-10
+as a follow-up when Phase 3 began ("the 'find latest workbook per
+company' logic lives in the validator's `--all` mode for now. When
+Phase 3 build starts, this logic should be lifted out into a shared
+helper"). This PR closes that follow-up.
+
+**Path supersedes 2026-05-10 target.** That entry named
+`scripts/ingestion/archive_lookup.py` as the intended location.
+This PR supersedes that target — the helper lands at
+`mfip/ingestion/bloomberg/archive_lookup.py` alongside the relocated
+validator. Same logic, same name, new package home.
+
+**Policy/mechanism split inside `archive_lookup.py`.**
+`find_all_latest` returns `dict[str, Path | None]` and does not
+consult `KNOWN_ABSENT` — known-absent treatment is a caller-side
+policy. `validate_all` (in `validator.py`) handles the three-way
+disambiguation: folder-missing-and-known-absent → ADVISORY,
+folder-missing-and-unknown → FAIL, folder-present-no-dated-export →
+FAIL. This keeps `archive_lookup` policy-free so the parser can
+reuse it in PR #62b without inheriting validator-side semantics.
+
+**Observability nuance: sorted iteration in `validate_all`.** The
+pre-PR `validate_all` iterated `UNIVERSE` (a `set`) directly, so
+report ordering across companies was randomised by Python's per-process
+hash seed — invisible to operators in single-process use, but visible
+in the PR's pre/post smoke test which spawns two processes. PR #62a
+sorts the iteration in `validate_all` to make output deterministic
+across processes. Strict improvement, no impact on findings, counts,
+exit codes, or report contents.
+
+**Affected docs (this PR):**
+- `decisions.md` — this entry + TOC line.
+- `MEMORY.md` — "What Is Built" row for the Bloomberg validator path
+  updated; Phase 3 progress noted.
+- `worklog.md` — `tests/<package>/__init__.py` inconsistency observation
+  (no action this PR).
+- `phase-validations/PHASE_3_VALIDATION.md` — Findings note added
+  recording the validator-relocation as a Phase 3 prerequisite;
+  parser deliverables remain unchecked (PR #62b begins the parser).
+
+**Affected docs (deferred):**
+- `CLAUDE.md § Terminology` — the "Validator" row's reference to
+  `scripts/ingestion/validate_bloomberg_workbook.py` updates to
+  `mfip/ingestion/bloomberg/validator.py`. Batch with the watchdog
+  doc-alignment pass per PR #60.
+
+**Revisit trigger:** None — structural move with no behaviour change
+beyond the deterministic-ordering note above.
