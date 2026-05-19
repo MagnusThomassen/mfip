@@ -42,7 +42,7 @@ Phase 2 closed 2026-05-15. Phase 3 kicked off 2026-05-18 with `phase-validations
 | `.env` | `C:\MFIP\repo\.env` | Off Git; Magnus holds keys |
 | `.env.example` | `repo\.env.example` | Environment variable template; real `.env` is Magnus-side, gitignored, not in repo |
 | Bloomberg templates | `repo\templates\bloomberg\` | Git-versioned; FX, Indices, Master xlsx + 4 .py support files |
-| Bloomberg validator | `scripts/ingestion/validate_bloomberg_workbook.py` | PASS / ADVISORY / FAIL; encodes 07_BLOOMBERG_EXPORT_TEMPLATE.docx contract |
+| Bloomberg validator | `mfip/ingestion/bloomberg/validator.py` (+ thin CLI shell at `scripts/ingestion/validate_bloomberg_workbook.py`) | PASS / ADVISORY / FAIL; encodes 07_BLOOMBERG_EXPORT_TEMPLATE.docx contract; archive-walking helpers extracted into sibling `archive_lookup.py` |
 | `CLAUDE.md` | `repo\CLAUDE.md` | Session-bootstrap file for Claude Code; rewritten 2026-05-09 |
 | `theme.py` | `mfip/dashboard/theme.py` | Both dark + light token sets; `apply_theme(fig, mode)` helper |
 | Theme CSS | `assets/theme.css` | `[data-theme]` selectors; defines all color tokens on `:root`/`html`; mirrors theme.py DARK + LIGHT |
@@ -213,4 +213,4 @@ Layer 5.5 (Thesis Monitor, Agent 21) is non-integer — permanent and intentiona
 
 ---
 
-*Last updated: 2026-05-18 — Session 18: watchdog scope decision logged (option c — dropped from v1, reserved for v2); Open Loops "watchdog scope decision" row retired.*
+*Last updated: 2026-05-19 — Session 19 PR #62a: Bloomberg validator relocated to `mfip/ingestion/bloomberg/validator.py`; archive walkers extracted into sibling `archive_lookup.py`; thin CLI shell retained at the old script path. Phase 3 parser scaffolding (PR #62b) unblocked.*
