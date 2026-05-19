@@ -8,6 +8,7 @@ Format: date, decision, reasoning, implication, affected docs.
 
 ## Index
 
+- [2026-05-19 — Phase 3 parser: array-spill extraction convention (HP sheets)](#2026-05-19--phase-3-parser-array-spill-extraction-convention-hp-sheets) `data-contract` `phase-3`
 - [2026-05-19 — Phase 3 parser conventions: `na_cells` provenance, `#N/A` taxonomy, two-tier fixture strategy](#2026-05-19--phase-3-parser-conventions-na_cells-provenance-na-taxonomy-two-tier-fixture-strategy) `data-contract` `tests` `phase-3`
 - [2026-05-19 — Bloomberg Parser scaffolding: public API, handoff schema, exception hierarchy](#2026-05-19--bloomberg-parser-scaffolding-public-api-handoff-schema-exception-hierarchy) `architecture` `phase-3` `data-contract`
 - [2026-05-19 — Bloomberg Validator moved to mfip/ingestion/bloomberg/](#2026-05-19--bloomberg-validator-moved-to-mfipingestionbloomberg) `architecture` `phase-3`
@@ -3797,6 +3798,141 @@ number).
 - `MEMORY.md` — "What Is Built" parser row upgraded from "scaffolding"
   to "CONFIG + BETA + EE scalars"; last-updated line bumped.
 
-**Revisit trigger:** When DVD lands (PR #65), the array-spill row
+**Revisit trigger:** When DVD lands (PR #66), the array-spill row
 shape will need a sibling convention — but the scalar conventions
 above carry forward unchanged.
+
+---
+
+## 2026-05-19 — Phase 3 parser: array-spill extraction convention (HP sheets)
+
+**Tags:** `data-contract` `phase-3`
+
+PR #65 shipped HP_Monthly + HP_Daily extraction — the first array-spill
+sheets to land. The implementation is mechanical per-row, but it locked
+two conventions that DVD (PR #66) will inherit. The scalar conventions
+from PR #64 carry forward unchanged; this entry covers what's new.
+
+**Convention 1: terminate at the first fully-empty row, not at
+`openpyxl`'s `max_row`.**
+
+The HP template sheets are pre-sized for the eventual array spill —
+the master template has `HP_Daily.max_row=1310` with only `B6`
+populated. Iterating to `max_row` would produce ~1300 phantom
+`(None, None)` rows to filter out anyway. The "first row where both
+B and C are `None`" rule is the robust signal in both directions:
+- Template (spill never materialised): loop exits after row 6.
+- Real export (spill materialised): loop exits at the natural end
+  of the data, regardless of whether Excel re-saved the bounds.
+
+`max_row` reflects how the workbook author pre-sized the sheet, not
+data presence. Don't trust it.
+
+**Convention 2: `pandas.Series` with `DatetimeIndex` is the storage
+shape for time-series sheet data.**
+
+`PriceHistorySheet.series` is `pandas.Series` with:
+- `index = pandas.DatetimeIndex(..., name="Date")`
+- `name = "PX_LAST"` (preserves Bloomberg field provenance for
+  downstream `.name` introspection)
+- `dtype = "float64"` (NaN-tolerant; missing prices land here)
+
+Chosen over list-of-tuples or `dict[date, float]` because:
+- Downstream consumers (FSA, DCF, Shock agents) do `resample`,
+  rolling-window, and time-aligned operations natively on
+  `pandas.Series`. Skipping a conversion step is meaningful when
+  every chart and every shock series passes through this contract.
+- Native `NaN` handling for missing prices (with-date-no-price rows
+  are kept with NaN rather than dropped — preserves the row count
+  for downstream alignment).
+- Trivial JSON serialisation via
+  `series.to_json(orient="split", date_format="iso")` when
+  `decision_log` entries need the series shape.
+
+The `arbitrary_types_allowed=True` config on `_BaseSheetModel`
+(shipped in PR #62b for exactly this case) is the enabling Pydantic
+choice. The model field already existed; PR #65 just populates it.
+
+**Symmetric `#`-prefix guard extended to the date column.**
+
+PR #64 locked the `#`-prefix rule as a closed lexical convention for
+Excel/Bloomberg error sentinels — `_read_scalar` uses it for value
+cells. PR #65 extends it to the date column too: when an array
+formula fails to spill (the template state), Bloomberg emits its
+error sentinel (`#NAME?`) into `B6` — the *first cell* of the spill
+region. The same lexical rule applies because the same convention
+generated it; the column it lives in doesn't change the semantic.
+
+Implementation: if `raw_date` is a string starting with `#`, treat
+as end-of-spill (record the coord in `na_cells`, break). This makes
+the template Tier-1 test assert an empty series with one `na_cells`
+entry, mirroring BETA/EE's all-`None` + `na_cells` template behaviour.
+
+**Row-level edge-case handling, locked here for DVD to inherit.**
+
+| Date | Value | Action |
+|---|---|---|
+| None | None | Terminate spill. |
+| `#`-prefix str | * | Terminate spill, record date coord in `na_cells`. |
+| None | not None | Skip row entirely; record date coord in `na_cells`. A price without a date is unusable. |
+| valid datetime | None | Keep row with `NaN` price; record value coord in `na_cells`. |
+| valid datetime | `#`-prefix str | Keep row with `NaN`; record value coord. |
+| valid datetime | int/float | Normal case; cast to float. |
+| valid datetime | numeric string | Permissive parse (matches `_read_scalar`'s comma-stripping path). |
+| valid datetime | unexpected string/type | Raise `WorkbookExtractionError`. |
+| non-date in date col | * | Raise `WorkbookExtractionError`. |
+
+Distinction (echoing PR #64): NaN = "Bloomberg gave a row but no
+price"; raised exception = "workbook is corrupt"; skipped row =
+"row was structurally unusable but the rest is fine".
+
+**Header sanity check at row 5.**
+
+Both extractors assert `ws["B5"].value == "Date"` and
+`ws["C5"].value == "PX_LAST"` before iterating. Cheap belt-and-braces
+against accidental row-edits before save. Raises
+`WorkbookExtractionError` with the actual header values for fast
+diagnosis. The validator's contract check (PR #62) covers sheet
+presence and shape but not header strings — this fills that gap
+for the two HP sheets specifically.
+
+**Fixture strategy: no new files this PR.**
+
+Reuses `tests/fixtures/bloomberg/EQNR_NO_2026-05-08.xlsx` from
+PR #64. EQNR's HP_Monthly has 120 rows (2016-05-31 → 2026-04-30);
+HP_Daily has 1305 rows (2021-05-10 → 2026-05-08). Both fully
+populated with positive floats, no `#N/A`. Synthetic in-memory
+worksheets (helper `_make_hp_ws`) cover the edge cases the real
+fixture doesn't exercise: row-skip, `#`-prefix in value column,
+numeric strings with commas, unexpected-string errors.
+
+**Tests:** 102 → 117 green (+15).
+
+**What was *not* changed.**
+
+- `_read_scalar` unchanged. The two helpers are intentionally
+  separate — scalar reads and array-spill reads have different
+  termination, different error semantics, different return types.
+  A single `_read_cell` helper parametrised over "is this a spill?"
+  would obscure both call sites.
+- Date column receives a `datetime` (or `date`) instance — `pd.Timestamp`
+  conversion happens at `pd.DatetimeIndex(...)` construction. Don't
+  convert per-cell.
+- No `RawCellValue` adapter or tagged-union for the row shape.
+  The straight imperative loop is the right size for this contract;
+  abstraction would only pay off if a third array-spill sheet had a
+  different row structure, and DVD is the only such sheet planned
+  (PR #66 will introduce a sibling helper, not extend this one).
+
+**Affected docs (this PR):**
+- `decisions.md` — this entry + TOC line.
+- `MEMORY.md` — parser row upgraded to include HP_Monthly + HP_Daily;
+  last-updated line bumped.
+
+**Revisit trigger:** DVD extraction (PR #66) introduces mixed-type
+spill (dates, floats, strings, enum-like dividend types across
+columns). A sibling helper — `_read_dividend_rows` or similar —
+inherits the termination rule and `#`-prefix symmetry from here but
+diverges on per-column type discrimination. If the divergence is
+narrower than expected, consider lifting the termination logic into
+a shared helper; if wider, keep them parallel.

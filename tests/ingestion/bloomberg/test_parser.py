@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import openpyxl
+import pandas as pd
 import pytest
 
 from mfip.ingestion.bloomberg.exceptions import (
@@ -29,6 +30,9 @@ from mfip.ingestion.bloomberg.parser import (
     _NA_VALUES,
     _extract_beta,
     _extract_ee,
+    _extract_hp_daily,
+    _extract_hp_monthly,
+    _read_price_series,
     _read_scalar,
     ValidationPolicy,
     parse_fx_workbook,
@@ -314,3 +318,228 @@ class TestExtractEqnrFixture:
         assert result.ee.best_eps is not None
         assert result.beta.na_cells == []
         assert result.ee.na_cells == []
+
+
+# ---------------------------------------------------------------------------
+# _read_price_series helper — synthetic in-memory workbook unit tests
+# ---------------------------------------------------------------------------
+
+def _make_hp_ws(
+    title: str,
+    rows: list[tuple[object, object]],
+    *,
+    headers: tuple[str, str] = ("Date", "PX_LAST"),
+) -> openpyxl.worksheet.worksheet.Worksheet:
+    """Build a price-history-shaped worksheet.
+
+    Rows go into B6/C6 onward. None values are written as None so the
+    cell stays empty (mirrors the spilled-but-empty case in templates).
+    """
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = title
+    ws["B5"] = headers[0]
+    ws["C5"] = headers[1]
+    for i, (b, c) in enumerate(rows):
+        ws.cell(row=6 + i, column=2, value=b)
+        ws.cell(row=6 + i, column=3, value=c)
+    return ws
+
+
+class TestReadPriceSeries:
+    def test_terminates_at_first_empty_row(self):
+        rows = [
+            (datetime(2025, 1, 31), 100.0),
+            (datetime(2025, 2, 28), 101.0),
+            (datetime(2025, 3, 31), 102.0),
+            (None, None),  # End of spill at row 9.
+            (datetime(2025, 5, 31), 999.0),  # Must NOT be picked up.
+        ]
+        ws = _make_hp_ws("HP_Monthly", rows)
+        na_cells: list[str] = []
+        series = _read_price_series(ws, na_cells=na_cells)
+        assert len(series) == 3
+        assert list(series.values) == [100.0, 101.0, 102.0]
+        assert na_cells == []
+
+    def test_terminates_on_hash_prefix_in_date_col(self):
+        """Template-state case: B6 holds '#NAME?' as a string."""
+        rows = [("#NAME?", None)]
+        ws = _make_hp_ws("HP_Monthly", rows)
+        na_cells: list[str] = []
+        series = _read_price_series(ws, na_cells=na_cells)
+        assert len(series) == 0
+        assert na_cells == ["HP_Monthly!B6"]
+
+    def test_handles_hash_prefix_in_value_col(self):
+        """Value sentinel becomes NaN; coordinate recorded."""
+        rows = [
+            (datetime(2025, 1, 31), 100.0),
+            (datetime(2025, 2, 28), "#N/A"),
+            (datetime(2025, 3, 31), 102.0),
+        ]
+        ws = _make_hp_ws("HP_Monthly", rows)
+        na_cells: list[str] = []
+        series = _read_price_series(ws, na_cells=na_cells)
+        assert len(series) == 3
+        assert series.iloc[0] == 100.0
+        assert pd.isna(series.iloc[1])
+        assert series.iloc[2] == 102.0
+        assert na_cells == ["HP_Monthly!C7"]
+
+    def test_handles_none_value_with_date_present(self):
+        """A date with a None price is kept with NaN, not skipped."""
+        rows = [
+            (datetime(2025, 1, 31), 100.0),
+            (datetime(2025, 2, 28), None),
+            # No trailing empty row needed — termination requires both
+            # B and C None on the SAME row. Use an explicit end marker.
+            (datetime(2025, 3, 31), 102.0),
+            (None, None),
+        ]
+        ws = _make_hp_ws("HP_Monthly", rows)
+        na_cells: list[str] = []
+        series = _read_price_series(ws, na_cells=na_cells)
+        assert len(series) == 3
+        assert pd.isna(series.iloc[1])
+        assert na_cells == ["HP_Monthly!C7"]
+
+    def test_skips_row_with_none_date(self):
+        """Price without a date is unusable; row is skipped entirely."""
+        rows = [
+            (datetime(2025, 1, 31), 100.0),
+            (None, 999.0),  # Date-less price — skip.
+            (datetime(2025, 3, 31), 102.0),
+        ]
+        ws = _make_hp_ws("HP_Monthly", rows)
+        na_cells: list[str] = []
+        series = _read_price_series(ws, na_cells=na_cells)
+        assert len(series) == 2
+        assert list(series.values) == [100.0, 102.0]
+        assert na_cells == ["HP_Monthly!B7"]
+
+    def test_raises_on_non_date_in_date_col(self):
+        """Non-`#` strings in the date column are workbook corruption."""
+        rows = [("not a date", 100.0)]
+        ws = _make_hp_ws("HP_Monthly", rows)
+        with pytest.raises(WorkbookExtractionError) as excinfo:
+            _read_price_series(ws, na_cells=[])
+        assert "HP_Monthly!B6" in str(excinfo.value)
+        assert "not a date" in str(excinfo.value)
+
+    def test_raises_on_unexpected_string_in_value_col(self):
+        rows = [(datetime(2025, 1, 31), "approx 1.2")]
+        ws = _make_hp_ws("HP_Monthly", rows)
+        with pytest.raises(WorkbookExtractionError) as excinfo:
+            _read_price_series(ws, na_cells=[])
+        assert "HP_Monthly!C6" in str(excinfo.value)
+        assert "approx 1.2" in str(excinfo.value)
+
+    def test_handles_numeric_string_with_comma(self):
+        rows = [(datetime(2025, 1, 31), "1,234.5")]
+        ws = _make_hp_ws("HP_Monthly", rows)
+        na_cells: list[str] = []
+        series = _read_price_series(ws, na_cells=na_cells)
+        assert len(series) == 1
+        assert series.iloc[0] == 1234.5
+        assert na_cells == []
+
+    def test_returned_series_has_px_last_name_and_datetime_index(self):
+        rows = [(datetime(2025, 1, 31), 100.0), (datetime(2025, 2, 28), 101.0)]
+        ws = _make_hp_ws("HP_Monthly", rows)
+        series = _read_price_series(ws, na_cells=[])
+        assert series.name == "PX_LAST"
+        assert isinstance(series.index, pd.DatetimeIndex)
+        assert series.index.name == "Date"
+        assert series.dtype == "float64"
+
+
+# ---------------------------------------------------------------------------
+# Tier 1 — HP extraction against the master template
+#
+# Template has B6 = '#NAME?' in the date column for both HP sheets.
+# Extractor returns an empty series with one na_cells entry pointing
+# to B6 (the symmetric '#'-prefix guard from PR #65).
+# ---------------------------------------------------------------------------
+
+class TestExtractHpTemplate:
+    def test_extract_hp_monthly_template_empty(self):
+        wb = openpyxl.load_workbook(MASTER_TEMPLATE, data_only=True, read_only=True)
+        try:
+            hp = _extract_hp_monthly(wb)
+        finally:
+            wb.close()
+        assert len(hp.series) == 0
+        assert hp.series.name == "PX_LAST"
+        assert isinstance(hp.series.index, pd.DatetimeIndex)
+        assert hp.na_cells == ["HP_Monthly!B6"]
+
+    def test_extract_hp_daily_template_empty(self):
+        wb = openpyxl.load_workbook(MASTER_TEMPLATE, data_only=True, read_only=True)
+        try:
+            hp = _extract_hp_daily(wb)
+        finally:
+            wb.close()
+        assert len(hp.series) == 0
+        assert hp.na_cells == ["HP_Daily!B6"]
+
+    def test_extract_hp_monthly_raises_on_header_mismatch(self):
+        """Cheap safety net for accidental row-shift before save."""
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "HP_Monthly"
+        ws["B5"] = "Wrong"
+        ws["C5"] = "PX_LAST"
+        # Wrap in a fake-workbook-like dict: parser uses wb["HP_Monthly"].
+        class FakeWb:
+            def __getitem__(self, key):
+                assert key == "HP_Monthly"
+                return ws
+        with pytest.raises(WorkbookExtractionError, match="header mismatch"):
+            _extract_hp_monthly(FakeWb())
+
+
+# ---------------------------------------------------------------------------
+# Tier 2 — HP extraction against the committed EQNR fixture (PR #64)
+# ---------------------------------------------------------------------------
+
+class TestExtractHpEqnrFixture:
+    def test_hp_monthly_eqnr_shape_and_range(self):
+        wb = openpyxl.load_workbook(EQNR_FIXTURE, data_only=True, read_only=True)
+        try:
+            hp = _extract_hp_monthly(wb)
+        finally:
+            wb.close()
+        assert 100 <= len(hp.series) <= 130   # 10y * 12m + tolerance
+        assert hp.series.name == "PX_LAST"
+        assert isinstance(hp.series.index, pd.DatetimeIndex)
+        assert hp.series.dtype == "float64"
+        assert (hp.series.dropna() > 0).all()
+        # Sane window around 2026-05-08 export date.
+        assert hp.series.index.min() >= pd.Timestamp("2015-01-01")
+        assert hp.series.index.max() <= pd.Timestamp("2026-06-01")
+        assert hp.na_cells == []
+
+    def test_hp_daily_eqnr_shape_and_range(self):
+        wb = openpyxl.load_workbook(EQNR_FIXTURE, data_only=True, read_only=True)
+        try:
+            hp = _extract_hp_daily(wb)
+        finally:
+            wb.close()
+        assert 1100 <= len(hp.series) <= 1400  # ~5y * 252 trading days
+        assert hp.series.name == "PX_LAST"
+        assert isinstance(hp.series.index, pd.DatetimeIndex)
+        assert hp.series.dtype == "float64"
+        assert (hp.series.dropna() > 0).all()
+        assert hp.series.index.min() >= pd.Timestamp("2020-01-01")
+        assert hp.series.index.max() <= pd.Timestamp("2026-06-01")
+        assert hp.na_cells == []
+
+    def test_parse_eqnr_full_smoke_includes_hp(self):
+        result = parse_workbook(EQNR_FIXTURE)
+        assert result.hp_monthly.series is not None
+        assert result.hp_daily.series is not None
+        assert len(result.hp_monthly.series) > 0
+        assert len(result.hp_daily.series) > 0
+        assert result.hp_monthly.na_cells == []
+        assert result.hp_daily.na_cells == []
